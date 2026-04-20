@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS 기초 핵심 개념 개관</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root{--bg:#f8fafc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--accent:#059669}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14.5px;line-height:1.75}
+#sidebar{width:248px;min-height:100vh;background:var(--card);border-right:1px solid var(--border);padding:24px 0;position:fixed;left:0;top:0;overflow-y:auto;z-index:50}
+#sidebar .brand{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:16px}
+#sidebar .brand .tag{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+#sidebar .brand h2{font-size:14px;font-weight:700;line-height:1.4}
+#sidebar .group-label{padding:12px 20px 4px;font-size:10.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em}
+#sidebar a{display:block;padding:7px 20px;font-size:13px;color:var(--muted);text-decoration:none;border-left:3px solid transparent;transition:all .15s}
+#sidebar a:hover,#sidebar a.active{color:var(--accent);background:var(--bg);border-left-color:var(--accent)}
+main{margin-left:248px;flex:1;max-width:1080px;padding:48px 56px}
+.page-hdr{margin-bottom:48px;padding-bottom:32px;border-bottom:2px solid var(--border)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{font-size:12px;font-weight:500;padding:3px 11px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.accent{background:#d1fae5;border-color:var(--accent);color:#064e3b}
+.page-hdr h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:10px}
+.page-hdr p{color:var(--muted)}
+section{margin-bottom:64px;scroll-margin-top:24px}
+section>h2{font-size:20px;font-weight:700;padding-bottom:12px;border-bottom:2px solid var(--border);margin-bottom:24px}
+h3{font-size:16px;font-weight:600;margin:28px 0 12px}
+p{margin-bottom:10px}ul,ol{padding-left:22px;margin:8px 0 10px}li{margin-bottom:4px}
+.diagram-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px 24px 20px;margin:18px 0;overflow-x:auto;text-align:center}
+.diagram-wrap .cap{font-size:12px;color:var(--muted);margin-top:14px}
+.mermaid{display:inline-block}
+.tbl-wrap{overflow-x:auto;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+th{background:#f1f5f9;font-weight:600;font-size:12.5px;padding:9px 14px;border-bottom:1px solid var(--border);text-align:left}
+td{padding:9px 14px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+tr:last-child td{border-bottom:none}tr:hover td{background:#fafafa}
+.callout{border-radius:8px;padding:13px 16px;margin:14px 0;border-left:4px solid;font-size:13.5px}
+.callout .c-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.callout.interview{background:#fef2f2;border-color:#dc2626}.callout.interview .c-title{color:#dc2626}
+.callout.warn{background:#fff7ed;border-color:#ea580c}.callout.warn .c-title{color:#ea580c}
+.callout.tip{background:#f0fdf4;border-color:#16a34a}.callout.tip .c-title{color:#16a34a}
+.deep{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:4px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;margin-left:6px}
+code{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#be185d}
+pre{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#1e293b;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:14px 0;line-height:1.6}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:14px}
+.q-card .q-num{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px}
+.ans-area{margin-top:12px}
+.ans-label{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.saved-badge{font-size:11px;color:#16a34a;opacity:0;transition:opacity .4s}.saved-badge.show{opacity:1}
+.ans-area textarea{width:100%;min-height:110px;border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-family:'Noto Sans KR',sans-serif;font-size:14px;line-height:1.7;resize:vertical;background:#fafcff;color:var(--text);transition:border-color .15s}
+.ans-area textarea:focus{outline:none;border-color:var(--accent);background:#fff}
+.ans-area textarea::placeholder{color:#cbd5e1}
+.feedback-box{background:var(--card);border:1.5px dashed var(--border);border-radius:12px;padding:22px 24px;margin-top:28px;text-align:center}
+.feedback-box p{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+.btn-feedback{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:background .15s}
+.btn-feedback:hover{background:#047857}
+.copy-result{margin-top:12px;font-size:13px;color:#16a34a;min-height:20px}
+.next-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:14px}
+.next-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;transition:box-shadow .15s}
+.next-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.next-card .coach{font-size:11px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:5px}
+.next-card .topic{font-size:13px;font-weight:500}
+@media(max-width:860px){#sidebar{display:none}main{margin-left:0;padding:24px 20px}}
+</style>
+</head>
+<body>
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🧮 cs-fundamentals-coach</div>
+    <h2>CS 기초<br>핵심 개념 개관</h2>
+  </div>
+  <div class="group-label">핵심 주제</div>
+  <a href="#ds">1. 자료구조 선택 가이드</a>
+  <a href="#complexity">2. 시간·공간 복잡도</a>
+  <a href="#os">3. OS 기초 (프로세스/스레드)</a>
+  <a href="#memory">4. 메모리 구조</a>
+  <a href="#network">5. 네트워크 (TCP/HTTP/TLS)</a>
+  <a href="#concurrency">6. 동시성 이론</a>
+  <a href="#io">7. I/O 모델</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#qa">Q&amp;A 연습</a>
+</nav>
+<main>
+  <div class="page-hdr">
+    <div class="chips">
+      <span class="chip accent">cs-fundamentals-coach</span>
+      <span class="chip">Concept Mode</span>
+      <span class="chip">v0.1 — 2026-04-15</span>
+    </div>
+    <h1>CS 기초 핵심 개념 개관</h1>
+    <p>자료구조와 알고리즘 복잡도부터 OS 프로세스/스레드, 네트워크 TCP/HTTP/TLS, 동시성 이론까지 — 시니어 백엔드 엔지니어가 면접에서 반드시 설명할 수 있어야 하는 CS 기초를 다진다.</p>
+  </div>
+
+  <!-- 1. 자료구조 선택 가이드 -->
+  <section id="ds">
+    <h2>1. 자료구조 선택 가이드</h2>
+    <p>자료구조는 <strong>접근 패턴</strong>에 따라 선택한다. 읽기/쓰기 비율, 순서 보장 필요 여부, 중복 허용 여부가 핵심 기준이다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    A([데이터를 어떻게 사용?]) --> B{순서가 중요한가?}
+    B -- YES --> C{앞뒤 삽입/삭제\n빈번?}
+    B -- NO --> D{Key로 빠른 조회?}
+    C -- YES --> E["LinkedList / Deque\n삽입/삭제 O(1)"]
+    C -- NO --> F{LIFO 스택\nor FIFO 큐?}
+    F -- LIFO --> G["Stack\n재귀, 괄호 검사"]
+    F -- FIFO --> H["Queue / PriorityQueue\nBFS, 작업 스케줄러"]
+    D -- YES --> I{키 순서 기반\nRange 필요?}
+    I -- YES --> J["TreeMap (Red-Black Tree)\n정렬된 Key, O(log n)"]
+    I -- NO --> K["HashMap\n평균 O(1), 최악 O(n)"]
+    B -- "중복 제거" --> L["HashSet / TreeSet\n중복 없는 집합"]
+    A --> M{최솟값/최댓값\n자주 필요?}
+    M -- YES --> N["Heap (PriorityQueue)\nO(1) peek, O(log n) poll"]
+
+    style E fill:#dcfce7,stroke:#059669
+    style K fill:#dbeafe,stroke:#3b82f6
+    style J fill:#fef3c7,stroke:#d97706
+    style N fill:#ede9fe,stroke:#8b5cf6
+      </div>
+      <div class="cap">자료구조 선택 의사결정 트리 — 접근 패턴을 먼저 파악하고 자료구조를 선택</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>자료구조</th><th>조회</th><th>삽입</th><th>삭제</th><th>특징</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Array</strong></td><td>O(1)</td><td>O(n)</td><td>O(n)</td><td>인덱스 접근 최적, 메모리 연속</td></tr>
+          <tr><td><strong>LinkedList</strong></td><td>O(n)</td><td>O(1)*</td><td>O(1)*</td><td>*노드 위치 알 때. 캐시 지역성 낮음</td></tr>
+          <tr><td><strong>HashMap</strong></td><td>O(1) avg</td><td>O(1) avg</td><td>O(1) avg</td><td>해시 충돌 시 O(n), Resizing O(n)</td></tr>
+          <tr><td><strong>TreeMap</strong></td><td>O(log n)</td><td>O(log n)</td><td>O(log n)</td><td>Red-Black Tree, 정렬 보장</td></tr>
+          <tr><td><strong>Heap</strong></td><td>O(1) peek</td><td>O(log n)</td><td>O(log n)</td><td>최솟/최댓값 접근 특화</td></tr>
+          <tr><td><strong>Stack/Queue</strong></td><td>O(n)</td><td>O(1)</td><td>O(1)</td><td>LIFO/FIFO 접근 패턴</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">실무 연결</div>
+      LRU(Least Recently Used, 최근 최소 사용) 캐시 구현: <strong>HashMap + DoublyLinkedList</strong> 조합. HashMap으로 O(1) 조회, LinkedList로 O(1) 순서 조정. Java의 <code>LinkedHashMap</code>이 이 구조를 내장한다.
+    </div>
+  </section>
+
+  <!-- 2. 시간/공간 복잡도 -->
+  <section id="complexity">
+    <h2>2. 시간·공간 복잡도</h2>
+    <p>Big-O(빅오)는 입력 크기 n이 커질 때 알고리즘의 <strong>최악 성능 상한</strong>을 나타낸다.</p>
+
+    <pre>
+O(1)       < O(log n)   < O(n)     < O(n log n) < O(n²)    < O(2ⁿ)
+상수 시간    로그 시간     선형 시간    선형 로그     이차 시간    지수 시간
+
+예시:
+O(1)       : HashMap 조회, 배열 인덱스 접근
+O(log n)   : 이진 탐색, B+Tree 인덱스 탐색
+O(n)       : 배열 순차 탐색, 단순 루프
+O(n log n) : Merge Sort, Quick Sort (평균)
+O(n²)      : 버블 정렬, 중첩 루프
+O(2ⁿ)      : 완전 탐색 (부분집합 열거)
+    </pre>
+
+    <h3>정렬 알고리즘 비교</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>알고리즘</th><th>평균</th><th>최악</th><th>공간</th><th>Stable?</th><th>사용 상황</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Quick Sort</strong></td><td>O(n log n)</td><td>O(n²)</td><td>O(log n)</td><td>No</td><td>일반 목적 (in-place). Java Arrays.sort (primitive)</td></tr>
+          <tr><td><strong>Merge Sort</strong></td><td>O(n log n)</td><td>O(n log n)</td><td>O(n)</td><td>Yes</td><td>안정 정렬 필요 시. Java Collections.sort</td></tr>
+          <tr><td><strong>Heap Sort</strong></td><td>O(n log n)</td><td>O(n log n)</td><td>O(1)</td><td>No</td><td>메모리 제약, 최악 보장 필요</td></tr>
+          <tr><td><strong>Tim Sort</strong></td><td>O(n log n)</td><td>O(n log n)</td><td>O(n)</td><td>Yes</td><td>실제 데이터 (부분 정렬 이용). Python 기본</td></tr>
+          <tr><td><strong>Radix Sort</strong></td><td>O(nk)</td><td>O(nk)</td><td>O(n+k)</td><td>Yes</td><td>정수, 고정 길이 문자열 정렬</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">면접 함정</div>
+      <strong>"HashMap은 O(1)이죠?"</strong> — 평균은 O(1)이지만 해시 충돌이 집중되면 최악 O(n). Java 8+에서 Bucket 크기 8 초과 시 LinkedList → Red-Black Tree로 전환해 O(log n)으로 완화. 초기 capacity와 load factor(0.75 기본) 설정으로 리사이징 최소화.
+    </div>
+  </section>
+
+  <!-- 3. OS 기초 -->
+  <section id="os">
+    <h2>3. OS 기초 — 프로세스(Process) vs 스레드(Thread)</h2>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> New : fork() / exec()
+    New --> Ready : 메모리 할당 완료
+    Ready --> Running : CPU 스케줄러 선택
+    Running --> Ready : 타임 슬라이스 만료\n(선점)
+    Running --> Waiting : I/O 대기\nwait() / sleep()
+    Waiting --> Ready : I/O 완료\n이벤트 발생
+    Running --> Terminated : exit()
+    Terminated --> [*]
+      </div>
+      <div class="cap">프로세스 상태 머신 — New → Ready → Running ↔ Waiting → Terminated</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>구분</th><th>프로세스 (Process)</th><th>스레드 (Thread)</th></tr></thead>
+        <tbody>
+          <tr><td><strong>주소 공간</strong></td><td>독립 가상 주소 공간</td><td>프로세스 내 공유</td></tr>
+          <tr><td><strong>공유 자원</strong></td><td>IPC(메시지 패싱, 공유 메모리)로만 통신</td><td>힙, 전역 변수, 파일 디스크립터 공유</td></tr>
+          <tr><td><strong>Context Switch 비용</strong></td><td>높음 (TLB flush, 주소 공간 전환)</td><td>낮음 (같은 주소 공간)</td></tr>
+          <tr><td><strong>장애 격리</strong></td><td>높음 (한 프로세스 크래시가 다른 프로세스에 영향 없음)</td><td>낮음 (한 스레드 크래시 → 전체 프로세스)</td></tr>
+          <tr><td><strong>생성 비용</strong></td><td>높음</td><td>낮음</td></tr>
+          <tr><td><strong>Linux 구현</strong></td><td><code>clone()</code> 시스템 콜 (CLONE_VM 없이)</td><td><code>clone()</code> with CLONE_VM flag</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Context Switch(문맥 교환) 비용</h3>
+    <p>Context Switch는 CPU가 실행 중인 작업을 바꾸는 과정이다. PCB(Process Control Block, 프로세스 제어 블록)에 레지스터, 프로그램 카운터, 스택 포인터를 저장하고 다음 작업의 상태를 복구한다.</p>
+    <ul>
+      <li><strong>직접 비용</strong>: 레지스터 저장/복구, 커널 진입/복귀</li>
+      <li><strong>간접 비용</strong>: CPU 캐시(L1/L2) 무효화 → 캐시 미스 증가</li>
+      <li><strong>TLB flush</strong>: 프로세스 전환 시 페이지 테이블 캐시 초기화</li>
+    </ul>
+
+    <div class="callout tip">
+      <div class="c-title">스레드가 항상 빠르지 않은 이유</div>
+      스레드 수가 CPU 코어 수를 초과하면 Context Switch 비용이 증가한다. 동기화(Mutex/Lock) 경쟁이 심할 경우 <strong>Lock Contention(락 경합)</strong>으로 오히려 단일 스레드보다 느려질 수 있다 (Amdahl's Law).
+    </div>
+  </section>
+
+  <!-- 4. 메모리 -->
+  <section id="memory">
+    <h2>4. 메모리 구조</h2>
+
+    <pre>
+프로세스 가상 주소 공간 (낮은 주소 → 높은 주소)
+┌─────────────────────────────────────┐  높은 주소
+│           Kernel Space              │
+├─────────────────────────────────────┤  0x7fff...
+│           Stack (스택)              │  ← 스택 프레임 (지역 변수, 리턴 주소)
+│         ↓ (grows down)              │
+├─────────────────────────────────────┤
+│           (사용 안 함)               │
+├─────────────────────────────────────┤
+│         ↑ (grows up)                │
+│           Heap (힙)                 │  ← 동적 할당 (malloc/new)
+├─────────────────────────────────────┤
+│      BSS Segment (초기화 안 된 전역) │
+├─────────────────────────────────────┤
+│      Data Segment (초기화된 전역)   │
+├─────────────────────────────────────┤  낮은 주소
+│      Text Segment (코드)            │
+└─────────────────────────────────────┘
+    </pre>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>영역</th><th>저장 내용</th><th>특징</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Stack</strong></td><td>지역 변수, 함수 매개변수, 리턴 주소</td><td>자동 할당/해제, 크기 제한 (보통 8MB), Stack Overflow 주의</td></tr>
+          <tr><td><strong>Heap</strong></td><td>동적 할당 객체 (new, malloc)</td><td>GC 또는 수동 해제. 단편화 발생. 크기 제한 없음(메모리 한도)</td></tr>
+          <tr><td><strong>Text</strong></td><td>컴파일된 기계어 코드</td><td>Read-only. 여러 프로세스가 공유 가능</td></tr>
+          <tr><td><strong>Data/BSS</strong></td><td>전역/정적 변수</td><td>프로그램 시작~종료까지 유지</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>가상 메모리(Virtual Memory) & 페이징(Paging)</h3>
+    <p>각 프로세스는 자신이 전체 메모리를 독점한다고 착각하는 <strong>가상 주소 공간</strong>을 갖는다. MMU(Memory Management Unit)가 가상 주소 → 물리 주소로 변환. TLB(Translation Lookaside Buffer, 변환 참조 버퍼)는 최근 변환 결과를 캐싱해 속도를 높인다.</p>
+
+    <div class="callout interview">
+      <div class="c-title">면접 질문</div>
+      <strong>"Java의 Heap과 OS의 Heap은 같은 건가요?"</strong> — 다르다. JVM Heap은 OS Heap 위에 할당된 별도 메모리 풀이다. JVM이 OS로부터 큰 블록(<code>-Xmx</code>)을 미리 받아서 객체를 배치하고, GC(Garbage Collection, 가비지 컬렉션)가 관리한다.
+    </div>
+  </section>
+
+  <!-- 5. 네트워크 -->
+  <section id="network">
+    <h2>5. 네트워크 — TCP / HTTP / TLS</h2>
+
+    <h3>TCP 3-way Handshake(3방향 핸드셰이크)</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant C as 클라이언트
+    participant S as 서버
+
+    Note over C,S: TCP 연결 수립 (3-way Handshake)
+    C->>S: SYN (seq=x)
+    S->>C: SYN-ACK (seq=y, ack=x+1)
+    C->>S: ACK (ack=y+1)
+    Note over C,S: 연결 수립 완료 — 데이터 전송 가능
+
+    Note over C,S: TCP 연결 종료 (4-way Handshake)
+    C->>S: FIN
+    S->>C: ACK
+    S->>C: FIN
+    C->>S: ACK
+    Note over C: TIME_WAIT (2×MSL 대기)
+    Note over C,S: 연결 종료
+      </div>
+      <div class="cap">TCP 연결 수립(3-way) & 종료(4-way) — TIME_WAIT는 지연 패킷 처리를 위해 필수</div>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">면접 단골 질문</div>
+      <strong>"TIME_WAIT가 왜 필요한가요?"</strong> — ① 마지막 ACK가 유실될 경우 서버의 FIN 재전송에 응답하기 위해, ② 네트워크에 떠다니는 지연 패킷이 새 연결에서 오판되지 않도록. 기간은 2×MSL(Maximum Segment Lifetime, 최대 세그먼트 수명, 보통 60~120초). TIME_WAIT가 너무 많으면 소켓 포트 고갈 → <code>SO_REUSEADDR</code> 또는 연결 풀링으로 해결.
+    </div>
+
+    <h3>TLS 1.3 Handshake(TLS 1.3 핸드셰이크)</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant C as 클라이언트
+    participant S as 서버
+
+    Note over C,S: TLS 1.3 — 1-RTT 핸드셰이크
+    C->>S: ClientHello\n(지원 암호 스위트 + key_share)
+    S->>C: ServerHello\n(선택된 암호 스위트 + key_share)\n+ Certificate + CertificateVerify\n+ Finished
+    Note over C,S: 여기서 이미 대칭키 생성 완료!
+    C->>S: Finished
+    Note over C,S: 데이터 전송 시작 (1-RTT)
+
+    Note over C,S: TLS 1.2 대비 개선
+    Note over C: TLS 1.2: 2-RTT\nTLS 1.3: 1-RTT (재연결: 0-RTT)
+      </div>
+      <div class="cap">TLS 1.3 핸드셰이크 — ECDHE(타원 곡선 디피-헬만)로 1-RTT에 키 교환 완료</div>
+    </div>
+
+    <h3>HTTP 버전 진화</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>버전</th><th>주요 특징</th><th>문제점</th></tr></thead>
+        <tbody>
+          <tr><td><strong>HTTP/1.0</strong></td><td>요청마다 TCP 연결 수립/종료</td><td>높은 지연, 연결 비용 크다</td></tr>
+          <tr><td><strong>HTTP/1.1</strong></td><td>Keep-Alive(지속 연결), Pipelining</td><td>HOL Blocking(Head-Of-Line 블로킹) — 앞 요청 지연 시 뒤 요청 대기</td></tr>
+          <tr><td><strong>HTTP/2</strong></td><td>멀티플렉싱(Multiplexing), HPACK(헤더 압축), 서버 푸시, 바이너리 프레이밍</td><td>TCP 레벨 HOL Blocking 여전히 존재</td></tr>
+          <tr><td><strong>HTTP/3</strong></td><td>QUIC(UDP 기반), 연결 이주(Connection Migration), 0-RTT 재연결</td><td>UDP 방화벽 차단 이슈, 구현 복잡</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 6. 동시성 이론 -->
+  <section id="concurrency">
+    <h2>6. 동시성(Concurrency) 이론</h2>
+
+    <h3>동기화 프리미티브(Synchronization Primitive)</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>메커니즘</th><th>특징</th><th>사용 상황</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Mutex(뮤텍스)</strong></td><td>상호 배제. 소유자만 해제 가능. Binary Semaphore와 다름</td><td>단일 공유 자원 보호</td></tr>
+          <tr><td><strong>Semaphore(세마포어)</strong></td><td>계수형 락. N개 동시 접근 허용</td><td>연결 풀 크기 제한</td></tr>
+          <tr><td><strong>ReentrantLock</strong></td><td>재진입 가능 락. tryLock(), lockInterruptibly()</td><td>타임아웃이 있는 락 획득</td></tr>
+          <tr><td><strong>ReadWriteLock</strong></td><td>읽기 동시, 쓰기 배타</td><td>읽기 다수/쓰기 소수 패턴</td></tr>
+          <tr><td><strong>Spinlock(스핀락)</strong></td><td>락 대기 중 CPU 점유 (Busy Waiting). 컨텍스트 스위치 없음</td><td>짧은 임계 구역, 멀티코어</td></tr>
+          <tr><td><strong>CAS(Compare-And-Swap)</strong></td><td>원자적 비교-교환. Lock-free 알고리즘의 기반</td><td>AtomicInteger, LockFreeQueue</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Deadlock(교착 상태) 4 조건</h3>
+    <p>Deadlock은 다음 4가지 조건이 <strong>동시에</strong> 성립할 때 발생한다. 하나라도 제거하면 예방 가능.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    A["1. 상호 배제\n(Mutual Exclusion)\n자원은 한 번에 하나만 점유"] --> D
+    B["2. 점유 대기\n(Hold & Wait)\n자원 점유 + 추가 자원 대기"] --> D
+    C["3. 비선점\n(No Preemption)\n점유 자원 강제 회수 불가"] --> D
+    E["4. 순환 대기\n(Circular Wait)\nA→B→C→A 순환 자원 대기"] --> D
+    D(["⚠️ Deadlock\n발생 가능"])
+
+    style D fill:#fef2f2,stroke:#dc2626
+    style A fill:#fef3c7,stroke:#d97706
+    style B fill:#fef3c7,stroke:#d97706
+    style C fill:#fef3c7,stroke:#d97706
+    style E fill:#fef3c7,stroke:#d97706
+      </div>
+      <div class="cap">Deadlock 4 조건 — 4가지 조건 중 하나를 제거하면 교착 상태 예방 가능</div>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">Deadlock 방지 전략</div>
+      <ul>
+        <li><strong>순환 대기 제거</strong>: 모든 스레드가 동일한 순서로 락 획득 (가장 실용적)</li>
+        <li><strong>타임아웃</strong>: tryLock(timeout)으로 일정 시간 내 획득 실패 시 포기</li>
+        <li><strong>락 개수 최소화</strong>: 여러 락을 하나의 더 큰 락으로 통합</li>
+        <li><strong>Lock-free 자료구조</strong>: CAS 기반으로 락 없이 원자적 연산</li>
+      </ul>
+    </div>
+
+    <h3>Java Memory Model(JMM, 자바 메모리 모델) & happens-before</h3>
+    <p><strong>happens-before</strong> 관계: A happens-before B이면, A의 결과가 B에 반드시 보임을 보장한다.</p>
+    <ul>
+      <li>동일 스레드 내 순서</li>
+      <li><code>volatile</code> 변수 쓰기 → 읽기</li>
+      <li>모니터 unlock → lock</li>
+      <li>Thread.start() 호출</li>
+      <li>Thread.join() 반환</li>
+    </ul>
+  </section>
+
+  <!-- 7. I/O 모델 -->
+  <section id="io">
+    <h2>7. I/O 모델 — Blocking / Non-blocking / I/O Multiplexing</h2>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant App as 애플리케이션
+    participant Kernel as 커널
+
+    Note over App,Kernel: Blocking I/O — 스레드 대기
+    App->>Kernel: read() 호출
+    Note over App: 스레드 블로킹 (대기)
+    Kernel-->>App: 데이터 반환 (완료 후)
+
+    Note over App,Kernel: Non-blocking I/O — 폴링
+    App->>Kernel: read() 호출 (O_NONBLOCK)
+    Kernel-->>App: EAGAIN (즉시 반환)
+    App->>Kernel: read() 재시도 ...
+    Kernel-->>App: 데이터 반환
+
+    Note over App,Kernel: I/O Multiplexing (epoll) — 이벤트 기반
+    App->>Kernel: epoll_wait() (여러 FD 등록)
+    Note over App: 스레드 블로킹 (epoll 대기)
+    Kernel-->>App: 준비된 FD 목록 반환
+    App->>Kernel: 준비된 FD만 read()
+      </div>
+      <div class="cap">I/O 모델 비교 — Blocking, Non-blocking, epoll I/O 멀티플렉싱 흐름</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>I/O 모델</th><th>동작</th><th>장점</th><th>단점</th><th>사용 예</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Blocking I/O</strong></td><td>완료까지 스레드 대기</td><td>단순</td><td>스레드 낭비</td><td>전통적 서블릿, JDBC</td></tr>
+          <tr><td><strong>Non-blocking I/O</strong></td><td>즉시 반환 (EAGAIN). 폴링 필요</td><td>스레드 해방</td><td>CPU 낭비 (폴링)</td><td>직접 사용 드묾</td></tr>
+          <tr><td><strong>I/O Multiplexing</strong><br>(select/poll/epoll)</td><td>여러 FD를 하나의 시스템 콜로 감시</td><td>소수 스레드로 다수 연결 처리</td><td>epoll 사용법 복잡</td><td>Nginx, Redis, Node.js Reactor</td></tr>
+          <tr><td><strong>Async I/O (AIO)</strong></td><td>커널이 완료 후 콜백 호출</td><td>CPU 낭비 없음</td><td>복잡한 콜백 모델</td><td>io_uring, Windows IOCP</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">면접 질문</div>
+      <strong>"Nginx가 Apache보다 동시 연결 처리에 강한 이유는?"</strong> — Apache는 연결당 스레드(Thread per connection) 모델 → 10K 동시 연결 = 10K 스레드 → C10K 문제. Nginx는 이벤트 루프(Event Loop) + epoll/kqueue I/O 멀티플렉싱 → 소수 워커 스레드로 수만 연결 처리. Node.js도 동일 방식.
+    </div>
+  </section>
+
+  <!-- Q&A -->
+  <section id="qa">
+    <h2>Q&amp;A 연습</h2>
+    <p>아래 질문에 직접 답변을 작성하세요. 자동 저장되며 피드백 요청 시 복사할 수 있습니다.</p>
+
+    <div class="q-card">
+      <div class="q-num">Q1 — 자료구조 선택</div>
+      <p>실시간 배달 주문 시스템에서 <strong>배달 기사 위치를 기반으로 가장 가까운 배달 기사를 찾는</strong> 기능을 구현해야 합니다. 어떤 자료구조와 알고리즘을 사용하겠습니까? 시간 복잡도와 함께 설명하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>나의 답변</span>
+          <span class="saved-badge" id="badge-cs-q1">저장됨 ✓</span>
+        </div>
+        <textarea id="ans-cs-q1" placeholder="답변을 입력하세요..." oninput="saveAns('cs-q1',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2 — OS / 스레드</div>
+      <p>Java에서 스레드 풀(ThreadPoolExecutor) 크기를 결정하는 기준은 무엇인가요? CPU-bound 작업과 I/O-bound 작업에서 각각 어떻게 달리 설정해야 하는지 이유와 함께 설명하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>나의 답변</span>
+          <span class="saved-badge" id="badge-cs-q2">저장됨 ✓</span>
+        </div>
+        <textarea id="ans-cs-q2" placeholder="답변을 입력하세요..." oninput="saveAns('cs-q2',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3 — TCP & TIME_WAIT</div>
+      <p>고트래픽 서비스에서 <code>ss -s</code> 명령으로 확인했을 때 TIME_WAIT 소켓이 수천 개입니다. 이 현상의 원인과 시스템에 미치는 영향, 그리고 해결 방법을 설명하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>나의 답변</span>
+          <span class="saved-badge" id="badge-cs-q3">저장됨 ✓</span>
+        </div>
+        <textarea id="ans-cs-q3" placeholder="답변을 입력하세요..." oninput="saveAns('cs-q3',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q4 — 동시성</div>
+      <p>싱글톤(Singleton) 패턴을 멀티스레드 환경에서 안전하게 구현하는 방법을 3가지 이상 설명하고, 각각의 Trade-off(지연 초기화, 성능, 코드 복잡도)를 비교하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>나의 답변</span>
+          <span class="saved-badge" id="badge-cs-q4">저장됨 ✓</span>
+        </div>
+        <textarea id="ans-cs-q4" placeholder="답변을 입력하세요..." oninput="saveAns('cs-q4',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>작성한 답변을 복사해서 Claude에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 복사</button>
+      <div class="copy-result" id="copy-result"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>다음 학습 주제</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">cs-fundamentals-coach</div><div class="topic">TCP Congestion Control 심화</div></div>
+      <div class="next-card"><div class="coach">cs-fundamentals-coach</div><div class="topic">Java GC (G1, ZGC) 내부 구조</div></div>
+      <div class="next-card"><div class="coach">cs-fundamentals-coach</div><div class="topic">Lock-free 자료구조 설계</div></div>
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">B+Tree vs LSM Tree (RocksDB)</div></div>
+      <div class="next-card"><div class="coach">system-design-coach</div><div class="topic">Consistent Hashing 심화 설계</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'neutral',securityLevel:'loose',flowchart:{htmlLabels:true,curve:'basis'}});
+
+const NS = 'jobStudy::cs::00-introduction::';
+
+function saveAns(id, val) {
+  localStorage.setItem(NS + id, val);
+  const b = document.getElementById('badge-' + id);
+  if (b) { b.classList.add('show'); setTimeout(() => b.classList.remove('show'), 1800); }
+}
+
+function loadAll() {
+  document.querySelectorAll('[id^="ans-"]').forEach(el => {
+    const key = NS + el.id.replace('ans-', '');
+    const saved = localStorage.getItem(key);
+    if (saved) el.value = saved;
+  });
+}
+
+function copyForFeedback() {
+  const title = document.title;
+  const qs = document.querySelectorAll('.q-card');
+  let text = `[${title} — Q&A 피드백 요청]\n\n`;
+  qs.forEach((card, i) => {
+    const num = card.querySelector('.q-num')?.innerText || `Q${i+1}`;
+    const q = card.querySelector('p')?.innerText || '';
+    const ta = card.querySelector('textarea');
+    const ans = ta ? ta.value.trim() : '';
+    text += `${num}\n질문: ${q}\n내 답변: ${ans || '(미작성)'}\n\n`;
+  });
+  text += '위 답변들에 대해 시니어 CS 기초 코치 관점에서 피드백 부탁드립니다.';
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('copy-result').textContent = '✓ 클립보드에 복사되었습니다. Claude 채팅창에 붙여넣기 하세요.';
+    setTimeout(() => document.getElementById('copy-result').textContent = '', 4000);
+  });
+}
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      document.querySelectorAll('#sidebar a').forEach(a => a.classList.remove('active'));
+      const id = e.target.id;
+      const link = document.querySelector(`#sidebar a[href="#${id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, {rootMargin: '-20% 0px -70% 0px'});
+
+document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+loadAll();
+</script>
+</body>
+</html>

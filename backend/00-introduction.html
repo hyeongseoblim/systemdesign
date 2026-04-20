@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>백엔드 구현 핵심 개념 개관</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root{--bg:#f8fafc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--accent:#0891b2}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14.5px;line-height:1.75}
+#sidebar{width:248px;min-height:100vh;background:var(--card);border-right:1px solid var(--border);padding:24px 0;position:fixed;left:0;top:0;overflow-y:auto;z-index:50}
+#sidebar .brand{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:16px}
+#sidebar .brand .tag{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+#sidebar .brand h2{font-size:14px;font-weight:700;line-height:1.4}
+#sidebar .group-label{padding:12px 20px 4px;font-size:10.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em}
+#sidebar a{display:block;padding:7px 20px;font-size:13px;color:var(--muted);text-decoration:none;border-left:3px solid transparent;transition:all .15s}
+#sidebar a:hover,#sidebar a.active{color:var(--accent);background:var(--bg);border-left-color:var(--accent)}
+main{margin-left:248px;flex:1;max-width:1080px;padding:48px 56px}
+.page-hdr{margin-bottom:48px;padding-bottom:32px;border-bottom:2px solid var(--border)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{font-size:12px;font-weight:500;padding:3px 11px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.accent{background:#cffafe;border-color:var(--accent);color:#164e63}
+.page-hdr h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:10px}
+.page-hdr p{color:var(--muted)}
+section{margin-bottom:64px;scroll-margin-top:24px}
+section>h2{font-size:20px;font-weight:700;padding-bottom:12px;border-bottom:2px solid var(--border);margin-bottom:24px}
+h3{font-size:16px;font-weight:600;margin:28px 0 12px}
+p{margin-bottom:10px}ul,ol{padding-left:22px;margin:8px 0 10px}li{margin-bottom:4px}
+.diagram-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px 24px 20px;margin:18px 0;overflow-x:auto;text-align:center}
+.diagram-wrap .cap{font-size:12px;color:var(--muted);margin-top:14px}
+.mermaid{display:inline-block}
+.tbl-wrap{overflow-x:auto;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+th{background:#f1f5f9;font-weight:600;font-size:12.5px;padding:9px 14px;border-bottom:1px solid var(--border);text-align:left}
+td{padding:9px 14px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+tr:last-child td{border-bottom:none}tr:hover td{background:#fafafa}
+.callout{border-radius:8px;padding:13px 16px;margin:14px 0;border-left:4px solid;font-size:13.5px}
+.callout .c-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.callout.interview{background:#fef2f2;border-color:#dc2626}.callout.interview .c-title{color:#dc2626}
+.callout.warn{background:#fff7ed;border-color:#ea580c}.callout.warn .c-title{color:#ea580c}
+.callout.tip{background:#f0fdf4;border-color:#16a34a}.callout.tip .c-title{color:#16a34a}
+.deep{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:4px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;margin-left:6px}
+code{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#be185d}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:14px}
+.q-card .q-num{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px}
+.ans-area{margin-top:12px}
+.ans-label{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.saved-badge{font-size:11px;color:#16a34a;opacity:0;transition:opacity .4s}.saved-badge.show{opacity:1}
+.ans-area textarea{width:100%;min-height:110px;border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-family:'Noto Sans KR',sans-serif;font-size:14px;line-height:1.7;resize:vertical;background:#fafcff;color:var(--text);transition:border-color .15s}
+.ans-area textarea:focus{outline:none;border-color:var(--accent);background:#fff}
+.ans-area textarea::placeholder{color:#cbd5e1}
+.feedback-box{background:var(--card);border:1.5px dashed var(--border);border-radius:12px;padding:22px 24px;margin-top:28px;text-align:center}
+.feedback-box p{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+.btn-feedback{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:background .15s}
+.btn-feedback:hover{background:#0e7490}
+.copy-result{margin-top:12px;font-size:13px;color:#16a34a;min-height:20px}
+.next-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:14px}
+.next-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;transition:box-shadow .15s}
+.next-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.next-card .coach{font-size:11px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:5px}
+.next-card .topic{font-size:13px;font-weight:500}
+@media(max-width:860px){#sidebar{display:none}main{margin-left:0;padding:24px 20px}}
+</style>
+</head>
+<body>
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">⚙️ backend-dev-coach</div>
+    <h2>백엔드 구현<br>핵심 개념 개관</h2>
+  </div>
+  <div class="group-label">핵심 주제</div>
+  <a href="#lifecycle">1. Spring Boot 요청 라이프사이클</a>
+  <a href="#transaction">2. 트랜잭션 & 동시성 기초</a>
+  <a href="#api">3. API 설계 원칙</a>
+  <a href="#testing">4. 테스트 전략</a>
+  <a href="#observability">5. 관측성 3기둥</a>
+  <a href="#pitfalls">6. 자주 나오는 함정</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+<main>
+  <header class="page-hdr">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">backend-dev-coach</span>
+      <span class="chip">Session #0 — 구현 기초 개관</span>
+    </div>
+    <h1>백엔드 구현 핵심 개념 개관</h1>
+    <p>Spring Boot(Kotlin/Java) 기반 백엔드 개발의 <strong>트랜잭션·동시성·API·테스트·관측성</strong> 전반을 한눈에 그리기.</p>
+  </header>
+
+  <section id="lifecycle">
+    <h2>1. Spring Boot 요청 처리 라이프사이클</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant Client as 클라이언트
+    participant Filter as Filter Chain
+    participant DS as DispatcherServlet
+    participant HM as HandlerMapping
+    participant Interceptor as Interceptor
+    participant Ctrl as Controller
+    participant Svc as Service
+    participant Repo as Repository
+    participant DB as Database
+
+    Client->>Filter: HTTP Request
+    Filter->>DS: (통과)
+    DS->>HM: 핸들러 조회
+    HM-->>DS: HandlerAdapter
+    DS->>Interceptor: preHandle()
+    Interceptor->>Ctrl: 요청 전달
+    Ctrl->>Svc: 비즈니스 로직 위임
+    Svc->>Repo: 데이터 접근
+    Repo->>DB: SQL 실행
+    DB-->>Repo: ResultSet
+    Repo-->>Svc: Entity / DTO
+    Svc-->>Ctrl: 응답 객체
+    Ctrl-->>DS: ResponseEntity
+    DS->>Interceptor: postHandle()
+    DS-->>Client: HTTP Response
+      </div>
+      <div class="cap">Spring MVC 요청 처리 흐름 — 각 레이어의 책임 경계를 명확히 이해해야 함</div>
+    </div>
+
+    <h3>레이어별 책임</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>레이어</th><th>책임</th><th>피해야 할 것</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Filter</strong></td><td>인증 토큰 파싱, CORS, 로깅, 요청 변환</td><td>비즈니스 로직</td></tr>
+        <tr><td><strong>Controller</strong></td><td>요청 파싱, 입력 검증, 응답 포맷</td><td>DB 접근, 복잡한 비즈니스 로직</td></tr>
+        <tr><td><strong>Service</strong></td><td>트랜잭션 경계, 비즈니스 규칙, 오케스트레이션</td><td>HTTP 개념 (Request/Response)</td></tr>
+        <tr><td><strong>Repository</strong></td><td>DB 쿼리, 영속성 추상화</td><td>비즈니스 규칙, 외부 호출</td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 경계 오염 주의</div>
+      Controller 에서 <code>EntityManager</code> 직접 사용, Service 에서 <code>HttpServletRequest</code> 참조 — 레이어 경계 오염. 테스트 불가능해지고 책임이 흐려진다.
+    </div>
+  </section>
+
+  <section id="transaction">
+    <h2>2. 트랜잭션 & 동시성 기초</h2>
+
+    <h3>트랜잭션 정상 / 롤백 흐름</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant Proxy as Spring Proxy
+    participant Svc as Service
+    participant DB as Database
+
+    Note over Proxy,DB: 정상 흐름
+    Proxy->>DB: BEGIN TRANSACTION
+    Proxy->>Svc: 메서드 호출
+    Svc->>DB: INSERT / UPDATE
+    DB-->>Svc: OK
+    Svc-->>Proxy: 반환
+    Proxy->>DB: COMMIT
+
+    Note over Proxy,DB: 예외 발생 시
+    Proxy->>DB: BEGIN TRANSACTION
+    Proxy->>Svc: 메서드 호출
+    Svc->>DB: INSERT
+    Svc->>Svc: RuntimeException 발생
+    Svc-->>Proxy: 예외 전파
+    Proxy->>DB: ROLLBACK
+      </div>
+      <div class="cap">@Transactional 프록시 동작 — Spring AOP 프록시가 트랜잭션을 감싼다</div>
+    </div>
+
+    <h3>동시성 처리 전략 비교</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>전략</th><th>방식</th><th>장점</th><th>단점</th><th>사용 시기</th></tr></thead>
+      <tbody>
+        <tr><td><strong>낙관적 락</strong><br><code>@Version</code></td><td>버전 컬럼으로 충돌 감지, 충돌 시 재시도</td><td>락 없음, 높은 처리량</td><td>충돌 많으면 재시도 폭증</td><td>충돌 적을 때 (카탈로그 업데이트)</td></tr>
+        <tr><td><strong>비관적 락</strong><br><code>FOR UPDATE</code></td><td>읽기 시 즉시 락 획득</td><td>직관적, 확실한 보장</td><td>락 대기, 데드락 위험</td><td>충돌 많을 때 (재고 차감)</td></tr>
+        <tr><td><strong>원자적 UPDATE</strong></td><td><code>UPDATE SET qty=qty-1 WHERE qty&gt;=1</code></td><td>단순, 락 없음</td><td>조건 복잡해지면 관리 어려움</td><td>단순 증감 연산 <strong>권장</strong></td></tr>
+        <tr><td><strong>Redis 원자 연산</strong></td><td><code>DECR</code>, Lua 스크립트</td><td>초고 TPS 가능</td><td>DB와 일관성 유지 필요</td><td>콘서트 티켓, 쿠폰 발급</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — @Transactional 동작 안 하는 케이스</div>
+      <ol style="padding-left:18px;margin:6px 0">
+        <li><strong>자기 호출(Self-invocation)</strong>: 같은 클래스 내 메서드 → 프록시 우회</li>
+        <li><strong>private 메서드</strong>: Spring AOP 프록시 불가</li>
+        <li><strong>@Async 조합</strong>: 별도 스레드 → 트랜잭션 컨텍스트 없음</li>
+        <li><strong>RuntimeException 이 아닌 Checked Exception</strong>: 기본 rollback 안 됨</li>
+        <li><strong>트랜잭션 내 외부 HTTP 호출</strong>: 분산 트랜잭션 환상 <span class="deep">🔥 Deep-dive</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="api">
+    <h2>3. API 설계 원칙</h2>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>원칙</th><th>올바른 예</th><th>잘못된 예</th></tr></thead>
+      <tbody>
+        <tr><td>리소스는 명사</td><td><code>GET /orders/{id}</code></td><td><code>GET /getOrder?id=1</code></td></tr>
+        <tr><td>HTTP 메서드 의미 준수</td><td><code>DELETE /orders/{id}</code></td><td><code>POST /orders/delete/{id}</code></td></tr>
+        <tr><td>상태 코드 정확성</td><td>생성: 201, 없음: 404, 검증 실패: 400</td><td>모든 오류에 200 반환</td></tr>
+        <tr><td>에러 포맷 (RFC 7807)</td><td><code>{"type","title","status","detail"}</code></td><td>에러마다 다른 포맷</td></tr>
+        <tr><td>멱등성 키</td><td><code>Idempotency-Key</code> 헤더 지원</td><td>중복 요청 처리 없음</td></tr>
+        <tr><td>페이지네이션</td><td>Cursor/Keyset 방식</td><td>OFFSET 방식 (깊어질수록 느림)</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>에러 응답 표준 (RFC 7807 Problem Details)</h3>
+    <div class="diagram-wrap" style="text-align:left">
+<pre style="font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.6;background:#f8fafc;padding:0;overflow-x:auto">{
+  "type":   "https://example.com/errors/out-of-stock",
+  "title":  "재고 부족",
+  "status": 409,
+  "detail": "SKU sku-1234 의 가용 재고가 0입니다.",
+  "traceId": "4bf9e7b2-..."
+}</pre>
+      <div class="cap">모든 에러 응답을 동일한 스키마로 통일 → 클라이언트 에러 핸들링 단순화</div>
+    </div>
+  </section>
+
+  <section id="testing">
+    <h2>4. 테스트 전략</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    E2E["E2E 테스트\n브라우저/API 전체 흐름\n느림·비쌈·적게"]
+    Integration["통합 테스트\nTestcontainers + 실제 DB/Kafka\n핵심 경계 중심"]
+    Unit["단위 테스트\n도메인 로직·유틸\n빠름·많이"]
+
+    Unit --> Integration --> E2E
+
+    style Unit fill:#dcfce7,stroke:#22c55e
+    style Integration fill:#fef3c7,stroke:#f59e0b
+    style E2E fill:#fce7f3,stroke:#ec4899
+      </div>
+      <div class="cap">테스트 피라미드 — 단위가 가장 많고 E2E가 가장 적음</div>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정</div>
+      <strong>H2 인메모리 DB로 통합 테스트</strong>: MySQL과 격리수준·SQL 방언 차이로 프로덕션 버그 놓침.<br>
+      → <strong>Testcontainers</strong>로 실제 MySQL/PostgreSQL 컨테이너 사용 권장.
+    </div>
+
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>테스트 종류</th><th>도구</th><th>무엇을 검증</th><th>DB</th></tr></thead>
+      <tbody>
+        <tr><td>단위</td><td>JUnit5 + MockK/Mockito</td><td>도메인 규칙, 계산 로직</td><td>없음</td></tr>
+        <tr><td>통합 (슬라이스)</td><td>@DataJpaTest</td><td>쿼리, 인덱스, N+1</td><td>Testcontainers</td></tr>
+        <tr><td>통합 (전체)</td><td>@SpringBootTest + MockMvc</td><td>API 계약, 트랜잭션 경계</td><td>Testcontainers</td></tr>
+        <tr><td>계약</td><td>Pact</td><td>API 소비자·공급자 호환성</td><td>없음</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="observability">
+    <h2>5. 관측성 3기둥</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    App["⚙️ Application"]
+    Metric["📊 Metric\nPrometheus + Grafana\n시스템 건강 지표\nRED / USE 방법론"]
+    Log["📝 Log\nLoki / ELK\n이벤트 기록\nJSON 구조화 + TraceId"]
+    Trace["🔍 Trace\nOpenTelemetry + Tempo\n요청 흐름 추적\nSpan 연결"]
+
+    App --> Metric
+    App --> Log
+    App --> Trace
+
+    style Metric fill:#dbeafe,stroke:#3b82f6
+    style Log fill:#fef3c7,stroke:#f59e0b
+    style Trace fill:#dcfce7,stroke:#22c55e
+      </div>
+      <div class="cap">관측성 3기둥 (Three Pillars of Observability)</div>
+    </div>
+
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>기둥</th><th>질문</th><th>도구</th><th>핵심 규칙</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Metric (지표)</strong></td><td>"무언가 잘못됐나?"</td><td>Prometheus, Micrometer</td><td>RED(요청률·에러율·지연) / USE(사용률·포화·에러)</td></tr>
+        <tr><td><strong>Log (로그)</strong></td><td>"무슨 일이 있었나?"</td><td>Loki, ELK</td><td>JSON 구조화, TraceId/SpanId 포함, PII 마스킹</td></tr>
+        <tr><td><strong>Trace (추적)</strong></td><td>"어디서 느려졌나?"</td><td>OpenTelemetry, Tempo</td><td>W3C Trace Context 전파, 샘플링율 조정</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="pitfalls">
+    <h2>6. 자주 나오는 함정 (면접 필수)</h2>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>#</th><th>함정</th><th>증상</th><th>해결책</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>트랜잭션 내 외부 HTTP/Kafka 호출</td><td>부분 성공/실패, 이벤트 유실</td><td>Outbox 패턴 <span class="deep">🔥</span></td></tr>
+        <tr><td>2</td><td>@Transactional 자기 호출</td><td>트랜잭션 미적용</td><td>별도 Bean으로 분리</td></tr>
+        <tr><td>3</td><td>낙관적 락 없이 재고 차감</td><td>Lost update, 오버셀</td><td>@Version 또는 원자적 UPDATE</td></tr>
+        <tr><td>4</td><td>Retry 무한루프</td><td>Retry storm → 시스템 다운</td><td>Exponential backoff + 최대 횟수</td></tr>
+        <tr><td>5</td><td>Timeout 미설정</td><td>스레드 풀 고갈, 연쇄 장애</td><td>모든 외부 호출에 Timeout 명시</td></tr>
+        <tr><td>6</td><td>N+1 쿼리</td><td>페이지 로드 느림</td><td>Fetch join / @EntityGraph / Batch size</td></tr>
+        <tr><td>7</td><td>로그에 PII/토큰 노출</td><td>보안 사고</td><td>마스킹 필터, 구조화 로그 검증</td></tr>
+        <tr><td>8</td><td>H2로 통합 테스트</td><td>Mock은 통과, 프로덕션 실패</td><td>Testcontainers</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="quiz">
+    <h2>이해도 확인 질문</h2>
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>Spring의 <code>@Transactional</code>이 <strong>동작하지 않는 케이스</strong>를 4가지 이상 설명하고, 각각의 원인과 해결책은 무엇인가요?</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div>
+        <textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장)"></textarea>
+      </div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>재고 차감 시 동시에 100개의 요청이 들어옵니다. <strong>낙관적 락 / 비관적 락 / 원자적 UPDATE / Redis 원자 연산</strong> 4가지 방식의 코드 흐름과 Trade-off를 설명해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div>
+        <textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장)"></textarea>
+      </div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>"테스트 환경에서는 정상인데 프로덕션에서 간헐적으로 실패합니다" — 원인 후보를 <strong>동시성 / 타이밍 / 환경 차이</strong> 관점에서 각 2개씩 총 6개 이상 제시해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div>
+        <textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장)"></textarea>
+      </div>
+    </div>
+    <div class="feedback-box">
+      <p>답변 작성 후 복사해서 채팅창에 붙여넣고 "피드백 주세요"라고 입력하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">backend-dev-coach</div><div class="topic">Outbox 패턴 — DB + 이벤트 원자성 (Concept)</div></div>
+      <div class="next-card"><div class="coach">backend-dev-coach + database-coach</div><div class="topic">재고 차감 동시성 심화 실습</div></div>
+      <div class="next-card"><div class="coach">backend-dev-coach</div><div class="topic">Resilience4j Circuit Breaker 구현 (Review)</div></div>
+      <div class="next-card"><div class="coach">backend-dev-coach</div><div class="topic">OpenTelemetry 분산 추적 설정 (Design)</div></div>
+    </div>
+  </section>
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'default',themeVariables:{primaryColor:'#cffafe',primaryTextColor:'#1e293b',primaryBorderColor:'#0891b2',lineColor:'#64748b',fontSize:'13px'},flowchart:{curve:'basis',padding:20},sequence:{actorMargin:50,messageMargin:30}});
+const NS='jobStudy::backend::00-introduction::';
+['ans1','ans2','ans3'].forEach((id,i)=>{
+  const el=document.getElementById(id);if(!el)return;
+  const sv=localStorage.getItem(NS+id);if(sv)el.value=sv;
+  let t;el.addEventListener('input',()=>{clearTimeout(t);t=setTimeout(()=>{localStorage.setItem(NS+id,el.value);const b=document.getElementById('saved'+(i+1));if(b){b.classList.add('show');setTimeout(()=>b.classList.remove('show'),1800);}},400);});
+});
+const QS=['Q1. @Transactional 동작 안 하는 케이스 4가지 이상 — 원인과 해결책','Q2. 재고 차감 동시 100개 요청 — 낙관적 락/비관적 락/원자적 UPDATE/Redis 방식 Trade-off','Q3. 프로덕션 간헐 실패 원인 — 동시성/타이밍/환경 관점에서 각 2개씩'];
+function copyForFeedback(){const lines=['[백엔드 구현 핵심 개념 개관 — Q&A 피드백 요청]\n'];['ans1','ans2','ans3'].forEach((id,i)=>{const a=(document.getElementById(id)?.value||'').trim()||'(답변 없음)';lines.push(QS[i]);lines.push('A'+(i+1)+'. '+a+'\n');});const text=lines.join('\n');const el=document.getElementById('copyResult');navigator.clipboard?.writeText(text).then(()=>el.textContent='✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.').catch(()=>{el.textContent='⚠️ 직접 복사하세요.';});}
+const secs=document.querySelectorAll('section[id]'),links=document.querySelectorAll('#sidebar a');
+secs.forEach(s=>new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.classList.remove('active'));const a=document.querySelector(`#sidebar a[href="#${e.target.id}"]`);if(a)a.classList.add('active');}});},{threshold:.25}).observe(s));
+</script>
+</body>
+</html>

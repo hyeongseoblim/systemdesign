@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>물류 도메인 전체 지도 — OMS / WMS / TMS 개관</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg); color: var(--text);
+      display: flex; min-height: 100vh;
+      font-size: 14.5px; line-height: 1.75;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 248px; min-height: 100vh;
+      background: var(--card); border-right: 1px solid var(--border);
+      padding: 24px 0; position: fixed; left: 0; top: 0;
+      overflow-y: auto; z-index: 50;
+    }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a {
+      display: block; padding: 7px 20px;
+      font-size: 13px; color: var(--muted);
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+
+    /* ── Main ── */
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+
+    /* ── Page header ── */
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip {
+      font-size: 12px; font-weight: 500;
+      padding: 3px 11px; border-radius: 20px;
+      background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+    }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+
+    /* ── Sections ── */
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 {
+      font-size: 20px; font-weight: 700;
+      padding-bottom: 12px; border-bottom: 2px solid var(--border);
+      margin-bottom: 24px; display: flex; align-items: center; gap: 8px;
+    }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+
+    /* ── Diagrams ── */
+    .diagram-wrap {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 28px 24px 20px;
+      margin: 18px 0; overflow-x: auto; text-align: center;
+    }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+
+    /* ── Tables ── */
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 13.5px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    /* ── System cards ── */
+    .sys-card {
+      border-radius: 10px; padding: 18px 22px;
+      margin-bottom: 20px; border-left: 4px solid;
+    }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .sys-card.lm  { background: var(--lm);  border-color: var(--lm-b);  color: var(--lm-t);  }
+    .sys-card.ret { background: var(--ret); border-color: var(--ret-b); color: var(--ret-t); }
+
+    /* ── Callouts ── */
+    .callout {
+      border-radius: 8px; padding: 13px 16px;
+      margin: 14px 0; border-left: 4px solid; font-size: 13.5px;
+    }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+
+    /* ── Badges ── */
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+
+    /* ── Q&A cards ── */
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+
+    /* ── Next steps ── */
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+
+    /* ── Q&A Input ── */
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea {
+      width: 100%; min-height: 110px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif;
+      font-size: 14px; line-height: 1.7; resize: vertical;
+      background: #fafcff; color: var(--text);
+      transition: border-color .15s, background .15s;
+    }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+
+    /* ── Feedback button section ── */
+    .feedback-box {
+      background: var(--card); border: 1.5px dashed var(--border);
+      border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center;
+    }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 8px; padding: 10px 22px;
+      font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════ SIDEBAR ══════════════════ -->
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🚚 logistics-domain-coach</div>
+    <h2>물류 도메인<br/>전체 지도</h2>
+  </div>
+  <div class="group-label">밸류체인</div>
+  <a href="#overview">1. 전체 흐름</a>
+  <a href="#oms">2. OMS — 주문관리</a>
+  <a href="#wms">3. WMS — 창고관리</a>
+  <a href="#tms">4. TMS — 운송관리</a>
+  <a href="#lastmile">5. Last-mile</a>
+  <div class="group-label">사례 & 연결</div>
+  <a href="#coupang">쿠팡 로켓배송 매핑</a>
+  <a href="#design">시스템 디자인 연결</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+
+<!-- ══════════════════ MAIN ══════════════════ -->
+<main>
+
+  <!-- Page Header -->
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">logistics-domain-coach</span>
+      <span class="chip">2026-04-15</span>
+      <span class="chip green">Session #1</span>
+    </div>
+    <h1>물류 도메인 전체 지도<br>OMS / WMS / TMS 개관</h1>
+    <p>밸류체인 전체 흐름과 3대 시스템의 역할 경계를 확실히 그리기. 이후 Deep-dive 주제는 <span class="deep">🔥 Deep-dive</span> 로 표시.</p>
+  </header>
+
+  <!-- ── Section 1: 전체 흐름 ── -->
+  <section id="overview">
+    <h2>1. 물류 밸류체인 한눈에</h2>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    Customer(["👤 고객 주문"])
+    OMS["🧠 OMS\nOrder Management System\n주문관리 — 주문의 두뇌"]
+    WMS["🏭 WMS\nWarehouse Management System\n창고관리 — 창고의 손발"]
+    TMS["🚛 TMS\nTransportation Management System\n운송관리 — 운송의 신경망"]
+    LM["📦 Last-mile\n라스트마일 — 고객 만족의 80%"]
+    Done(["✅ 배송 완료"])
+    Returns["♻️ Reverse Logistics\n역물류 — 반품·환불·재판매"]
+
+    Customer -->|"OrderPlaced"| OMS
+    OMS -->|"OrderConfirmed\nAllocationRequested"| WMS
+    WMS -->|"PackageReady\nShipmentRequested"| TMS
+    TMS -->|"InTransit\nOutForDelivery"| LM
+    LM -->|"Delivered"| Done
+    LM -->|"DeliveryFailed"| Returns
+    Done -.->|"ReturnRequested"| Returns
+    Returns -.->|"Restocked / Refunded"| OMS
+
+    style Customer fill:#f1f5f9,stroke:#94a3b8
+    style OMS     fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a
+    style WMS     fill:#fef3c7,stroke:#f59e0b,color:#78350f
+    style TMS     fill:#ede9fe,stroke:#8b5cf6,color:#3b0764
+    style LM      fill:#dcfce7,stroke:#22c55e,color:#14532d
+    style Returns fill:#fce7f3,stroke:#ec4899,color:#831843
+    style Done    fill:#f0fdf4,stroke:#16a34a
+      </div>
+      <div class="cap">물류 밸류체인 전체 흐름 — 주문 발생부터 반품·환불까지</div>
+    </div>
+
+    <h3>단계별 핵심 정리표</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>단계</th><th>주요 Entity</th><th>도메인 이벤트 (Domain Event)</th><th>대표 KPI</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong style="color:var(--oms-b)">🧠 OMS</strong></td>
+            <td><code>Order</code>, <code>OrderLine</code>, <code>Customer</code>, <code>Payment</code>, <code>Allocation</code></td>
+            <td><code>OrderPlaced</code>, <code>OrderConfirmed</code>, <code>OrderCanceled</code>, <code>AllocationDecided</code></td>
+            <td>주문 수락률, 취소율, Cut-off 준수율</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--wms-b)">🏭 WMS</strong></td>
+            <td><code>SKU</code>, <code>Inventory</code>, <code>Bin</code>, <code>PickList</code>, <code>Package</code></td>
+            <td><code>InboundReceived</code>, <code>InventoryReserved</code>, <code>PickingStarted</code>, <code>OutboundShipped</code></td>
+            <td>재고 정확도, 피킹 정확도, UPH</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--tms-b)">🚛 TMS</strong></td>
+            <td><code>Shipment</code>, <code>Route</code>, <code>Waybill</code>, <code>Vehicle</code>, <code>Driver</code>, <code>Hub</code></td>
+            <td><code>ShipmentCreated</code>, <code>RouteAssigned</code>, <code>ArrivedAtHub</code>, <code>DepartedHub</code></td>
+            <td>OTD(정시배송률), 차량 적재율, 구간 지연율</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--lm-b)">📦 Last-mile</strong></td>
+            <td><code>DeliveryTask</code>, <code>TrackingEvent</code>, <code>POD</code></td>
+            <td><code>OutForDelivery</code>, <code>DeliveryAttempted</code>, <code>Delivered</code>, <code>DeliveryFailed</code></td>
+            <td>최초 배송 성공률, 고객 CSAT, 재방문 비율</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--ret-b)">♻️ Returns</strong></td>
+            <td><code>ReturnRequest</code>, <code>ReturnPickup</code>, <code>QCResult</code>, <code>Refund</code></td>
+            <td><code>ReturnRequested</code>, <code>ReturnPickedUp</code>, <code>ReturnInspected</code>, <code>Refunded</code></td>
+            <td>반품률, 재판매율, 처리 리드타임</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Section 2: OMS ── -->
+  <section id="oms">
+    <h2>2. 🧠 OMS — Order Management System (주문관리)</h2>
+
+    <div class="sys-card oms">
+      <div class="sys-label">핵심 책임</div>
+      <div class="sys-title">주문이라는 비즈니스 객체의 <em>라이프사이클 전체</em>를 관리한다.</div>
+    </div>
+
+    <h3>주문 상태 머신 (State Machine)</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> PLACED : OrderPlaced
+    PLACED --> PAID : PaymentCaptured
+    PLACED --> CANCELED : CancelByCustomer
+    PAID --> ALLOCATED : AllocationDecided
+    PAID --> CANCELED : CancelBeforeAllocation
+    ALLOCATED --> FULFILLING : PickingStarted
+    ALLOCATED --> CANCELED : CancelBeforeFulfill
+    FULFILLING --> SHIPPED : OutboundShipped
+    SHIPPED --> DELIVERED : DeliveryConfirmed
+    SHIPPED --> DELIVERY_FAILED : DeliveryFailed
+    DELIVERY_FAILED --> SHIPPED : ReAttempt
+    DELIVERY_FAILED --> RETURNED : ReturnToSender
+    DELIVERED --> CLOSED : AfterReturnWindow
+    DELIVERED --> RETURNED : ReturnRequested
+    RETURNED --> REFUNDED : RefundProcessed
+    CANCELED --> [*]
+    CLOSED --> [*]
+    REFUNDED --> [*]
+      </div>
+      <div class="cap">주문 상태 전이 다이어그램 — Boolean 플래그 대신 이 상태 머신으로 강제해야 함</div>
+    </div>
+
+    <h3>왜 WMS / TMS 에서 분리되는가</h3>
+    <ul>
+      <li>주문은 <strong>여러 채널</strong>(자사 앱·오픈마켓·B2B)에서 들어오고, <strong>여러 창고·파트너</strong>에 할당된다. 멀티 소스·멀티 싱크를 흡수하는 허브 역할이 필요.</li>
+      <li>결제·쿠폰·정산·고객 CS 가 모두 주문에 엮여 있어, WMS/TMS 에 섞으면 <strong>Bounded Context(경계 있는 컨텍스트)</strong>가 무너진다.</li>
+    </ul>
+
+    <h3>내부 주요 기능</h3>
+    <ul>
+      <li><strong>주문 수집 & 검증</strong>: 재고·결제·주소 정규화·Fraud(사기) 검증</li>
+      <li><strong>Allocation(할당)</strong>: 어느 창고에서 어느 SKU 를 보낼지 결정. 단일창고 / 분할출고(Split shipment) / 드랍쉬핑(Dropshipping) 판단</li>
+      <li><strong>결제/정산 연동</strong>: Auth(인증) → Capture(매입) → Refund(환불). 부분 취소·부분 환불 처리</li>
+    </ul>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정</div>
+      주문 상태를 Boolean 플래그 여러 개로 관리 → 조합 폭발. <code>Enum + 상태 머신</code>으로 강제해야 함.<br>
+      분할 출고 시 "주문 1건 = 배송 1건" 가정이 깨짐. <code>Order ↔ Shipment</code>가 <strong>1:N</strong>.<br>
+      Cut-off time(마감시각) 전후 주문 몰림 → 동시성 + 트랜잭션 경쟁 <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- ── Section 3: WMS ── -->
+  <section id="wms">
+    <h2>3. 🏭 WMS — Warehouse Management System (창고관리)</h2>
+
+    <div class="sys-card wms">
+      <div class="sys-label">핵심 책임</div>
+      <div class="sys-title"><em>실물 재고</em>의 입고부터 출고까지, 창고 내부 작업 전체를 관리한다.</div>
+    </div>
+
+    <h3>재고 상태 분류</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    OH["On-hand\n실물 재고\n창고에 실제 존재"]
+    RS["Reserved\n예약 재고\n주문에 할당됨"]
+    AV["Available\n가용 재고\n= On-hand − Reserved"]
+    IT["InTransit\n이동 중\n창고 간 이동"]
+    DM["Damaged\n손상/폐기"]
+    SP["Shipped\n출고 완료"]
+
+    OH -->|"주문 Allocate"| RS
+    OH --> AV
+    OH --> DM
+    OH --> IT
+    RS -->|"Commit (출고 확정)"| SP
+    RS -->|"Expire / Cancel"| AV
+
+    style OH fill:#fef3c7,stroke:#f59e0b
+    style RS fill:#fce7f3,stroke:#ec4899
+    style AV fill:#dcfce7,stroke:#22c55e
+    style IT fill:#dbeafe,stroke:#3b82f6
+    style DM fill:#fee2e2,stroke:#ef4444
+    style SP fill:#e0e7ff,stroke:#6366f1
+      </div>
+      <div class="cap">재고 상태 분류 — <strong>On-hand ≠ Available</strong> 임을 항상 구분할 것</div>
+    </div>
+
+    <h3>Reserve → Commit → Ship 3단계</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant OMS as OMS
+    participant Inv as WMS Inventory
+    participant Pick as Picker
+    participant Ship as Shipment
+
+    OMS->>Inv: ReserveRequest(sku, qty, orderId, TTL)
+    Inv->>Inv: Available -= qty / Reserved += qty
+    Inv-->>OMS: Reserved(reservationId)
+    Note over Inv: 만료 TTL 내에 Commit 없으면 자동 롤백
+
+    OMS->>Inv: CommitRequest(reservationId)
+    Inv->>Pick: CreatePickList
+    Pick->>Inv: PickCompleted
+    Inv->>Inv: On-hand -= qty / Reserved -= qty
+    Inv-->>OMS: Committed
+
+    Inv->>Ship: ShipmentReady(packageId)
+    Ship-->>OMS: OutboundShipped
+      </div>
+      <div class="cap">재고 Reserve → Commit → Ship — 이 흐름을 모르면 면접에서 탈락한다</div>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트</div>
+      "재고 차감을 어떻게 설계하시겠어요?" → <strong>"그냥 -1 하면 됩니다"</strong>는 즉시 탈락.<br>
+      Reserve → Commit → Ship 3단계 + 만료 처리 + 원자적 조건부 UPDATE(또는 낙관적 락)를 이야기해야 함. <span class="deep">🔥 Deep-dive</span>
+    </div>
+
+    <h3>피킹 전략 비교</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>전략</th><th>방식</th><th>적합한 상황</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Batch picking</strong></td><td>여러 주문을 한 번에 묶어 피킹</td><td>SKU 집중, 동선 반복</td></tr>
+          <tr><td><strong>Zone picking</strong></td><td>창고 구역별 담당자 분리</td><td>창고가 크고 구역 특성이 뚜렷할 때</td></tr>
+          <tr><td><strong>Wave picking</strong></td><td>특정 시간대에 집중 처리</td><td>Cut-off 기반 새벽배송 (컬리 샛별)</td></tr>
+          <tr><td><strong>Cluster picking</strong></td><td>카트 여러 칸에 여러 주문 동시 처리</td><td>중간 규모, 균형 효율</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정</div>
+      <strong>Oversell(초과판매)</strong>: 예약 만료를 안 걸어서 주문은 받았는데 실물이 없음. <span class="deep">🔥 Deep-dive</span><br>
+      창고 간 이동(Transfer) 중 "출발지에서 빠졌는데 도착지에 아직 안 찍힌" 상태 → InTransit 명시 필요.
+    </div>
+  </section>
+
+  <!-- ── Section 4: TMS ── -->
+  <section id="tms">
+    <h2>4. 🚛 TMS — Transportation Management System (운송관리)</h2>
+
+    <div class="sys-card tms">
+      <div class="sys-label">핵심 책임</div>
+      <div class="sys-title"><em>화물을 언제·어떻게·얼마에</em> 목적지까지 보낼지 결정하고 집행한다.</div>
+    </div>
+
+    <h3>허브앤스포크 (Hub-and-spoke) 네트워크</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    P1[판매자 A] --> OH
+    P2[판매자 B] --> OH
+    P3[판매자 C] --> OH
+    OH["🏢 서울 메가허브\n발송 Hub"]
+    OH -->|"간선 트럭\n야간 운송"| DH
+    DH["🏢 부산 메가허브\n도착 Hub"]
+    DH --> C1["📍 캠프 A\n해운대"]
+    DH --> C2["📍 캠프 B\n동래"]
+    C1 --> D1((기사 1))
+    C1 --> D2((기사 2))
+    C2 --> D3((기사 3))
+    D1 --> G1([고객 ①])
+    D2 --> G2([고객 ②])
+    D3 --> G3([고객 ③])
+
+    style OH fill:#ede9fe,stroke:#8b5cf6
+    style DH fill:#ede9fe,stroke:#8b5cf6
+    style C1 fill:#fef3c7,stroke:#f59e0b
+    style C2 fill:#fef3c7,stroke:#f59e0b
+      </div>
+      <div class="cap">허브앤스포크 네트워크 — CJ대한통운·FedEx 표준 모델. 쿠팡은 이 모델의 하이브리드.</div>
+    </div>
+
+    <h3>허브앤스포크 vs 포인트투포인트</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>허브앤스포크</th><th>포인트투포인트</th></tr></thead>
+        <tbody>
+          <tr><td>적재 효율</td><td>높음 (허브에서 모아 재분류)</td><td>낮음 (차량 공간 낭비)</td></tr>
+          <tr><td>리드타임</td><td>김 (허브 경유 필요)</td><td>짧음 (직행)</td></tr>
+          <tr><td>네트워크 복잡도</td><td>낮음 (N 노드 → N 링크)</td><td>높음 (N² 링크)</td></tr>
+          <tr><td>대표 사례</td><td>CJ대한통운·FedEx·DHL</td><td>쿠팡 일부 구간·퀵 배송</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>운송장 (Waybill) 상태 머신</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> CREATED : 운송장 발행
+    CREATED --> PICKED_UP : 집하 완료
+    PICKED_UP --> IN_TRANSIT : 간선 운송 출발
+    IN_TRANSIT --> IN_TRANSIT : 허브 경유 (복수 가능)
+    IN_TRANSIT --> OUT_FOR_DELIVERY : 캠프 도착 / 기사 배차
+    OUT_FOR_DELIVERY --> DELIVERED : 수령 완료 (POD)
+    OUT_FOR_DELIVERY --> DELIVERY_FAILED : 부재 / 수령 거부
+    DELIVERY_FAILED --> OUT_FOR_DELIVERY : 재방문
+    DELIVERY_FAILED --> RETURNED : 최종 반송
+    DELIVERED --> [*]
+    RETURNED --> [*]
+      </div>
+      <div class="cap">운송장 상태 전이 — TrackingEvent 는 이 전이의 각 시점에 발행됨</div>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정</div>
+      기사 앱 <strong>오프라인 동기화</strong>: 지하·산간에서 스캔 누락 후 재접속 시 이벤트 재생 필요.<br>
+      운송장 상태 <strong>중복 수신</strong>: 동일 TrackingEvent 가 여러 경로로 올 수 있음 → <code>Idempotency(멱등성)</code> 필수. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- ── Section 5: Last-mile ── -->
+  <section id="lastmile">
+    <h2>5. 📦 Last-mile (라스트마일)</h2>
+
+    <div class="sys-card lm">
+      <div class="sys-label">비용과 만족도의 결정적 구간</div>
+      <div class="sys-title">전체 물류 비용의 <em>40–60%</em>를 차지하며, 고객이 직접 경험하는 유일한 구간</div>
+    </div>
+
+    <h3>주요 시나리오 처리</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>시나리오</th><th>처리 방식</th><th>시스템 대응</th></tr></thead>
+        <tbody>
+          <tr><td>정상 배송</td><td>기사가 직접 전달 + POD 촬영</td><td><code>DELIVERED</code> 이벤트 → OMS 상태 동기화</td></tr>
+          <tr><td>부재</td><td>1회 재방문 / 문앞 배송 / 보관함</td><td><code>DELIVERY_FAILED</code> → ReAttempt 일정 등록</td></tr>
+          <tr><td>수령 거부</td><td>반송 (Return to Sender) 처리</td><td><code>RETURNED</code> → OMS 반품 흐름 트리거</td></tr>
+          <tr><td>오배송</td><td>회수 + 재배송 or 보상</td><td>별도 ClaimEvent, CS 연동 필요</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 (최상위 단골)</div>
+      수천만 건/일 규모의 <strong>TrackingEvent Fan-out 설계</strong>: Kafka + CDC(Change Data Capture) + 최종 일관성(Eventual Consistency) 은 대형 이커머스 시스템 디자인 면접의 최상위 단골 주제. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- ── Section 6: 쿠팡 ── -->
+  <section id="coupang">
+    <h2>6. 쿠팡 로켓배송 — 수직 통합 사례</h2>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>레이어</th><th>쿠팡에서의 구현</th><th>핵심 특징</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong style="color:var(--oms-b)">OMS</strong></td>
+            <td>쿠팡 앱 주문 + 로켓배송 전용 SLA 판정</td>
+            <td>Cut-off(자정)까지 주문 → 하루 안에 ALLOCATED 진입</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--wms-b)">WMS</strong></td>
+            <td>전국 100+ 풀필먼트 센터(FC) 자체 운영</td>
+            <td>직매입·직보관·직배송. 피킹 동선 최적화가 핵심 경쟁력</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--tms-b)">TMS</strong></td>
+            <td>쿠팡로지스틱스서비스(CLS) 자체 배송망</td>
+            <td>허브·캠프·기사 수직 통합 → 데이터 일관성↑, 리드타임↓</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--lm-b)">Last-mile</strong></td>
+            <td>쿠팡친구 기사 앱, 문앞 배송, 실시간 위치 공유</td>
+            <td>POD(배송증빙) 사진 자동 촬영, 고객 실시간 추적</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--ret-b)">Returns</strong></td>
+            <td>앱 반품 신청 → 같은 기사가 다음 방문 때 수거</td>
+            <td>정방향·역방향 통합 → 역물류 리드타임 대폭 단축</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 컬리 샛별배송 — 시간 제약이 모든 설계를 지배</div>
+      <strong>Cut-off = 23:00 / Delivery = 다음날 07:00 이전.</strong>
+      약 8시간 안에 피킹·패킹·간선·라스트마일을 전부 완료해야 함.<br>
+      → WMS Wave picking(집중 피킹), TMS 야간 간선 운영, 냉장 Cold-chain 유지가 모두 이 제약에서 파생.
+    </div>
+  </section>
+
+  <!-- ── Section 7: 시스템 디자인 연결 ── -->
+  <section id="design">
+    <h2>7. 백엔드 시스템 디자인 연결</h2>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>시스템</th><th>단골 이슈</th><th>관련 기술</th><th>담당 코치</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong style="color:var(--oms-b)">OMS</strong></td>
+            <td>주문 폭주 시 결제·재고 트랜잭션 경쟁</td>
+            <td>Saga, Outbox, Idempotency-Key</td>
+            <td><code>backend-architecture-coach</code></td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--wms-b)">WMS</strong></td>
+            <td>재고 차감 동시성, Oversell 방지</td>
+            <td>낙관적 락, 조건부 UPDATE, Redis 원자 감소</td>
+            <td><code>database-coach</code> + <code>backend-dev-coach</code></td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--tms-b)">TMS</strong></td>
+            <td>실시간 배차 재최적화, VRP 스케일링</td>
+            <td>OR-Tools, 메타휴리스틱, 분산 큐</td>
+            <td><code>system-design-coach</code></td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--lm-b)">Last-mile</strong></td>
+            <td>수천만 TrackingEvent/일 Fan-out</td>
+            <td>Kafka, CDC, 최종 일관성</td>
+            <td><code>system-design-coach</code></td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--ret-b)">Returns</strong></td>
+            <td>정방향·역방향 상태 합류</td>
+            <td>상태 머신, 이벤트 소싱 일부</td>
+            <td><code>backend-architecture-coach</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Section 8: 이해도 확인 ── -->
+  <section id="quiz">
+    <h2>8. 이해도 확인 질문</h2>
+
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>OMS 의 "가용 재고(Available)" 와 WMS 의 "실물 재고(On-hand)" 가 순간적으로 <strong>다를 수 있는 상황</strong>을 3가지 이상 설명해보세요. 이 차이를 어떻게 허용/동기화해야 할지 방향도 함께.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>내 답변</span>
+          <span class="saved-badge" id="saved1">저장됨 ✓</span>
+        </div>
+        <textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>쿠팡(수직 통합) vs 전통 이커머스(3PL 위탁) — <em>리드타임 · 데이터 일관성 · 확장성 · 초기 투자비</em> 관점에서 장단점을 비교해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>내 답변</span>
+          <span class="saved-badge" id="saved2">저장됨 ✓</span>
+        </div>
+        <textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>"주문 1건 = 배송 1건" 이 현실에서 깨지는 구체 시나리오 2개를 제시하고, 이것이 <code>Order</code>와 <code>Shipment</code>의 <strong>관계 카디널리티</strong>와 <strong>상태 전이 설계</strong>에 어떤 영향을 주는지 설명해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>내 답변</span>
+          <span class="saved-badge" id="saved3">저장됨 ✓</span>
+        </div>
+        <textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <!-- ── Section 9: 다음 학습 ── -->
+  <section id="next">
+    <h2>9. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card">
+        <div class="coach">system-design-coach</div>
+        <div class="topic">Last-mile 추적 시스템 설계 (Design 모드)</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">database-coach + backend-dev-coach</div>
+        <div class="topic">재고 차감 동시성 문제 심화</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">backend-architecture-coach</div>
+        <div class="topic">주문-결제-배송 Saga 설계 (Interview 모드)</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">system-design-coach</div>
+        <div class="topic">VRP(배차) 알고리즘 기초와 스케일링</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // ── Mermaid ──
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    themeVariables: {
+      primaryColor: '#dbeafe',
+      primaryTextColor: '#1e293b',
+      primaryBorderColor: '#3b82f6',
+      lineColor: '#64748b',
+      secondaryColor: '#fef3c7',
+      tertiaryColor: '#ede9fe',
+      fontSize: '13px'
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+
+  // ── Active sidebar link on scroll ──
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  // ── Q&A localStorage (key namespace per file) ──
+  const NS = 'jobStudy::logistics::00-domain-overview::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+
+  // Load saved answers on page load
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(NS + id);
+    if (saved) el.value = saved;
+
+    // Auto-save with debounce
+    let timer;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(NS + id, el.value);
+        const badge = document.getElementById('saved' + (i + 1));
+        if (badge) {
+          badge.classList.add('show');
+          setTimeout(() => badge.classList.remove('show'), 1800);
+        }
+      }, 400);
+    });
+  });
+
+  // ── Copy Q&A for feedback ──
+  function copyForFeedback() {
+    const questions = [
+      'Q1. OMS의 "가용 재고(Available)"와 WMS의 "실물 재고(On-hand)"가 순간적으로 다를 수 있는 상황을 3가지 이상 설명하고, 동기화 방향까지 제시해보세요.',
+      'Q2. 쿠팡(수직 통합) vs 전통 이커머스(3PL 위탁) — 리드타임·데이터 일관성·확장성·초기 투자비 관점에서 비교해보세요.',
+      'Q3. "주문 1건 = 배송 1건"이 깨지는 구체 시나리오 2개와, Order ↔ Shipment의 카디널리티·상태 전이 설계에 미치는 영향을 설명해보세요.'
+    ];
+
+    const lines = ['[물류 도메인 개관 — 이해도 확인 Q&A 피드백 요청]\n세션: logistics/00-domain-overview.html\n'];
+    ansIds.forEach((id, i) => {
+      const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)';
+      lines.push(questions[i]);
+      lines.push('A' + (i + 1) + '. ' + ans + '\n');
+    });
+
+    const text = lines.join('\n');
+    const resultEl = document.getElementById('copyResult');
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.';
+      }).catch(() => fallbackCopy(text, resultEl));
+    } else {
+      fallbackCopy(text, resultEl);
+    }
+  }
+
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try {
+      document.execCommand('copy');
+      el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.';
+    } catch {
+      el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.';
+    }
+    document.body.removeChild(ta);
+  }
+</script>
+</body>
+</html>

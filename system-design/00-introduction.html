@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시스템 디자인 면접 방법론 개관</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root{--bg:#f8fafc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--accent:#6366f1}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14.5px;line-height:1.75}
+#sidebar{width:248px;min-height:100vh;background:var(--card);border-right:1px solid var(--border);padding:24px 0;position:fixed;left:0;top:0;overflow-y:auto;z-index:50}
+#sidebar .brand{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:16px}
+#sidebar .brand .tag{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+#sidebar .brand h2{font-size:14px;font-weight:700;line-height:1.4}
+#sidebar .group-label{padding:12px 20px 4px;font-size:10.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em}
+#sidebar a{display:block;padding:7px 20px;font-size:13px;color:var(--muted);text-decoration:none;border-left:3px solid transparent;transition:all .15s}
+#sidebar a:hover,#sidebar a.active{color:var(--accent);background:var(--bg);border-left-color:var(--accent)}
+main{margin-left:248px;flex:1;max-width:1080px;padding:48px 56px}
+.page-hdr{margin-bottom:48px;padding-bottom:32px;border-bottom:2px solid var(--border)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{font-size:12px;font-weight:500;padding:3px 11px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.accent{background:#ede9fe;border-color:var(--accent);color:var(--accent)}
+.page-hdr h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:10px}
+.page-hdr p{color:var(--muted)}
+section{margin-bottom:64px;scroll-margin-top:24px}
+section>h2{font-size:20px;font-weight:700;padding-bottom:12px;border-bottom:2px solid var(--border);margin-bottom:24px}
+h3{font-size:16px;font-weight:600;margin:28px 0 12px}
+p{margin-bottom:10px}ul,ol{padding-left:22px;margin:8px 0 10px}li{margin-bottom:4px}
+.diagram-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px 24px 20px;margin:18px 0;overflow-x:auto;text-align:center}
+.diagram-wrap .cap{font-size:12px;color:var(--muted);margin-top:14px}
+.mermaid{display:inline-block}
+.tbl-wrap{overflow-x:auto;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+th{background:#f1f5f9;font-weight:600;font-size:12.5px;padding:9px 14px;border-bottom:1px solid var(--border);text-align:left}
+td{padding:9px 14px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+tr:last-child td{border-bottom:none}tr:hover td{background:#fafafa}
+.callout{border-radius:8px;padding:13px 16px;margin:14px 0;border-left:4px solid;font-size:13.5px}
+.callout .c-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.callout.interview{background:#fef2f2;border-color:#dc2626}.callout.interview .c-title{color:#dc2626}
+.callout.warn{background:#fff7ed;border-color:#ea580c}.callout.warn .c-title{color:#ea580c}
+.callout.tip{background:#f0fdf4;border-color:#16a34a}.callout.tip .c-title{color:#16a34a}
+.deep{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:4px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;margin-left:6px}
+code{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#be185d}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:14px}
+.q-card .q-num{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px}
+.ans-area{margin-top:12px}
+.ans-label{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.saved-badge{font-size:11px;color:#16a34a;opacity:0;transition:opacity .4s}
+.saved-badge.show{opacity:1}
+.ans-area textarea{width:100%;min-height:110px;border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-family:'Noto Sans KR',sans-serif;font-size:14px;line-height:1.7;resize:vertical;background:#fafcff;color:var(--text);transition:border-color .15s}
+.ans-area textarea:focus{outline:none;border-color:var(--accent);background:#fff}
+.ans-area textarea::placeholder{color:#cbd5e1}
+.feedback-box{background:var(--card);border:1.5px dashed var(--border);border-radius:12px;padding:22px 24px;margin-top:28px;text-align:center}
+.feedback-box p{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+.btn-feedback{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:background .15s}
+.btn-feedback:hover{background:#4f46e5}
+.copy-result{margin-top:12px;font-size:13px;color:#16a34a;min-height:20px}
+.next-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:14px}
+.next-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;transition:box-shadow .15s}
+.next-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.next-card .coach{font-size:11px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:5px}
+.next-card .topic{font-size:13px;font-weight:500}
+.step-badge{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700;margin-right:8px;flex-shrink:0}
+.step-row{display:flex;align-items:flex-start;gap:0;margin-bottom:10px}
+.step-row .step-content{flex:1}
+@media(max-width:860px){#sidebar{display:none}main{margin-left:0;padding:24px 20px}}
+</style>
+</head>
+<body>
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🏗️ system-design-coach</div>
+    <h2>시스템 디자인<br>면접 방법론 개관</h2>
+  </div>
+  <div class="group-label">핵심 방법론</div>
+  <a href="#why">1. 왜 시스템 디자인인가</a>
+  <a href="#framework">2. 6단계 프레임워크</a>
+  <a href="#blocks">3. 핵심 Building Blocks</a>
+  <a href="#estimation">4. 용량 추정 치트시트</a>
+  <div class="group-label">사고 프레임</div>
+  <a href="#tradeoff">5. Trade-off 사고법</a>
+  <a href="#cap">6. CAP / PACELC 기초</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+<main>
+  <header class="page-hdr">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">system-design-coach</span>
+      <span class="chip">Session #0 — 방법론 개관</span>
+    </div>
+    <h1>시스템 디자인 면접 방법론 개관</h1>
+    <p>설계 능력보다 <strong>사고 과정과 커뮤니케이션</strong>이 평가된다. 6단계 프레임워크를 몸에 익히는 것이 목표.</p>
+  </header>
+
+  <section id="why">
+    <h2>1. 왜 시스템 디자인 면접인가</h2>
+    <p>시스템 디자인 면접은 "정답이 없는" 열린 문제다. 면접관이 보는 것은 <strong>요구사항을 구체화하는 능력, 불확실성 속에서 합리적 결정을 내리는 능력, Trade-off를 명확하게 설명하는 능력</strong>이다.</p>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>평가 항목</th><th>잘하는 후보</th><th>못하는 후보</th></tr></thead>
+      <tbody>
+        <tr><td>요구사항 파악</td><td>Functional/Non-functional 나눠서 명확화</td><td>바로 설계 시작</td></tr>
+        <tr><td>용량 추정</td><td>숫자로 근거 제시 (DAU → QPS → 저장량)</td><td>추정 생략하거나 근거 없이 숫자</td></tr>
+        <tr><td>Trade-off</td><td>"A를 선택하면 B를 잃는다"를 명시</td><td>"이게 제일 좋습니다" 단정</td></tr>
+        <tr><td>Deep-dive</td><td>병목·장애 시나리오 선제적 언급</td><td>물어볼 때만 반응</td></tr>
+        <tr><td>커뮤니케이션</td><td>생각을 소리로 설명하며 진행</td><td>침묵 후 결과만 제시</td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout tip">
+      <div class="c-title">💡 핵심 마인드셋</div>
+      "완벽한 설계"가 아니라 <strong>"최선의 절충"</strong>을 보여주는 것이 목표. 45분 안에 모든 것을 다 설계할 수 없다는 것을 면접관도 안다.
+    </div>
+  </section>
+
+  <section id="framework">
+    <h2>2. 6단계 설계 프레임워크</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    S1["① 요구사항 명확화\n(5분)\nFunctional / Non-functional\n규모·트래픽·SLA 확인"]
+    S2["② 용량 추정\n(5분)\nDAU → QPS → 저장량 → 대역폭\nBack-of-the-envelope"]
+    S3["③ API & 데이터 모델\n(5분)\nREST/gRPC 엔드포인트\n핵심 스키마 + 인덱스"]
+    S4["④ High-level 아키텍처\n(10분)\nLB·App·Cache·DB·Queue·CDN\n컴포넌트 배치"]
+    S5["⑤ Deep-dive\n(15분)\n병목·일관성·장애 전파\n핵심 컴포넌트 2-3개 집중"]
+    S6["⑥ Trade-off 정리\n(5분)\n선택 근거·대안·한계 명시"]
+
+    S1 --> S2 --> S3 --> S4 --> S5 --> S6
+
+    style S1 fill:#dbeafe,stroke:#3b82f6
+    style S2 fill:#fef3c7,stroke:#f59e0b
+    style S3 fill:#dcfce7,stroke:#22c55e
+    style S4 fill:#ede9fe,stroke:#8b5cf6
+    style S5 fill:#fce7f3,stroke:#ec4899
+    style S6 fill:#fff7ed,stroke:#ea580c
+      </div>
+      <div class="cap">6단계 프레임워크 — 시간 배분이 중요. 요구사항 명확화를 가장 먼저.</div>
+    </div>
+
+    <h3>각 단계별 핵심 질문</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>단계</th><th>반드시 물어볼 것</th><th>흔한 함정</th></tr></thead>
+      <tbody>
+        <tr><td><strong>① 요구사항</strong></td><td>DAU, 읽기/쓰기 비율, SLA(가용성/지연), 데이터 보존 기간, 지역(단일/멀티 리전)</td><td>비기능 요구사항 생략</td></tr>
+        <tr><td><strong>② 용량 추정</strong></td><td>QPS = DAU × 평균 요청수 ÷ 86,400 / 저장량 = 레코드수 × 평균 크기</td><td>단위 실수 (MB vs GB)</td></tr>
+        <tr><td><strong>③ API/데이터</strong></td><td>핵심 엔드포인트 3개 내외, 주요 테이블과 인덱스</td><td>완벽한 스키마 설계에 시간 낭비</td></tr>
+        <tr><td><strong>④ High-level</strong></td><td>단일 장애점(SPOF), 데이터 흐름, 확장 포인트</td><td>컴포넌트 이름만 나열</td></tr>
+        <tr><td><strong>⑤ Deep-dive</strong></td><td>가장 어려운 1-2개 집중 (면접관과 합의)</td><td>모든 것을 얕게 다룸</td></tr>
+        <tr><td><strong>⑥ Trade-off</strong></td><td>"왜 이 방식을 선택했나", "대안은 무엇이었나"</td><td>장점만 설명, 단점 생략</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="blocks">
+    <h2>3. 핵심 Building Blocks 지도</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    Client(["👤 Client"])
+    CDN["🌐 CDN\n정적 자산·API 캐시"]
+    LB["⚖️ Load Balancer\nL7·ALB·Nginx"]
+    App["⚙️ App Server\nStateless"]
+    Cache["⚡ Cache\nRedis·Memcached"]
+    DB["🗄️ Primary DB\nRDBMS·NoSQL"]
+    Queue["📨 Message Queue\nKafka·SQS"]
+    Search["🔍 Search\nElasticsearch"]
+    Storage["🪣 Object Storage\nS3"]
+    Worker["🔧 Worker\n비동기 처리"]
+
+    Client --> CDN --> LB --> App
+    App --> Cache
+    App --> DB
+    App --> Queue --> Worker
+    Worker --> DB
+    App --> Search
+    App --> Storage
+
+    style Client fill:#f1f5f9,stroke:#94a3b8
+    style CDN fill:#dbeafe,stroke:#3b82f6
+    style LB fill:#fef3c7,stroke:#f59e0b
+    style App fill:#dcfce7,stroke:#22c55e
+    style Cache fill:#fce7f3,stroke:#ec4899
+    style DB fill:#ede9fe,stroke:#8b5cf6
+    style Queue fill:#fff7ed,stroke:#ea580c
+      </div>
+      <div class="cap">핵심 Building Blocks — 대부분의 시스템 디자인 문제는 이 블록들의 조합</div>
+    </div>
+
+    <h3>블록별 선택 기준</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>블록</th><th>언제</th><th>대표 선택지</th><th>핵심 고려사항</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Cache</strong></td><td>읽기 중심, DB 부하 절감</td><td>Redis, Memcached</td><td>Cache invalidation, TTL, Stampede</td></tr>
+        <tr><td><strong>Message Queue</strong></td><td>비동기 처리, 서비스 분리</td><td>Kafka, SQS, RabbitMQ</td><td>순서 보장, At-least-once, Idempotency</td></tr>
+        <tr><td><strong>Search</strong></td><td>전문 검색, 복잡한 필터</td><td>Elasticsearch, OpenSearch</td><td>동기화 지연, 인덱스 비용</td></tr>
+        <tr><td><strong>Object Storage</strong></td><td>미디어·대용량 파일</td><td>S3, GCS</td><td>Presigned URL, CDN 연동</td></tr>
+        <tr><td><strong>CDN</strong></td><td>글로벌 지연 감소</td><td>CloudFront, Fastly</td><td>Cache key, Purge 전략</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="estimation">
+    <h2>4. 용량 추정 치트시트</h2>
+    <div class="callout tip">
+      <div class="c-title">📐 기본 수치 암기</div>
+      <strong>시간</strong>: 1일 ≈ 86,400초 ≈ 10<sup>5</sup>초 &nbsp;|&nbsp; 1월 ≈ 2.5×10<sup>6</sup>초<br>
+      <strong>DAU → QPS</strong>: DAU 1억 → 평균 QPS ≈ 1,200 / 피크 ≈ 5,000–12,000 (피크계수 4–10배)<br>
+      <strong>크기</strong>: 텍스트 포스트 ≈ 300B / 사진 ≈ 200KB / 10분 동영상 ≈ 50MB<br>
+      <strong>지연</strong>: SSD ≈ 0.1ms / DC 내부 RTT ≈ 0.5ms / 대륙 간 RTT ≈ 150ms<br>
+      <strong>처리량</strong>: MySQL ≈ 1,000–10,000 QPS / Redis ≈ 100,000 QPS / Kafka ≈ 수백만 msg/s
+    </div>
+
+    <h3>추정 예시 — DAU 1천만 Twitter류 서비스</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>항목</th><th>계산</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td>평균 쓰기 QPS</td><td>1천만 ÷ 86,400 × 사용자당 3트윗/일</td><td>≈ 350 QPS</td></tr>
+        <tr><td>피크 쓰기 QPS</td><td>350 × 피크계수 5</td><td>≈ 1,750 QPS</td></tr>
+        <tr><td>읽기 QPS</td><td>쓰기의 100배 (읽기 중심 서비스)</td><td>≈ 35,000 QPS (피크)</td></tr>
+        <tr><td>일일 저장량</td><td>350 QPS × 86,400 × 300B</td><td>≈ 9 GB/일</td></tr>
+        <tr><td>5년 저장량</td><td>9 GB × 365 × 5</td><td>≈ 16 TB</td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트</div>
+      추정 과정을 소리로 말하면서 진행. 숫자가 틀려도 OK — 중요한 건 <strong>합리적 추론 과정</strong>.
+    </div>
+  </section>
+
+  <section id="tradeoff">
+    <h2>5. Trade-off 사고법</h2>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>축</th><th>선택지 A</th><th>선택지 B</th><th>결정 기준</th></tr></thead>
+      <tbody>
+        <tr><td><strong>일관성 vs 가용성</strong></td><td>Strong Consistency (항상 최신)</td><td>Eventual Consistency (가용성↑)</td><td>금융·결제: Strong / SNS 피드: Eventual</td></tr>
+        <tr><td><strong>정규화 vs 반정규화</strong></td><td>정규화 (쓰기 효율↑)</td><td>반정규화 (읽기 효율↑)</td><td>읽기:쓰기 비율</td></tr>
+        <tr><td><strong>Pull vs Push</strong></td><td>Pull (소비자가 요청)</td><td>Push (서버가 밀어넣기)</td><td>팔로워 수 분포 (팬아웃 비용)</td></tr>
+        <tr><td><strong>SQL vs NoSQL</strong></td><td>RDBMS (ACID, 복잡한 쿼리)</td><td>NoSQL (수평 확장, 유연한 스키마)</td><td>쿼리 패턴, 정합성 요구 수준</td></tr>
+        <tr><td><strong>동기 vs 비동기</strong></td><td>동기 (즉시 응답)</td><td>비동기 (Queue, 높은 처리량)</td><td>사용자 응답 필요 여부</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="cap">
+    <h2>6. CAP / PACELC 기초</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    CAP["CAP 정리\n분산 시스템은 Partition 발생 시\nConsistency 또는 Availability 중\n하나만 보장 가능"]
+    CP["CP 시스템\nConsistency + Partition tolerance\n예: HBase, Zookeeper\n→ Partition 시 쓰기 거부"]
+    AP["AP 시스템\nAvailability + Partition tolerance\n예: Cassandra, DynamoDB\n→ 일시적 불일치 허용"]
+    CA["CA 시스템\n현실에서 불가\nPartition 없는 단일 서버만 가능"]
+
+    CAP --> CP
+    CAP --> AP
+    CAP -.->|"분산 시스템에서 불가"| CA
+
+    style CP fill:#dbeafe,stroke:#3b82f6
+    style AP fill:#dcfce7,stroke:#22c55e
+    style CA fill:#f1f5f9,stroke:#94a3b8,color:#94a3b8
+      </div>
+      <div class="cap">CAP 정리 — 분산 시스템 설계의 핵심 제약. 실무에서는 Partition Tolerance 는 필수.</div>
+    </div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 흔한 오해</div>
+      "CA를 선택하겠습니다"는 면접에서 감점. 분산 환경에서 P는 포기할 수 없음.<br>
+      <strong>PACELC</strong>: Partition이 없을 때도 Latency(지연) vs Consistency 선택이 있음. 더 현실적 프레임워크.
+    </div>
+
+    <h3>자주 나오는 시스템 디자인 문제 20선</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>난이도</th><th>문제</th><th>핵심 이슈</th></tr></thead>
+      <tbody>
+        <tr><td>기본</td><td>URL Shortener</td><td>해시 충돌, 리다이렉트, 만료</td></tr>
+        <tr><td>기본</td><td>Rate Limiter</td><td>토큰 버킷, 분산 카운터, Redis</td></tr>
+        <tr><td>기본</td><td>Key-Value Store</td><td>일관성 해싱, 복제, 충돌 해결</td></tr>
+        <tr><td>중급</td><td>Twitter / SNS 피드</td><td>Fan-out(팬아웃), 핫 유저, 읽기/쓰기 분리</td></tr>
+        <tr><td>중급</td><td>채팅 시스템</td><td>WebSocket, 메시지 순서, 읽음 확인</td></tr>
+        <tr><td>중급</td><td>알림 시스템</td><td>FCM/APNs, 재시도, 중복 제거</td></tr>
+        <tr><td>중급</td><td>검색 자동완성</td><td>Trie, 트래픽 급증, 랭킹</td></tr>
+        <tr><td>고급</td><td>YouTube / Netflix</td><td>영상 처리 파이프라인, CDN, 적응형 스트리밍</td></tr>
+        <tr><td>고급</td><td>Uber 배차</td><td>Geo index, 실시간 매칭, ETA</td></tr>
+        <tr><td>고급 (물류)</td><td>배송 추적 시스템</td><td>수천만 이벤트/일, Fan-out, 실시간성</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="quiz">
+    <h2>이해도 확인 질문</h2>
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>면접관이 "인스타그램을 설계해보세요"라고 합니다. 첫 5분 동안 <strong>반드시 확인해야 할 요구사항 5가지</strong>를 제시하고, 각각이 설계에 어떤 영향을 주는지 설명해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div>
+        <textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장)"></textarea>
+      </div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>DAU 500만의 뉴스피드 서비스에서 <strong>용량을 추정</strong>해보세요. 포스트 1개 평균 500B, 사진 첨부율 30% (사진 ≈ 200KB), 사용자당 하루 평균 읽기 50건 / 쓰기 2건.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div>
+        <textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장)"></textarea>
+      </div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>"Consistency와 Availability 중 어느 것을 선택하겠어요?"라는 질문을 받았습니다. <strong>"그것은 상황에 따라 다릅니다"</strong> 수준에서 한 단계 더 나아가, 구체적인 시스템 2가지를 예시로 들어 근거 있게 답해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div>
+        <textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장)"></textarea>
+      </div>
+    </div>
+    <div class="feedback-box">
+      <p>답변 작성 후 복사해서 채팅창에 붙여넣고 "피드백 주세요"라고 입력하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">system-design-coach</div><div class="topic">URL Shortener 설계 실습 (Design 모드)</div></div>
+      <div class="next-card"><div class="coach">system-design-coach</div><div class="topic">Twitter 피드 Fan-out 전략 (Concept 모드)</div></div>
+      <div class="next-card"><div class="coach">system-design-coach + logistics-domain-coach</div><div class="topic">배송 추적 시스템 설계</div></div>
+      <div class="next-card"><div class="coach">system-design-coach</div><div class="topic">Rate Limiter 설계 (Interview 모드)</div></div>
+    </div>
+  </section>
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'default',themeVariables:{primaryColor:'#dbeafe',primaryTextColor:'#1e293b',primaryBorderColor:'#3b82f6',lineColor:'#64748b',fontSize:'13px'},flowchart:{curve:'basis',padding:20}});
+const NS='jobStudy::system-design::00-introduction::';
+['ans1','ans2','ans3'].forEach((id,i)=>{
+  const el=document.getElementById(id);if(!el)return;
+  const sv=localStorage.getItem(NS+id);if(sv)el.value=sv;
+  let t;el.addEventListener('input',()=>{clearTimeout(t);t=setTimeout(()=>{localStorage.setItem(NS+id,el.value);const b=document.getElementById('saved'+(i+1));if(b){b.classList.add('show');setTimeout(()=>b.classList.remove('show'),1800);}},400);});
+});
+const QS=['Q1. 인스타그램 설계 시 첫 5분에 확인할 요구사항 5가지와 설계 영향','Q2. DAU 500만 뉴스피드 서비스 용량 추정 (포스트 500B, 사진 첨부 30%)','Q3. Consistency vs Availability — 구체적 시스템 2가지 예시로 근거 있게 답하기'];
+function copyForFeedback(){const lines=['[시스템 디자인 방법론 개관 — Q&A 피드백 요청]\n'];['ans1','ans2','ans3'].forEach((id,i)=>{const a=(document.getElementById(id)?.value||'').trim()||'(답변 없음)';lines.push(QS[i]);lines.push('A'+(i+1)+'. '+a+'\n');});const text=lines.join('\n');const el=document.getElementById('copyResult');navigator.clipboard?.writeText(text).then(()=>el.textContent='✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.').catch(()=>{el.textContent='⚠️ 직접 복사하세요.';});}
+const secs=document.querySelectorAll('section[id]'),links=document.querySelectorAll('#sidebar a');
+new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.classList.remove('active'));const a=document.querySelector(`#sidebar a[href="#${e.target.id}"]`);if(a)a.classList.add('active');}});},{threshold:.25}).observe&&secs.forEach(s=>new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.classList.remove('active'));const a=document.querySelector(`#sidebar a[href="#${e.target.id}"]`);if(a)a.classList.add('active');}});},{threshold:.25}).observe(s));
+</script>
+</body>
+</html>
