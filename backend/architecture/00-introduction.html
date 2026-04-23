@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>백엔드 아키텍처 핵심 패턴 개관</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root{--bg:#f8fafc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--accent:#7c3aed}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14.5px;line-height:1.75}
+#sidebar{width:248px;min-height:100vh;background:var(--card);border-right:1px solid var(--border);padding:24px 0;position:fixed;left:0;top:0;overflow-y:auto;z-index:50}
+#sidebar .brand{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:16px}
+#sidebar .brand .tag{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+#sidebar .brand h2{font-size:14px;font-weight:700;line-height:1.4}
+#sidebar .group-label{padding:12px 20px 4px;font-size:10.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em}
+#sidebar a{display:block;padding:7px 20px;font-size:13px;color:var(--muted);text-decoration:none;border-left:3px solid transparent;transition:all .15s}
+#sidebar a:hover,#sidebar a.active{color:var(--accent);background:var(--bg);border-left-color:var(--accent)}
+main{margin-left:248px;flex:1;max-width:1080px;padding:48px 56px}
+.page-hdr{margin-bottom:48px;padding-bottom:32px;border-bottom:2px solid var(--border)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{font-size:12px;font-weight:500;padding:3px 11px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.accent{background:#ede9fe;border-color:var(--accent);color:var(--accent)}
+.page-hdr h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:10px}
+.page-hdr p{color:var(--muted)}
+section{margin-bottom:64px;scroll-margin-top:24px}
+section>h2{font-size:20px;font-weight:700;padding-bottom:12px;border-bottom:2px solid var(--border);margin-bottom:24px}
+h3{font-size:16px;font-weight:600;margin:28px 0 12px}
+p{margin-bottom:10px}ul,ol{padding-left:22px;margin:8px 0 10px}li{margin-bottom:4px}
+.diagram-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px 24px 20px;margin:18px 0;overflow-x:auto;text-align:center}
+.diagram-wrap .cap{font-size:12px;color:var(--muted);margin-top:14px}
+.mermaid{display:inline-block}
+.tbl-wrap{overflow-x:auto;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+th{background:#f1f5f9;font-weight:600;font-size:12.5px;padding:9px 14px;border-bottom:1px solid var(--border);text-align:left}
+td{padding:9px 14px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+tr:last-child td{border-bottom:none}tr:hover td{background:#fafafa}
+.callout{border-radius:8px;padding:13px 16px;margin:14px 0;border-left:4px solid;font-size:13.5px}
+.callout .c-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.callout.interview{background:#fef2f2;border-color:#dc2626}.callout.interview .c-title{color:#dc2626}
+.callout.warn{background:#fff7ed;border-color:#ea580c}.callout.warn .c-title{color:#ea580c}
+.callout.tip{background:#f0fdf4;border-color:#16a34a}.callout.tip .c-title{color:#16a34a}
+.deep{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:4px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;margin-left:6px}
+code{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#be185d}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:14px}
+.q-card .q-num{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px}
+.ans-area{margin-top:12px}
+.ans-label{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.saved-badge{font-size:11px;color:#16a34a;opacity:0;transition:opacity .4s}.saved-badge.show{opacity:1}
+.ans-area textarea{width:100%;min-height:110px;border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-family:'Noto Sans KR',sans-serif;font-size:14px;line-height:1.7;resize:vertical;background:#fafcff;color:var(--text);transition:border-color .15s}
+.ans-area textarea:focus{outline:none;border-color:var(--accent);background:#fff}
+.ans-area textarea::placeholder{color:#cbd5e1}
+.feedback-box{background:var(--card);border:1.5px dashed var(--border);border-radius:12px;padding:22px 24px;margin-top:28px;text-align:center}
+.feedback-box p{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+.btn-feedback{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:background .15s}
+.btn-feedback:hover{background:#6d28d9}
+.copy-result{margin-top:12px;font-size:13px;color:#16a34a;min-height:20px}
+.next-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:14px}
+.next-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;transition:box-shadow .15s}
+.next-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.next-card .coach{font-size:11px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:5px}
+.next-card .topic{font-size:13px;font-weight:500}
+@media(max-width:860px){#sidebar{display:none}main{margin-left:0;padding:24px 20px}}
+</style>
+</head>
+<body>
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🏛️ backend-architecture-coach</div>
+    <h2>백엔드 아키텍처<br>핵심 패턴 개관</h2>
+  </div>
+  <div class="group-label">아키텍처 선택</div>
+  <a href="#monolith-vs-msa">1. Modular Monolith vs MSA</a>
+  <a href="#ddd">2. DDD 기초</a>
+  <a href="#event-driven">3. Event-driven 기초</a>
+  <div class="group-label">핵심 패턴</div>
+  <a href="#saga">4. Saga 패턴</a>
+  <a href="#outbox">5. Outbox & Idempotency</a>
+  <a href="#cqrs">6. CQRS 개관</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+<main>
+  <header class="page-hdr">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">backend-architecture-coach</span>
+      <span class="chip">Session #0 — 아키텍처 패턴 개관</span>
+    </div>
+    <h1>백엔드 아키텍처 핵심 패턴 개관</h1>
+    <p>서비스 경계를 어떻게 나눌지, 분산 환경에서 정합성을 어떻게 보장할지 — <strong>MSA·DDD·Saga·Outbox·CQRS</strong> 전반을 한눈에 그리기.</p>
+  </header>
+
+  <section id="monolith-vs-msa">
+    <h2>1. Modular Monolith vs MSA</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    subgraph MM["Modular Monolith"]
+        direction TB
+        M1["Order Module"]
+        M2["Inventory Module"]
+        M3["Shipping Module"]
+        M1 --- M2 --- M3
+        DB1[("단일 DB")]
+        M3 --- DB1
+    end
+
+    subgraph MSA_["MSA"]
+        direction TB
+        S1["Order Service"]
+        S2["Inventory Service"]
+        S3["Shipping Service"]
+        DB2[("Order DB")]
+        DB3[("Inventory DB")]
+        DB4[("Shipping DB")]
+        Q["Message Queue\nKafka / SQS"]
+        S1 --> Q --> S2
+        Q --> S3
+        S1 --- DB2
+        S2 --- DB3
+        S3 --- DB4
+    end
+
+    style MM fill:#dbeafe,stroke:#3b82f6
+    style MSA_ fill:#ede9fe,stroke:#8b5cf6
+      </div>
+      <div class="cap">Modular Monolith vs MSA — 대부분의 팀은 Modular Monolith로 시작해 경계가 안정된 후 분리</div>
+    </div>
+
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>관점</th><th>Modular Monolith</th><th>MSA</th></tr></thead>
+      <tbody>
+        <tr><td>배포 독립성</td><td>없음 (단일 배포)</td><td>있음 (서비스별 독립)</td></tr>
+        <tr><td>데이터 정합성</td><td>로컬 트랜잭션으로 쉬움</td><td>분산 트랜잭션 (Saga 필요)</td></tr>
+        <tr><td>장애 격리</td><td>부분적</td><td>좋음 (설계에 따라)</td></tr>
+        <tr><td>운영 복잡도</td><td>낮음</td><td>높음 (관측성·배포·네트워크)</td></tr>
+        <tr><td>팀 규모</td><td>소~중 (10명 이하)</td><td>중~대 (팀당 한 서비스)</td></tr>
+        <tr><td>초기 속도</td><td>빠름</td><td>느림 (인프라 비용)</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 조기 MSA는 재앙</div>
+      "MSA 니까 쪼개야 한다"는 금물. <strong>비즈니스 이유 + 팀 규모 + 도메인 성숙도</strong>가 준비됐을 때만.
+      데이터베이스를 공유하면서 서비스만 나눈 것은 <strong>Distributed Monolith(분산 모놀리스)</strong> — 최악.
+    </div>
+
+    <h3>서비스 경계 결정 기준 (Conway's Law 의식)</h3>
+    <ul>
+      <li><strong>비즈니스 Capability 기반</strong>: 함께 변하는 것은 함께 둔다</li>
+      <li><strong>데이터 소유권</strong>: 한 서비스가 한 데이터의 단일 진실 원천(SSOT)</li>
+      <li><strong>팀 구조와 일치</strong>: Team Topologies — Stream-aligned team</li>
+      <li><strong>채터링(Chattering) 확인</strong>: 두 서비스 간 동기 HTTP가 많으면 경계 재고</li>
+    </ul>
+  </section>
+
+  <section id="ddd">
+    <h2>2. DDD (Domain-Driven Design) 기초</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    subgraph Strategic["전략 설계 (Strategic Design)"]
+        UL["Ubiquitous Language\n유비쿼터스 언어\n도메인 전문가와 동일 용어"]
+        BC["Bounded Context\n경계 있는 컨텍스트\n모델의 경계"]
+        CM["Context Map\n컨텍스트 간 관계\nACL / Partnership / Conformist"]
+        UL --> BC --> CM
+    end
+
+    subgraph Tactical["전술 설계 (Tactical Design)"]
+        AG["Aggregate\n애그리거트\n일관성 경계 + Root"]
+        DE["Domain Event\n도메인 이벤트\n과거형 동사"]
+        VO["Value Object\n값 객체\n불변, 동등성"]
+        DS["Domain Service\n도메인 서비스\nEntity에 맞지 않는 로직"]
+        AG --> DE
+    end
+
+    Strategic --> Tactical
+
+    style Strategic fill:#dbeafe,stroke:#3b82f6
+    style Tactical fill:#ede9fe,stroke:#8b5cf6
+      </div>
+      <div class="cap">DDD 전략 설계 → 전술 설계 순서. 전략 없이 전술만 하면 Aggregate가 엉뚱하게 설계됨.</div>
+    </div>
+
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>개념</th><th>정의</th><th>핵심 규칙</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Bounded Context</strong></td><td>모델이 유효한 경계. 같은 단어가 컨텍스트마다 다른 의미</td><td>"상품" — 카탈로그 vs 재고 vs 정산 다름</td></tr>
+        <tr><td><strong>Aggregate</strong></td><td>일관성 경계. Aggregate Root 를 통해서만 접근</td><td>한 트랜잭션 = 한 Aggregate 변경</td></tr>
+        <tr><td><strong>Domain Event</strong></td><td>도메인에서 발생한 사실. 과거형 명사</td><td><code>OrderPlaced</code>, <code>InventoryReserved</code></td></tr>
+        <tr><td><strong>ACL (Anti-Corruption Layer)</strong></td><td>다른 BC의 모델을 내 모델로 변환하는 레이어</td><td>외부 모델이 내 도메인을 오염시키지 않도록</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="event-driven">
+    <h2>3. Event-driven Architecture 기초</h2>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>방식</th><th>Choreography (안무)</th><th>Orchestration (오케스트레이션)</th></tr></thead>
+      <tbody>
+        <tr><td>제어 방식</td><td>각 서비스가 이벤트 구독 후 자율 처리</td><td>중앙 Orchestrator가 순서 결정</td></tr>
+        <tr><td>전체 흐름 가시성</td><td>낮음 (흐름 분산)</td><td>높음 (한 곳에서 파악)</td></tr>
+        <tr><td>서비스 결합도</td><td>낮음</td><td>중간 (Orchestrator 의존)</td></tr>
+        <tr><td>디버깅</td><td>어려움 (이벤트 추적 필요)</td><td>쉬움 (Orchestrator 로그)</td></tr>
+        <tr><td>사용 시기</td><td>서비스 수 적고 독립성 중요 시</td><td>복잡한 비즈니스 흐름, 보상 트랜잭션</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="saga">
+    <h2>4. Saga 패턴 — 분산 트랜잭션 대안</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant Orch as Saga Orchestrator
+    participant Order as Order Service
+    participant Inv as Inventory Service
+    participant Pay as Payment Service
+
+    Note over Orch,Pay: 정상 흐름
+    Order->>Orch: OrderPlaced
+    Orch->>Inv: ReserveInventory
+    Inv-->>Orch: InventoryReserved
+    Orch->>Pay: ProcessPayment
+    Pay-->>Orch: PaymentProcessed
+    Orch->>Order: ConfirmOrder
+
+    Note over Orch,Pay: 결제 실패 시 보상 트랜잭션
+    Orch->>Pay: ProcessPayment
+    Pay-->>Orch: PaymentFailed
+    Orch->>Inv: ReleaseInventory
+    Inv-->>Orch: InventoryReleased
+    Orch->>Order: CancelOrder
+      </div>
+      <div class="cap">Saga Orchestration — 중앙 오케스트레이터가 흐름 제어 + 실패 시 보상(Compensation)</div>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 2PC vs Saga</div>
+      <strong>2PC(Two-Phase Commit)</strong>: Blocking, 코디네이터 SPOF, 가용성↓ → 현대 분산 시스템에서 거의 사용 안 함.<br>
+      <strong>Saga</strong>: 각 스텝이 로컬 트랜잭션 + 실패 시 보상(Compensating transaction). Eventual Consistency 수용.<br>
+      <em>보상 트랜잭션 설계 누락은 면접에서 치명적.</em> <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <section id="outbox">
+    <h2>5. Outbox 패턴 & Idempotency</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant Svc as Service
+    participant DB as Database
+    participant Relay as Outbox Relay (CDC)
+    participant MQ as Message Queue
+
+    Note over Svc,MQ: DB 커밋 + 이벤트 발행 원자화
+    Svc->>DB: BEGIN TRANSACTION
+    Svc->>DB: INSERT INTO orders (...)
+    Svc->>DB: INSERT INTO outbox (event_type, payload, status='PENDING')
+    Svc->>DB: COMMIT
+
+    Note over DB,MQ: 비동기 릴레이
+    Relay->>DB: SELECT * FROM outbox WHERE status='PENDING'
+    DB-->>Relay: 이벤트 목록
+    Relay->>MQ: Publish(event)
+    MQ-->>Relay: ACK
+    Relay->>DB: UPDATE outbox SET status='SENT'
+      </div>
+      <div class="cap">Outbox 패턴 — DB 트랜잭션과 메시지 발행을 원자적으로. Relay는 Debezium(CDC)이 일반적.</div>
+    </div>
+
+    <h3>Idempotency (멱등성) 보장</h3>
+    <ul>
+      <li><strong>멱등성 키(Idempotency-Key)</strong>: 클라이언트가 요청마다 고유 키 포함. 서버는 처리 결과를 저장해 중복 요청 시 같은 결과 반환.</li>
+      <li><strong>저장 위치</strong>: Redis (TTL 24h) 또는 DB (unique constraint).</li>
+      <li><strong>Kafka 소비자 멱등성</strong>: At-least-once 전달 특성 → 동일 이벤트 두 번 처리 방어 로직 필수.</li>
+    </ul>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 핵심 함정 — DB 커밋 후 이벤트 발행 금지</div>
+      <code>orderRepository.save(order) // 커밋</code><br>
+      <code>kafkaTemplate.send("order-created", event) // 여기서 장애나면?</code><br>
+      → 이벤트 유실. <strong>Outbox 패턴</strong>으로 DB 트랜잭션에 이벤트를 함께 포함시켜야 함.
+    </div>
+  </section>
+
+  <section id="cqrs">
+    <h2>6. CQRS (Command Query Responsibility Segregation) 개관</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    Client(["Client"])
+    subgraph Write["쓰기 모델 (Command)"]
+        CMD["Command Handler"]
+        WDB[("Write DB\nRDBMS")]
+        DE["Domain Events"]
+        CMD --> WDB
+        CMD --> DE
+    end
+    subgraph Read["읽기 모델 (Query)"]
+        QH["Query Handler"]
+        RDB[("Read DB\n역정규화 뷰\nElasticsearch/Redis")]
+        QH --> RDB
+    end
+
+    Client -->|"쓰기 요청"| CMD
+    Client -->|"읽기 요청"| QH
+    DE -->|"이벤트로 동기화"| RDB
+
+    style Write fill:#fce7f3,stroke:#ec4899
+    style Read fill:#dcfce7,stroke:#22c55e
+      </div>
+      <div class="cap">CQRS — 쓰기 모델과 읽기 모델 분리. 읽기 모델은 쿼리에 최적화된 별도 구조.</div>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 CQRS 적용 기준</div>
+      <strong>적용해야 할 때</strong>: 읽기/쓰기 확장 요구가 극단적으로 다름, 복잡한 집계 뷰가 필요, Event Sourcing 과 결합.<br>
+      <strong>적용하면 안 될 때</strong>: 단순 CRUD, 팀이 작음, 최종 일관성(Eventual Consistency)이 비즈니스적으로 허용 안 됨.<br>
+      <em>CQRS 과잉 적용은 복잡도 폭발로 이어짐. 필요성을 먼저 증명하라.</em>
+    </div>
+  </section>
+
+  <section id="quiz">
+    <h2>이해도 확인 질문</h2>
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>5명 팀이 운영하는 이커머스 서비스에서 "주문 서비스"와 "재고 서비스"를 분리해야 할지 결정해야 합니다. <strong>분리 시 얻는 것과 잃는 것</strong>을 구체적으로 나열하고, 어떤 조건이 갖춰졌을 때 분리가 정당화되는지 설명해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div>
+        <textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장)"></textarea>
+      </div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>분산 트랜잭션 없이 "주문 생성 + 재고 차감 + 결제 처리"를 <strong>원자적</strong>으로 처리하는 방법은? Saga 패턴의 Choreography와 Orchestration 방식으로 각각 설계해보고 Trade-off를 비교해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div>
+        <textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장)"></textarea>
+      </div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>Outbox 패턴이 필요한 이유를 설명하고, Outbox 릴레이 구현 방법 2가지(Polling vs CDC)의 <strong>장단점</strong>을 비교해보세요. 각각 어떤 환경에서 선택하겠어요?</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div>
+        <textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장)"></textarea>
+      </div>
+    </div>
+    <div class="feedback-box">
+      <p>답변 작성 후 복사해서 채팅창에 붙여넣고 "피드백 주세요"라고 입력하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">backend-architecture-coach</div><div class="topic">주문-결제-배송 Saga 설계 (Interview 모드)</div></div>
+      <div class="next-card"><div class="coach">backend-architecture-coach</div><div class="topic">DDD Bounded Context Event Storming 실습</div></div>
+      <div class="next-card"><div class="coach">backend-architecture-coach + database-coach</div><div class="topic">CQRS + Event Sourcing 심화</div></div>
+      <div class="next-card"><div class="coach">backend-architecture-coach + infra-coach</div><div class="topic">Kafka Outbox 패턴 구현 (Design)</div></div>
+    </div>
+  </section>
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'default',themeVariables:{primaryColor:'#ede9fe',primaryTextColor:'#1e293b',primaryBorderColor:'#8b5cf6',lineColor:'#64748b',fontSize:'13px'},flowchart:{curve:'basis',padding:20},sequence:{actorMargin:50,messageMargin:30}});
+const NS='jobStudy::backend::architecture::00-introduction::';
+['ans1','ans2','ans3'].forEach((id,i)=>{
+  const el=document.getElementById(id);if(!el)return;
+  const sv=localStorage.getItem(NS+id);if(sv)el.value=sv;
+  let t;el.addEventListener('input',()=>{clearTimeout(t);t=setTimeout(()=>{localStorage.setItem(NS+id,el.value);const b=document.getElementById('saved'+(i+1));if(b){b.classList.add('show');setTimeout(()=>b.classList.remove('show'),1800);}},400);});
+});
+const QS=['Q1. 5명 팀 이커머스 주문/재고 서비스 분리 — 얻는 것/잃는 것, 분리 정당화 조건','Q2. 분산 트랜잭션 없는 주문+재고+결제 원자 처리 — Saga Choreography vs Orchestration','Q3. Outbox 패턴 필요성 + Polling vs CDC 장단점 비교'];
+function copyForFeedback(){const lines=['[백엔드 아키텍처 핵심 패턴 개관 — Q&A 피드백 요청]\n'];['ans1','ans2','ans3'].forEach((id,i)=>{const a=(document.getElementById(id)?.value||'').trim()||'(답변 없음)';lines.push(QS[i]);lines.push('A'+(i+1)+'. '+a+'\n');});const text=lines.join('\n');const el=document.getElementById('copyResult');navigator.clipboard?.writeText(text).then(()=>el.textContent='✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.').catch(()=>{el.textContent='⚠️ 직접 복사하세요.';});}
+const secs=document.querySelectorAll('section[id]'),links=document.querySelectorAll('#sidebar a');
+secs.forEach(s=>new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.classList.remove('active'));const a=document.querySelector(`#sidebar a[href="#${e.target.id}"]`);if(a)a.classList.add('active');}});},{threshold:.25}).observe(s));
+</script>
+<script src="../../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

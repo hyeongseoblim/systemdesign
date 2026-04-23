@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>인프라·DevOps 핵심 개념 개관</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root{--bg:#f8fafc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--accent:#0369a1}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14.5px;line-height:1.75}
+#sidebar{width:248px;min-height:100vh;background:var(--card);border-right:1px solid var(--border);padding:24px 0;position:fixed;left:0;top:0;overflow-y:auto;z-index:50}
+#sidebar .brand{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:16px}
+#sidebar .brand .tag{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+#sidebar .brand h2{font-size:14px;font-weight:700;line-height:1.4}
+#sidebar .group-label{padding:12px 20px 4px;font-size:10.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em}
+#sidebar a{display:block;padding:7px 20px;font-size:13px;color:var(--muted);text-decoration:none;border-left:3px solid transparent;transition:all .15s}
+#sidebar a:hover,#sidebar a.active{color:var(--accent);background:var(--bg);border-left-color:var(--accent)}
+main{margin-left:248px;flex:1;max-width:1080px;padding:48px 56px}
+.page-hdr{margin-bottom:48px;padding-bottom:32px;border-bottom:2px solid var(--border)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{font-size:12px;font-weight:500;padding:3px 11px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.accent{background:#e0f2fe;border-color:var(--accent);color:#0c4a6e}
+.page-hdr h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:10px}
+.page-hdr p{color:var(--muted)}
+section{margin-bottom:64px;scroll-margin-top:24px}
+section>h2{font-size:20px;font-weight:700;padding-bottom:12px;border-bottom:2px solid var(--border);margin-bottom:24px}
+h3{font-size:16px;font-weight:600;margin:28px 0 12px}
+p{margin-bottom:10px}ul,ol{padding-left:22px;margin:8px 0 10px}li{margin-bottom:4px}
+.diagram-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px 24px 20px;margin:18px 0;overflow-x:auto;text-align:center}
+.diagram-wrap .cap{font-size:12px;color:var(--muted);margin-top:14px}
+.mermaid{display:inline-block}
+.tbl-wrap{overflow-x:auto;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+th{background:#f1f5f9;font-weight:600;font-size:12.5px;padding:9px 14px;border-bottom:1px solid var(--border);text-align:left}
+td{padding:9px 14px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+tr:last-child td{border-bottom:none}tr:hover td{background:#fafafa}
+.callout{border-radius:8px;padding:13px 16px;margin:14px 0;border-left:4px solid;font-size:13.5px}
+.callout .c-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.callout.interview{background:#fef2f2;border-color:#dc2626}.callout.interview .c-title{color:#dc2626}
+.callout.warn{background:#fff7ed;border-color:#ea580c}.callout.warn .c-title{color:#ea580c}
+.callout.tip{background:#f0fdf4;border-color:#16a34a}.callout.tip .c-title{color:#16a34a}
+.deep{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:4px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;margin-left:6px}
+code{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#be185d}
+pre{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#1e293b;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:14px 0;line-height:1.6}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:14px}
+.q-card .q-num{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px}
+.ans-area{margin-top:12px}
+.ans-label{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.saved-badge{font-size:11px;color:#16a34a;opacity:0;transition:opacity .4s}.saved-badge.show{opacity:1}
+.ans-area textarea{width:100%;min-height:110px;border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-family:'Noto Sans KR',sans-serif;font-size:14px;line-height:1.7;resize:vertical;background:#fafcff;color:var(--text);transition:border-color .15s}
+.ans-area textarea:focus{outline:none;border-color:var(--accent);background:#fff}
+.ans-area textarea::placeholder{color:#cbd5e1}
+.feedback-box{background:var(--card);border:1.5px dashed var(--border);border-radius:12px;padding:22px 24px;margin-top:28px;text-align:center}
+.feedback-box p{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+.btn-feedback{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:background .15s}
+.btn-feedback:hover{background:#075985}
+.copy-result{margin-top:12px;font-size:13px;color:#16a34a;min-height:20px}
+.next-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:14px}
+.next-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;transition:box-shadow .15s}
+.next-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.next-card .coach{font-size:11px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:5px}
+.next-card .topic{font-size:13px;font-weight:500}
+@media(max-width:860px){#sidebar{display:none}main{margin-left:0;padding:24px 20px}}
+</style>
+</head>
+<body>
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">☁️ infra-coach</div>
+    <h2>인프라·DevOps<br>핵심 개념 개관</h2>
+  </div>
+  <div class="group-label">핵심 주제</div>
+  <a href="#aws">1. AWS 핵심 서비스 지도</a>
+  <a href="#network">2. 네트워크 기초 (VPC)</a>
+  <a href="#kubernetes">3. Kubernetes 기초</a>
+  <a href="#cicd">4. CI/CD 파이프라인</a>
+  <a href="#observability">5. 관측성 스택</a>
+  <a href="#sre">6. SRE 기본 (SLO/Error Budget)</a>
+  <a href="#deploy">7. 배포 전략 비교</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#qa">Q&amp;A 연습</a>
+</nav>
+<main>
+  <div class="page-hdr">
+    <div class="chips">
+      <span class="chip accent">infra-coach</span>
+      <span class="chip">Concept Mode</span>
+      <span class="chip">v0.1 — 2026-04-15</span>
+    </div>
+    <h1>인프라·DevOps 핵심 개념 개관</h1>
+    <p>AWS 핵심 서비스 구성부터 Kubernetes(쿠버네티스) 기초, CI/CD 파이프라인, 관측성 스택, SRE(Site Reliability Engineering, 사이트 신뢰성 엔지니어링) 기본까지 — 운영 가능한 시스템을 설계하기 위한 인프라 기초를 다진다.</p>
+  </div>
+
+  <!-- 1. AWS 핵심 서비스 지도 -->
+  <section id="aws">
+    <h2>1. AWS 핵심 서비스 지도</h2>
+    <p>백엔드 시니어 개발자가 반드시 알아야 할 AWS 서비스를 레이어별로 정리한다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    subgraph Edge["엣지 & DNS"]
+        CF["CloudFront\n(CDN)"]
+        R53["Route 53\n(DNS + Health Check)"]
+        WAF["WAF\n(웹 방화벽)"]
+    end
+    subgraph Compute["컴퓨트 레이어"]
+        ALB["ALB\n(Application LB)"]
+        EKS["EKS\n(Kubernetes)"]
+        ECS["ECS Fargate\n(컨테이너)"]
+        Lambda["Lambda\n(서버리스)"]
+    end
+    subgraph Data["데이터 레이어"]
+        RDS["RDS Aurora\n(MySQL/PostgreSQL)"]
+        Elastic["ElastiCache\n(Redis)"]
+        S3["S3\n(오브젝트 스토리지)"]
+        SQS["SQS / MSK\n(메시지 큐 / Kafka)"]
+        DDB["DynamoDB\n(NoSQL)"]
+    end
+    subgraph Ops["운영 지원"]
+        CW["CloudWatch\n(메트릭/로그)"]
+        SM["Secrets Manager\n(시크릿 관리)"]
+        ECR["ECR\n(컨테이너 레지스트리)"]
+        IAM["IAM\n(접근 제어)"]
+    end
+
+    R53 --> CF --> ALB
+    WAF --> ALB
+    ALB --> EKS & ECS & Lambda
+    EKS & ECS --> RDS & Elastic & SQS & DDB
+    Lambda --> S3 & DDB
+    EKS & ECS --> CW
+    SM --> EKS & ECS
+
+    style CF fill:#fef3c7,stroke:#d97706
+    style R53 fill:#fef3c7,stroke:#d97706
+    style ALB fill:#dbeafe,stroke:#3b82f6
+    style EKS fill:#dbeafe,stroke:#3b82f6
+    style RDS fill:#dcfce7,stroke:#16a34a
+    style Elastic fill:#dcfce7,stroke:#16a34a
+    style S3 fill:#ede9fe,stroke:#8b5cf6
+      </div>
+      <div class="cap">AWS 핵심 서비스 레이어 지도 — 엣지 → 컴퓨트 → 데이터 → 운영 지원</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>서비스</th><th>핵심 특징</th><th>선택 기준</th><th>주의사항</th></tr></thead>
+        <tbody>
+          <tr><td><strong>ECS Fargate</strong></td><td>서버리스 컨테이너. 노드 관리 불필요</td><td>단순 컨테이너 워크로드</td><td>K8s 생태계 없음</td></tr>
+          <tr><td><strong>EKS</strong></td><td>Managed Kubernetes. Control Plane 관리형</td><td>복잡한 오케스트레이션 필요 시</td><td>운영 복잡도 높음</td></tr>
+          <tr><td><strong>Lambda</strong></td><td>이벤트 기반, 최대 15분, 콜드 스타트</td><td>산발적 이벤트 처리</td><td>VPC 연결 시 콜드 스타트 증가</td></tr>
+          <tr><td><strong>RDS Aurora</strong></td><td>MySQL/PG 호환. 공유 스토리지, 빠른 Failover</td><td>RDBMS + HA 필요</td><td>비용 일반 RDS 대비 높음</td></tr>
+          <tr><td><strong>SQS</strong></td><td>관리형 큐. 최소 1회 전달. Standard/FIFO</td><td>비동기 작업 디커플링</td><td>중복 메시지 처리(Idempotent) 필수</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>VPC(Virtual Private Cloud, 가상 사설 클라우드) 기본 구성</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    Internet["🌐 인터넷"]
+    IGW["Internet Gateway"]
+
+    subgraph VPC["VPC (10.0.0.0/16)"]
+        subgraph AZ_A["가용 영역 A"]
+            PubA["Public Subnet\n10.0.1.0/24"]
+            PriA["Private Subnet\n10.0.11.0/24"]
+        end
+        subgraph AZ_B["가용 영역 B"]
+            PubB["Public Subnet\n10.0.2.0/24"]
+            PriB["Private Subnet\n10.0.12.0/24"]
+        end
+        NAT["NAT Gateway\n(아웃바운드 전용)"]
+        ALB2["ALB"]
+    end
+
+    Internet --> IGW --> PubA & PubB
+    PubA --> NAT
+    NAT --> PriA & PriB
+    PubA & PubB --> ALB2
+    ALB2 --> PriA & PriB
+
+    style PubA fill:#dbeafe,stroke:#3b82f6
+    style PubB fill:#dbeafe,stroke:#3b82f6
+    style PriA fill:#dcfce7,stroke:#16a34a
+    style PriB fill:#dcfce7,stroke:#16a34a
+    style NAT fill:#fef3c7,stroke:#d97706
+      </div>
+      <div class="cap">VPC Multi-AZ 기본 구성 — Public/Private 서브넷 분리, NAT Gateway로 아웃바운드 허용</div>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">NAT Gateway 비용 함정</div>
+      NAT Gateway를 통한 S3, DynamoDB 트래픽은 GB당 요금이 발생한다. <strong>VPC Endpoint</strong>를 활용하면 NAT를 거치지 않고 AWS 내부망으로 통신 가능 — 비용 절감 + 보안 강화 동시 달성.
+    </div>
+  </section>
+
+  <!-- 2. 네트워크 기초 -->
+  <section id="network">
+    <h2>2. 네트워크 기초 (VPC & Security)</h2>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>구분</th><th>Security Group (보안 그룹)</th><th>NACL (Network ACL)</th></tr></thead>
+        <tbody>
+          <tr><td><strong>적용 레벨</strong></td><td>인스턴스(ENI) 레벨</td><td>서브넷 레벨</td></tr>
+          <tr><td><strong>상태</strong></td><td>Stateful (응답 트래픽 자동 허용)</td><td>Stateless (인/아웃 모두 명시 필요)</td></tr>
+          <tr><td><strong>규칙 방향</strong></td><td>인바운드 + 아웃바운드</td><td>인바운드 + 아웃바운드 (순번 우선순위)</td></tr>
+          <tr><td><strong>허용/거부</strong></td><td>허용만 (Whitelist)</td><td>허용 + 거부 모두 가능</td></tr>
+          <tr><td><strong>사용 패턴</strong></td><td>서비스별 접근 제어</td><td>서브넷 전체 IP 차단</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">면접 질문</div>
+      <strong>"Multi-AZ 구성은 왜 하나요?"</strong> — 단일 AZ 장애(IDC 전원, 네트워크 장애) 시 서비스 중단 방지. RDS Multi-AZ는 동기 복제로 Failover 30초~2분. ALB는 자동으로 헬시한 AZ로 라우팅. <strong>RTO(Recovery Time Objective, 복구 목표 시간)</strong>와 <strong>RPO(Recovery Point Objective, 복구 목표 시점)</strong> 관점에서 비용 대비 효과를 설명해야 한다.
+    </div>
+  </section>
+
+  <!-- 3. Kubernetes -->
+  <section id="kubernetes">
+    <h2>3. Kubernetes(쿠버네티스) 기초</h2>
+    <p>컨테이너 오케스트레이션(Container Orchestration) 플랫폼. 선언적(Declarative) 설정으로 워크로드를 자동 배포/확장/복구한다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    subgraph ControlPlane["Control Plane (마스터)"]
+        AS["API Server\n(모든 요청의 관문)"]
+        ETCD["etcd\n(클러스터 상태 저장)"]
+        SCHED["Scheduler\n(Pod 배치 결정)"]
+        CM["Controller Manager\n(상태 조정)"]
+        AS <--> ETCD
+        AS --> SCHED & CM
+    end
+    subgraph Node1["Worker Node 1"]
+        KUB1["kubelet"]
+        KP1["kube-proxy"]
+        P1["Pod\n[Container A]"]
+        P2["Pod\n[Container B]"]
+        KUB1 --> P1 & P2
+    end
+    subgraph Node2["Worker Node 2"]
+        KUB2["kubelet"]
+        KP2["kube-proxy"]
+        P3["Pod\n[Container C]"]
+        KUB2 --> P3
+    end
+
+    AS --> KUB1 & KUB2
+    KP1 & KP2 -. "Service 네트워킹" .-> P1 & P2 & P3
+
+    style AS fill:#dbeafe,stroke:#3b82f6
+    style ETCD fill:#fef3c7,stroke:#d97706
+    style P1 fill:#dcfce7,stroke:#16a34a
+    style P2 fill:#dcfce7,stroke:#16a34a
+    style P3 fill:#dcfce7,stroke:#16a34a
+      </div>
+      <div class="cap">Kubernetes 아키텍처 — Control Plane이 Worker Node의 Pod 상태를 지속 조정</div>
+    </div>
+
+    <h3>핵심 오브젝트</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>오브젝트</th><th>역할</th><th>핵심 설정</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Pod</strong></td><td>컨테이너 실행 단위 (1개 이상)</td><td>리소스 requests/limits, liveness/readiness probe</td></tr>
+          <tr><td><strong>Deployment</strong></td><td>Pod 선언적 관리, Rolling Update</td><td>replicas, strategy(RollingUpdate/Recreate)</td></tr>
+          <tr><td><strong>Service</strong></td><td>Pod 집합에 대한 안정적 엔드포인트</td><td>ClusterIP / NodePort / LoadBalancer</td></tr>
+          <tr><td><strong>Ingress</strong></td><td>HTTP(S) 라우팅 규칙 (L7)</td><td>host, path, TLS 설정</td></tr>
+          <tr><td><strong>ConfigMap / Secret</strong></td><td>설정값/민감정보 분리</td><td>envFrom, volumeMount</td></tr>
+          <tr><td><strong>HPA</strong></td><td>CPU/메모리/커스텀 메트릭 기반 수평 확장</td><td>minReplicas, maxReplicas, targetCPUUtilizationPercentage</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">Kubernetes 함정</div>
+      <ul>
+        <li><strong>Liveness probe와 Readiness probe 혼동</strong>: Liveness는 재시작 조건, Readiness는 트래픽 수신 조건. 무거운 작업 중 Liveness 실패 → 재시작 루프</li>
+        <li><strong>Memory limit 없으면 OOMKilled</strong>: 노드 전체 메모리 부족 유발</li>
+        <li><strong>latest 태그 사용 금지</strong>: 이미지 버전 불명확, 롤백 불가</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 4. CI/CD -->
+  <section id="cicd">
+    <h2>4. CI/CD 파이프라인</h2>
+    <p>CI(Continuous Integration, 지속적 통합)는 코드 변경마다 자동 빌드/테스트. CD(Continuous Delivery/Deployment, 지속적 배포)는 스테이징/운영 자동 배포까지 확장.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    Dev["👨‍💻 개발자\nPR 생성"]
+    Build["🔨 Build\n소스 컴파일\n단위 테스트"]
+    Scan["🔍 Scan\nSAST / SCA\n컨테이너 취약점"]
+    Artifact["📦 Artifact\n도커 이미지\nECR 푸시"]
+    StageDeploy["🧪 Staging\n배포 (ArgoCD)"]
+    Smoke["✅ Smoke Test\nE2E / API 검증"]
+    ProdDeploy["🚀 Production\nCanary 배포"]
+    Monitor["📊 Monitor\nSLO 모니터링\n이상 감지 → Rollback"]
+
+    Dev -->|"PR Merge"| Build
+    Build -->|"성공"| Scan
+    Scan -->|"통과"| Artifact
+    Artifact --> StageDeploy
+    StageDeploy --> Smoke
+    Smoke -->|"통과"| ProdDeploy
+    ProdDeploy --> Monitor
+    Monitor -->|"SLO 위반"| ProdDeploy
+
+    style Build fill:#dbeafe,stroke:#3b82f6
+    style Scan fill:#fef3c7,stroke:#d97706
+    style Smoke fill:#dcfce7,stroke:#16a34a
+    style ProdDeploy fill:#e0f2fe,stroke:#0369a1
+    style Monitor fill:#ede9fe,stroke:#8b5cf6
+      </div>
+      <div class="cap">CI/CD 파이프라인 전체 흐름 — Build → Scan → Artifact → Staging → Smoke → Production → Monitor</div>
+    </div>
+
+    <h3>GitOps</h3>
+    <p><strong>GitOps</strong>는 Git을 <strong>단일 진실 원천(Single Source of Truth)</strong>으로 삼아 인프라 상태를 선언적으로 관리하는 방식이다. ArgoCD(아르고시디)가 Git 저장소를 감시하다가 변경 감지 시 클러스터에 자동 동기화(Pull 기반).</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>DORA 지표</th><th>측정 항목</th><th>Elite 수준</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Deployment Frequency</strong></td><td>배포 빈도</td><td>하루 여러 번</td></tr>
+          <tr><td><strong>Lead Time for Changes</strong></td><td>코드 커밋 → 운영 배포 시간</td><td>1시간 미만</td></tr>
+          <tr><td><strong>Change Failure Rate</strong></td><td>배포로 인한 장애 비율</td><td>5% 미만</td></tr>
+          <tr><td><strong>MTTR</strong></td><td>장애 → 복구까지 시간</td><td>1시간 미만</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 5. 관측성 -->
+  <section id="observability">
+    <h2>5. 관측성(Observability) 스택</h2>
+    <p>시스템 내부 상태를 외부 출력(Metric/Log/Trace)으로 추론할 수 있는 능력. 단순 모니터링(Monitoring)을 넘어 <strong>"왜 이런 일이 일어났는가?"</strong>를 답할 수 있어야 한다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    subgraph App["애플리케이션"]
+        SDK["OpenTelemetry SDK\n(계측)"]
+    end
+    subgraph Observability["관측성 스택"]
+        subgraph Metric["Metric (지표)"]
+            Prom["Prometheus\n(수집·저장)"]
+            Grafana["Grafana\n(시각화)"]
+            Prom --> Grafana
+        end
+        subgraph Log["Log (로그)"]
+            Loki["Loki\n(로그 집계)"]
+            GrafanaL["Grafana\n(로그 조회)"]
+            Loki --> GrafanaL
+        end
+        subgraph Trace["Trace (추적)"]
+            Tempo["Tempo\n(분산 추적)"]
+            GrafanaT["Grafana\n(트레이스 조회)"]
+            Tempo --> GrafanaT
+        end
+    end
+    subgraph Alert["알림"]
+        AM["Alertmanager"]
+        PD["PagerDuty\n(온콜)"]
+        AM --> PD
+    end
+
+    SDK -->|"메트릭 스크랩"| Prom
+    SDK -->|"구조화 로그"| Loki
+    SDK -->|"트레이스 전파"| Tempo
+    Grafana -->|"SLO 알림"| AM
+
+    style SDK fill:#fef3c7,stroke:#d97706
+    style Prom fill:#fce7f3,stroke:#ec4899
+    style Loki fill:#dbeafe,stroke:#3b82f6
+    style Tempo fill:#dcfce7,stroke:#16a34a
+      </div>
+      <div class="cap">관측성 3기둥 스택 — OpenTelemetry로 계측 → Prometheus/Loki/Tempo 수집 → Grafana 시각화</div>
+    </div>
+
+    <h3>RED / USE 메서드</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>메서드</th><th>대상</th><th>지표</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="3"><strong>RED</strong><br>(서비스 레벨)</td><td>Rate</td><td>초당 요청 수 (RPS)</td></tr>
+          <tr><td>Errors</td><td>오류율 (%)</td></tr>
+          <tr><td>Duration</td><td>응답 시간 (p99 지연)</td></tr>
+          <tr><td rowspan="3"><strong>USE</strong><br>(리소스 레벨)</td><td>Utilization</td><td>리소스 사용률 (%)</td></tr>
+          <tr><td>Saturation</td><td>리소스 포화도 (큐 길이)</td></tr>
+          <tr><td>Errors</td><td>오류 횟수</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">구조화 로그</div>
+      로그는 반드시 JSON 형태로 구조화한다. 필수 필드: <code>timestamp</code>, <code>level</code>, <code>traceId</code>, <code>spanId</code>, <code>service</code>, <code>message</code>. <code>traceId</code>가 없으면 분산 시스템에서 요청 추적이 불가능하다.
+    </div>
+  </section>
+
+  <!-- 6. SRE -->
+  <section id="sre">
+    <h2>6. SRE 기본 (SLO / Error Budget)</h2>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    subgraph SLI["SLI (지표)"]
+        direction TB
+        S1["가용성: 성공 요청 / 전체 요청"]
+        S2["지연: p99 < 200ms 요청 비율"]
+        S3["에러율: 5xx 비율"]
+    end
+    subgraph SLO["SLO (목표)"]
+        direction TB
+        O1["가용성 ≥ 99.9%\n(연간 8.7h 다운 허용)"]
+        O2["p99 지연 < 200ms\n99% 이상 달성"]
+    end
+    subgraph EB["Error Budget (에러 예산)"]
+        direction TB
+        E1["남은 예산 → 기능 배포 OK"]
+        E2["예산 소진 → 배포 동결\n신뢰성 개선 집중"]
+    end
+
+    SLI --> SLO --> EB
+
+    style SLI fill:#dbeafe,stroke:#3b82f6
+    style SLO fill:#fef3c7,stroke:#d97706
+    style EB fill:#dcfce7,stroke:#16a34a
+      </div>
+      <div class="cap">SLI → SLO → Error Budget 흐름 — 예산이 소진되면 기능 배포를 멈추고 신뢰성 개선에 집중</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>가용성 목표</th><th>연간 다운타임</th><th>월간 다운타임</th></tr></thead>
+        <tbody>
+          <tr><td>99% (2 nines)</td><td>87.6시간</td><td>7.3시간</td></tr>
+          <tr><td>99.9% (3 nines)</td><td>8.7시간</td><td>43.8분</td></tr>
+          <tr><td>99.99% (4 nines)</td><td>52.6분</td><td>4.4분</td></tr>
+          <tr><td>99.999% (5 nines)</td><td>5.3분</td><td>26.3초</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">면접 질문</div>
+      <strong>"SLA 99.99%를 달성하려면 인프라를 어떻게 설계해야 하나요?"</strong> — Multi-AZ + 자동 Failover, Health Check 기반 라우팅, Graceful Shutdown, Circuit Breaker, 배포 전략(Canary/Blue-Green), Readiness Probe 설정, DB 복제. 각 컴포넌트의 SPOF(Single Point of Failure, 단일 장애점)를 제거하는 방향으로 설명.
+    </div>
+  </section>
+
+  <!-- 7. 배포 전략 -->
+  <section id="deploy">
+    <h2>7. 배포 전략 비교</h2>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    subgraph Rolling["롤링 업데이트 (Rolling Update)"]
+        direction LR
+        RV1["v1 v1 v1"] -->|"점진적 교체"| RV2["v2 v1 v1"] --> RV3["v2 v2 v1"] --> RV4["v2 v2 v2"]
+    end
+    subgraph BG["블루-그린 (Blue-Green)"]
+        direction LR
+        BGV1["Blue (v1)\n트래픽 100%"] -->|"전환"| BGV2["Green (v2)\n트래픽 100%"]
+        BGV1 -.->|"대기 중"| BGV3["Blue (v1)\n대기 (즉시 롤백 가능)"]
+    end
+    subgraph Canary["카나리 (Canary)"]
+        direction LR
+        CAV1["v1\n90% 트래픽"] & CAV2["v2\n10% 트래픽"] -->|"점진 증가"| CAV3["v2\n100% 트래픽"]
+    end
+
+    style Rolling fill:#dbeafe,stroke:#3b82f6
+    style BG fill:#dcfce7,stroke:#16a34a
+    style Canary fill:#fef3c7,stroke:#d97706
+      </div>
+      <div class="cap">배포 전략 비교 — Rolling(점진 교체), Blue-Green(즉시 전환), Canary(점진 트래픽 증가)</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>전략</th><th>롤백 속도</th><th>리소스 비용</th><th>리스크</th><th>사용 상황</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Rolling Update</strong></td><td>느림 (재배포 필요)</td><td>1x</td><td>중간 (버전 혼재)</td><td>일반적인 배포 기본값</td></tr>
+          <tr><td><strong>Blue-Green</strong></td><td>즉시 (DNS/LB 전환)</td><td>2x</td><td>낮음</td><td>DB 스키마 변경, 완전한 전환 필요</td></tr>
+          <tr><td><strong>Canary</strong></td><td>빠름 (트래픽 재조정)</td><td>1.1x~2x</td><td>낮음 (소수 사용자만 노출)</td><td>고위험 변경, A/B 테스트</td></tr>
+          <tr><td><strong>Recreate</strong></td><td>N/A</td><td>1x</td><td>높음 (다운타임 발생)</td><td>개발/스테이징 환경</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Q&A -->
+  <section id="qa">
+    <h2>Q&amp;A 연습</h2>
+    <p>아래 질문에 직접 답변을 작성하세요. 자동 저장되며 피드백 요청 시 복사할 수 있습니다.</p>
+
+    <div class="q-card">
+      <div class="q-num">Q1 — VPC 설계</div>
+      <p>일일 방문자 100만 명의 이커머스 서비스를 AWS에서 구성하려고 합니다. VPC 구조(Public/Private 서브넷, Multi-AZ, NAT Gateway), 보안 그룹 정책, 그리고 RDS와 ElastiCache의 배치를 설명하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>나의 답변</span>
+          <span class="saved-badge" id="badge-infra-q1">저장됨 ✓</span>
+        </div>
+        <textarea id="ans-infra-q1" placeholder="답변을 입력하세요..." oninput="saveAns('infra-q1',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2 — Kubernetes 운영</div>
+      <p>Kubernetes 클러스터에서 특정 Pod가 계속 CrashLoopBackOff 상태가 됩니다. 원인을 파악하고 해결하는 과정을 Runbook 형식으로 설명하세요. 사용할 kubectl 명령어도 포함하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>나의 답변</span>
+          <span class="saved-badge" id="badge-infra-q2">저장됨 ✓</span>
+        </div>
+        <textarea id="ans-infra-q2" placeholder="답변을 입력하세요..." oninput="saveAns('infra-q2',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3 — SLO & Error Budget</div>
+      <p>서비스 SLO가 가용성 99.9%인데, 이번 달 이미 40분의 장애가 발생했습니다. 남은 Error Budget을 계산하고, 이 상황에서 팀의 의사결정은 어떻게 해야 하는지 설명하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>나의 답변</span>
+          <span class="saved-badge" id="badge-infra-q3">저장됨 ✓</span>
+        </div>
+        <textarea id="ans-infra-q3" placeholder="답변을 입력하세요..." oninput="saveAns('infra-q3',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q4 — 배포 전략</div>
+      <p>DB 스키마 마이그레이션(컬럼 추가)을 포함하는 배포를 진행해야 합니다. 무중단으로 배포하기 위한 전략을 단계별로 설명하세요. 어떤 배포 전략을 사용하고, DB 마이그레이션은 언제 어떻게 적용하나요?</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>나의 답변</span>
+          <span class="saved-badge" id="badge-infra-q4">저장됨 ✓</span>
+        </div>
+        <textarea id="ans-infra-q4" placeholder="답변을 입력하세요..." oninput="saveAns('infra-q4',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>작성한 답변을 복사해서 Claude에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 복사</button>
+      <div class="copy-result" id="copy-result"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>다음 학습 주제</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">infra-coach</div><div class="topic">EKS 클러스터 구성 실습</div></div>
+      <div class="next-card"><div class="coach">infra-coach</div><div class="topic">Terraform으로 VPC + ECS 구성</div></div>
+      <div class="next-card"><div class="coach">infra-coach</div><div class="topic">Prometheus + Grafana 대시보드 설계</div></div>
+      <div class="next-card"><div class="coach">system-design-coach</div><div class="topic">대용량 서비스 AWS 아키텍처 설계</div></div>
+      <div class="next-card"><div class="coach">infra-coach</div><div class="topic">Kafka on MSK 구성 및 운영</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'neutral',securityLevel:'loose',flowchart:{htmlLabels:true,curve:'basis'}});
+
+const NS = 'jobStudy::infra::00-introduction::';
+
+function saveAns(id, val) {
+  localStorage.setItem(NS + id, val);
+  const b = document.getElementById('badge-' + id);
+  if (b) { b.classList.add('show'); setTimeout(() => b.classList.remove('show'), 1800); }
+}
+
+function loadAll() {
+  document.querySelectorAll('[id^="ans-"]').forEach(el => {
+    const key = NS + el.id.replace('ans-', '');
+    const saved = localStorage.getItem(key);
+    if (saved) el.value = saved;
+  });
+}
+
+function copyForFeedback() {
+  const title = document.title;
+  const qs = document.querySelectorAll('.q-card');
+  let text = `[${title} — Q&A 피드백 요청]\n\n`;
+  qs.forEach((card, i) => {
+    const num = card.querySelector('.q-num')?.innerText || `Q${i+1}`;
+    const q = card.querySelector('p')?.innerText || '';
+    const ta = card.querySelector('textarea');
+    const ans = ta ? ta.value.trim() : '';
+    text += `${num}\n질문: ${q}\n내 답변: ${ans || '(미작성)'}\n\n`;
+  });
+  text += '위 답변들에 대해 시니어 인프라/SRE 코치 관점에서 피드백 부탁드립니다.';
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('copy-result').textContent = '✓ 클립보드에 복사되었습니다. Claude 채팅창에 붙여넣기 하세요.';
+    setTimeout(() => document.getElementById('copy-result').textContent = '', 4000);
+  });
+}
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      document.querySelectorAll('#sidebar a').forEach(a => a.classList.remove('active'));
+      const id = e.target.id;
+      const link = document.querySelector(`#sidebar a[href="#${id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, {rootMargin: '-20% 0px -70% 0px'});
+
+document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+loadAll();
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

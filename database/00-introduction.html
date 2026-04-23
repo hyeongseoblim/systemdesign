@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>데이터베이스 핵심 개념 개관</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root{--bg:#f8fafc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--accent:#d97706}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14.5px;line-height:1.75}
+#sidebar{width:248px;min-height:100vh;background:var(--card);border-right:1px solid var(--border);padding:24px 0;position:fixed;left:0;top:0;overflow-y:auto;z-index:50}
+#sidebar .brand{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:16px}
+#sidebar .brand .tag{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+#sidebar .brand h2{font-size:14px;font-weight:700;line-height:1.4}
+#sidebar .group-label{padding:12px 20px 4px;font-size:10.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em}
+#sidebar a{display:block;padding:7px 20px;font-size:13px;color:var(--muted);text-decoration:none;border-left:3px solid transparent;transition:all .15s}
+#sidebar a:hover,#sidebar a.active{color:var(--accent);background:var(--bg);border-left-color:var(--accent)}
+main{margin-left:248px;flex:1;max-width:1080px;padding:48px 56px}
+.page-hdr{margin-bottom:48px;padding-bottom:32px;border-bottom:2px solid var(--border)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{font-size:12px;font-weight:500;padding:3px 11px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.accent{background:#fef3c7;border-color:var(--accent);color:#92400e}
+.page-hdr h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:10px}
+.page-hdr p{color:var(--muted)}
+section{margin-bottom:64px;scroll-margin-top:24px}
+section>h2{font-size:20px;font-weight:700;padding-bottom:12px;border-bottom:2px solid var(--border);margin-bottom:24px}
+h3{font-size:16px;font-weight:600;margin:28px 0 12px}
+p{margin-bottom:10px}ul,ol{padding-left:22px;margin:8px 0 10px}li{margin-bottom:4px}
+.diagram-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px 24px 20px;margin:18px 0;overflow-x:auto;text-align:center}
+.diagram-wrap .cap{font-size:12px;color:var(--muted);margin-top:14px}
+.mermaid{display:inline-block}
+.tbl-wrap{overflow-x:auto;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+th{background:#f1f5f9;font-weight:600;font-size:12.5px;padding:9px 14px;border-bottom:1px solid var(--border);text-align:left}
+td{padding:9px 14px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+tr:last-child td{border-bottom:none}tr:hover td{background:#fafafa}
+.callout{border-radius:8px;padding:13px 16px;margin:14px 0;border-left:4px solid;font-size:13.5px}
+.callout .c-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.callout.interview{background:#fef2f2;border-color:#dc2626}.callout.interview .c-title{color:#dc2626}
+.callout.warn{background:#fff7ed;border-color:#ea580c}.callout.warn .c-title{color:#ea580c}
+.callout.tip{background:#f0fdf4;border-color:#16a34a}.callout.tip .c-title{color:#16a34a}
+.deep{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:4px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;margin-left:6px}
+code{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#be185d}
+pre{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#1e293b;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:14px 0;line-height:1.6}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:14px}
+.q-card .q-num{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px}
+.ans-area{margin-top:12px}
+.ans-label{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.saved-badge{font-size:11px;color:#16a34a;opacity:0;transition:opacity .4s}.saved-badge.show{opacity:1}
+.ans-area textarea{width:100%;min-height:110px;border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-family:'Noto Sans KR',sans-serif;font-size:14px;line-height:1.7;resize:vertical;background:#fafcff;color:var(--text);transition:border-color .15s}
+.ans-area textarea:focus{outline:none;border-color:var(--accent);background:#fff}
+.ans-area textarea::placeholder{color:#cbd5e1}
+.feedback-box{background:var(--card);border:1.5px dashed var(--border);border-radius:12px;padding:22px 24px;margin-top:28px;text-align:center}
+.feedback-box p{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+.btn-feedback{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:background .15s}
+.btn-feedback:hover{background:#b45309}
+.copy-result{margin-top:12px;font-size:13px;color:#16a34a;min-height:20px}
+.next-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:14px}
+.next-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;transition:box-shadow .15s}
+.next-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.next-card .coach{font-size:11px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:5px}
+.next-card .topic{font-size:13px;font-weight:500}
+@media(max-width:860px){#sidebar{display:none}main{margin-left:0;padding:24px 20px}}
+</style>
+</head>
+<body>
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🗄️ database-coach</div>
+    <h2>데이터베이스<br>핵심 개념 개관</h2>
+  </div>
+  <div class="group-label">핵심 주제</div>
+  <a href="#selection">1. RDBMS vs NoSQL 선택 기준</a>
+  <a href="#index">2. 인덱스 & B+Tree</a>
+  <a href="#transaction">3. 트랜잭션 & 격리 수준</a>
+  <a href="#lock">4. 락 & MVCC</a>
+  <a href="#replication">5. 복제 & 샤딩</a>
+  <a href="#query">6. 쿼리 튜닝 기초</a>
+  <a href="#nosql">7. NoSQL 모델링 패턴</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#qa">Q&amp;A 연습</a>
+</nav>
+<main>
+  <div class="page-hdr">
+    <div class="chips">
+      <span class="chip accent">database-coach</span>
+      <span class="chip">Concept Mode</span>
+      <span class="chip">v0.1 — 2026-04-15</span>
+    </div>
+    <h1>데이터베이스 핵심 개념 개관</h1>
+    <p>RDBMS(관계형 데이터베이스 관리 시스템)와 NoSQL 선택 기준부터 인덱스 내부 구조, 트랜잭션 격리, 복제/샤딩까지 — 백엔드 시니어 수준의 DB 기초를 다진다.</p>
+  </div>
+
+  <!-- 1. RDBMS vs NoSQL -->
+  <section id="selection">
+    <h2>1. RDBMS vs NoSQL 선택 기준</h2>
+    <p>도구를 선택하기 전에 <strong>데이터의 구조, 접근 패턴(Read/Write 비율), 일관성 요구사항</strong>을 먼저 파악해야 한다. 아래 의사결정 트리를 출발점으로 삼는다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    A([데이터 요구사항 분석]) --> B{강한 일관성\n& ACID 필요?}
+    B -- YES --> C{복잡한 조인\n& 집계?}
+    B -- NO --> D{읽기 처리량\n초당 100K+?}
+    C -- YES --> E[🐘 PostgreSQL / MySQL\nOLTP 기본 선택]
+    C -- NO --> F{단순 Key 조회\n+ TTL 필요?}
+    F -- YES --> G[⚡ Redis\n캐시/세션/랭킹]
+    F -- NO --> H{문서 형태\n스키마 유연성?}
+    H -- YES --> I[🍃 MongoDB\n문서 저장]
+    H -- NO --> E
+    D -- YES --> J{시계열 or\n넓은 컬럼?}
+    D -- NO --> E
+    J -- YES --> K[📊 Cassandra / TimescaleDB\n쓰기 집중 분산]
+    J -- NO --> L{전문 검색\n& 랭킹?}
+    L -- YES --> M[🔍 Elasticsearch\n검색 엔진]
+    L -- NO --> E
+
+    style E fill:#dbeafe,stroke:#3b82f6
+    style G fill:#fef3c7,stroke:#f59e0b
+    style I fill:#dcfce7,stroke:#22c55e
+    style K fill:#ede9fe,stroke:#8b5cf6
+    style M fill:#fce7f3,stroke:#ec4899
+      </div>
+      <div class="cap">DB 선택 의사결정 트리 — 요구사항에 따른 데이터베이스 선택 흐름</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>기준</th><th>RDBMS (MySQL/PostgreSQL)</th><th>Redis</th><th>MongoDB</th><th>Cassandra</th><th>Elasticsearch</th></tr></thead>
+        <tbody>
+          <tr><td><strong>데이터 모델</strong></td><td>테이블/행/열</td><td>Key-Value / 자료구조</td><td>JSON 문서</td><td>Wide-column</td><td>JSON 문서 + 역색인</td></tr>
+          <tr><td><strong>일관성</strong></td><td>Strong (ACID)</td><td>Strong (단일 노드)</td><td>Configurable</td><td>Tunable (Eventual 기본)</td><td>Eventual</td></tr>
+          <tr><td><strong>스케일</strong></td><td>수직 확장 (샤딩 복잡)</td><td>수평 (Cluster)</td><td>수평 (Sharding)</td><td>선형 수평 확장</td><td>수평 (Shard)</td></tr>
+          <tr><td><strong>Join / 집계</strong></td><td>강점</td><td>불가</td><td>제한적 ($lookup)</td><td>불가</td><td>집계 파이프라인</td></tr>
+          <tr><td><strong>주 사용처</strong></td><td>주문/결제/회원</td><td>세션/캐시/큐</td><td>카탈로그/로그</td><td>타임라인/IoT</td><td>상품검색/로그분석</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">실무 팁</div>
+      <strong>Polyglot Persistence(다중 저장소 패턴)</strong>: 하나의 서비스에서 여러 DB를 목적에 맞게 혼용한다. 예) 주문 데이터는 MySQL, 상품 검색은 Elasticsearch, 세션은 Redis. 단, 데이터 동기화 복잡성을 고려해야 한다.
+    </div>
+  </section>
+
+  <!-- 2. 인덱스 & B+Tree -->
+  <section id="index">
+    <h2>2. 인덱스 & B+Tree</h2>
+    <p>인덱스(Index)는 특정 컬럼에 대한 <strong>정렬된 별도 자료구조</strong>로, 풀 스캔(O(n)) 대신 O(log n) 탐색을 가능하게 한다. MySQL InnoDB와 PostgreSQL은 모두 B+Tree를 기본 인덱스 구조로 사용한다.</p>
+
+    <h3>B+Tree 구조</h3>
+    <pre>
+       [Internal Node]
+      /       |        \
+   [50]     [100]     [150]        ← 내부 노드: 탐색 키만 보관
+   /  \     /   \     /   \
+[20,30][50,60][100,110][150,160]   ← 리프 노드: 실제 데이터(또는 row pointer)
+  ↕       ↕        ↕        ↕
+  (리프 노드끼리 Linked List로 연결 → Range Scan 효율적)
+    </pre>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    subgraph B+Tree["B+Tree 인덱스 구조"]
+        R["루트 노드\n[50 | 100]"]
+        I1["내부 노드\n[20 | 35]"]
+        I2["내부 노드\n[60 | 80]"]
+        I3["내부 노드\n[110 | 130]"]
+        L1["리프 🍃\n[10,15,20]"]
+        L2["리프 🍃\n[25,30,35]"]
+        L3["리프 🍃\n[40,45,50]"]
+        L4["리프 🍃\n[60,65,80]"]
+        L5["리프 🍃\n[110,115,130]"]
+        R --> I1 & I2 & I3
+        I1 --> L1 & L2
+        I2 --> L3 & L4
+        I3 --> L5
+        L1 -. "→ next" .-> L2 -. "→ next" .-> L3 -. "→ next" .-> L4 -. "→ next" .-> L5
+    end
+
+    style R fill:#fef3c7,stroke:#d97706
+    style I1 fill:#fff7ed,stroke:#d97706
+    style I2 fill:#fff7ed,stroke:#d97706
+    style I3 fill:#fff7ed,stroke:#d97706
+      </div>
+      <div class="cap">B+Tree 구조 — 리프 노드는 Linked List로 연결되어 Range Scan에 최적</div>
+    </div>
+
+    <h3>인덱스 종류와 선택</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>종류</th><th>특징</th><th>사용 상황</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Clustered Index</strong></td><td>리프 노드 = 실제 데이터 행. 테이블당 1개(InnoDB: PK)</td><td>PK 기반 조회 최적</td></tr>
+          <tr><td><strong>Secondary Index</strong></td><td>리프 노드 = PK 포인터. Extra lookup 발생</td><td>PK 외 조건 검색</td></tr>
+          <tr><td><strong>Covering Index</strong></td><td>쿼리 컬럼 모두 인덱스에 포함. Index-only scan</td><td>자주 쓰는 SELECT 최적화</td></tr>
+          <tr><td><strong>Composite Index</strong></td><td>다중 컬럼 인덱스. 선두 컬럼 규칙(Leftmost Prefix)</td><td>WHERE 다중 조건</td></tr>
+          <tr><td><strong>Partial Index (PG)</strong></td><td>조건을 만족하는 행만 인덱싱</td><td>Soft delete: WHERE deleted_at IS NULL</td></tr>
+          <tr><td><strong>Full-text Index</strong></td><td>역색인(Inverted Index) 구조. 형태소 분석</td><td>텍스트 검색 (LIKE '%word%' 대안)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">면접 단골 질문</div>
+      <strong>"인덱스가 있는데 왜 풀 스캔이 나오나요?"</strong> — 옵티마이저는 선택도(Selectivity)가 낮으면(예: 전체 데이터의 20% 이상 반환) 인덱스보다 풀 스캔이 더 빠르다고 판단한다. 또한 함수 적용(<code>WHERE YEAR(created_at)=2024</code>), 묵시적 타입 변환, Null 값 비교도 인덱스를 타지 못한다.
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">인덱스 함정</div>
+      인덱스는 <strong>쓰기 비용</strong>을 증가시킨다(INSERT/UPDATE/DELETE 시 인덱스도 갱신). 불필요한 인덱스는 DML 성능을 저하시키고 디스크를 낭비한다. 실행 계획(<code>EXPLAIN ANALYZE</code>)으로 반드시 검증한다.
+    </div>
+  </section>
+
+  <!-- 3. 트랜잭션 & 격리 수준 -->
+  <section id="transaction">
+    <h2>3. 트랜잭션 & 격리 수준</h2>
+    <p>트랜잭션(Transaction)은 <strong>ACID</strong> 속성을 보장하는 작업 단위다.</p>
+    <ul>
+      <li><strong>Atomicity(원자성)</strong>: 전부 성공 or 전부 실패</li>
+      <li><strong>Consistency(일관성)</strong>: 트랜잭션 전후 DB 무결성 제약 유지</li>
+      <li><strong>Isolation(격리성)</strong>: 동시 실행 트랜잭션이 서로 간섭하지 않음</li>
+      <li><strong>Durability(영속성)</strong>: 커밋된 데이터는 시스템 장애 후에도 유지</li>
+    </ul>
+
+    <h3>격리 수준(Isolation Level)별 발생 현상</h3>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant T1 as 트랜잭션 1
+    participant DB as DB
+    participant T2 as 트랜잭션 2
+
+    Note over T1,T2: READ UNCOMMITTED — Dirty Read 발생
+    T2->>DB: UPDATE balance = 500 (미커밋)
+    T1->>DB: SELECT balance → 500 읽음 (Dirty Read!)
+    T2->>DB: ROLLBACK
+    Note over T1: T1이 존재하지 않았던 값을 읽음
+
+    Note over T1,T2: READ COMMITTED — Non-repeatable Read 발생
+    T1->>DB: SELECT balance → 300
+    T2->>DB: UPDATE balance = 500 / COMMIT
+    T1->>DB: SELECT balance → 500 (같은 트랜잭션 내 다른 값!)
+
+    Note over T1,T2: REPEATABLE READ — Phantom Read 가능
+    T1->>DB: SELECT COUNT(*) WHERE age>20 → 10건
+    T2->>DB: INSERT new row age=25 / COMMIT
+    T1->>DB: SELECT COUNT(*) WHERE age>20 → 11건 (Phantom!)
+      </div>
+      <div class="cap">격리 수준별 이상 현상 — Dirty Read → Non-repeatable Read → Phantom Read 순으로 엄격해짐</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>격리 수준</th><th>Dirty Read</th><th>Non-repeatable Read</th><th>Phantom Read</th><th>MySQL InnoDB 기본</th></tr></thead>
+        <tbody>
+          <tr><td>READ UNCOMMITTED</td><td>발생</td><td>발생</td><td>발생</td><td>—</td></tr>
+          <tr><td>READ COMMITTED</td><td>방지</td><td>발생</td><td>발생</td><td>—</td></tr>
+          <tr><td><strong>REPEATABLE READ</strong></td><td>방지</td><td>방지</td><td>발생 (이론)</td><td>✅ 기본값</td></tr>
+          <tr><td>SERIALIZABLE</td><td>방지</td><td>방지</td><td>방지</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">InnoDB MVCC</div>
+      MySQL InnoDB의 REPEATABLE READ는 <strong>MVCC(Multi-Version Concurrency Control, 다중 버전 동시성 제어)</strong>를 통해 Phantom Read를 실질적으로 방지한다. 각 행에 숨겨진 버전 번호(DB_TRX_ID)를 기록하고, 트랜잭션 시작 시점의 스냅샷을 읽어 일관된 뷰를 제공한다.
+    </div>
+  </section>
+
+  <!-- 4. 락 & MVCC -->
+  <section id="lock">
+    <h2>4. 락(Lock) & MVCC</h2>
+    <p>동시 접근에서 데이터 정합성을 보장하는 두 가지 메커니즘이다.</p>
+
+    <h3>락 종류</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>락 종류</th><th>동작</th><th>사용 SQL</th><th>주의사항</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Shared Lock (S)</strong></td><td>읽기 락. 다른 S Lock과 공존 가능</td><td><code>SELECT ... LOCK IN SHARE MODE</code></td><td>X Lock과 충돌</td></tr>
+          <tr><td><strong>Exclusive Lock (X)</strong></td><td>쓰기 락. 다른 모든 Lock과 배타적</td><td><code>SELECT ... FOR UPDATE</code>, DML</td><td>긴 트랜잭션 주의</td></tr>
+          <tr><td><strong>Record Lock</strong></td><td>인덱스 레코드 단위 락</td><td>인덱스 조건 WHERE 절</td><td>인덱스 없으면 Table Lock</td></tr>
+          <tr><td><strong>Gap Lock</strong></td><td>인덱스 레코드 사이 공간 락. Phantom 방지</td><td>범위 조건 WHERE</td><td>데드락 원인 중 하나</td></tr>
+          <tr><td><strong>Next-key Lock</strong></td><td>Record + Gap Lock 조합 (InnoDB 기본)</td><td>범위 쿼리</td><td>REPEATABLE READ에서 동작</td></tr>
+          <tr><td><strong>Intention Lock</strong></td><td>테이블 레벨의 의도 락 (IS/IX)</td><td>자동 설정</td><td>테이블 락 충돌 감지용</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Optimistic vs Pessimistic Locking</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    subgraph OL["낙관적 락 (Optimistic Locking)"]
+        direction TB
+        OA[읽기: version=3 저장] --> OB[비즈니스 로직 처리]
+        OB --> OC["UPDATE WHERE version=3\n→ affected rows 확인"]
+        OC -- "rows=1 성공" --> OD[커밋]
+        OC -- "rows=0 충돌" --> OE[재시도 or 오류 반환]
+    end
+    subgraph PL["비관적 락 (Pessimistic Locking)"]
+        direction TB
+        PA["SELECT FOR UPDATE\n(즉시 락 획득)"] --> PB[비즈니스 로직 처리]
+        PB --> PC[UPDATE 실행]
+        PC --> PD[COMMIT / 락 해제]
+        PA -- "락 대기" --> PW[다른 트랜잭션 블로킹]
+    end
+
+    style OL fill:#dcfce7,stroke:#16a34a
+    style PL fill:#fef3c7,stroke:#d97706
+      </div>
+      <div class="cap">낙관적 락 vs 비관적 락 — 충돌 빈도와 처리 비용에 따라 선택</div>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">면접 단골 질문</div>
+      <strong>"재고 차감 동시성을 어떻게 해결하나요?"</strong> — 낙관적 락(충돌 드문 경우, UX 재시도 허용), 비관적 락(<code>SELECT FOR UPDATE</code>), Redis 분산 락(여러 서버), DB 원자적 연산(<code>UPDATE stock = stock - 1 WHERE stock > 0</code>). 각 방법의 Trade-off와 Deadlock 방지 전략까지 답해야 한다.
+    </div>
+  </section>
+
+  <!-- 5. 복제 & 샤딩 -->
+  <section id="replication">
+    <h2>5. 복제(Replication) & 샤딩(Sharding)</h2>
+
+    <h3>복제(Replication)</h3>
+    <p>데이터를 여러 서버에 복사해 <strong>고가용성(HA)</strong>과 <strong>읽기 확장</strong>을 달성한다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    subgraph Replication["MySQL Replication"]
+        W["Primary (Writer)\n쓰기 트래픽"]
+        R1["Replica 1\n읽기 트래픽"]
+        R2["Replica 2\n읽기 트래픽"]
+        R3["Replica 3\n읽기 트래픽"]
+        W -- "Binary Log\n(비동기/반동기)" --> R1
+        W -- "Binary Log" --> R2
+        W -- "Binary Log" --> R3
+    end
+    subgraph Types["복제 유형 비교"]
+        A1["비동기 (Async)\n낮은 지연, 데이터 손실 가능"]
+        A2["반동기 (Semi-sync)\n하나 이상 확인 후 커밋"]
+        A3["동기 (Sync)\n모든 복제본 확인\n높은 지연"]
+    end
+
+    style W fill:#fef3c7,stroke:#d97706
+    style R1 fill:#dbeafe,stroke:#3b82f6
+    style R2 fill:#dbeafe,stroke:#3b82f6
+    style R3 fill:#dbeafe,stroke:#3b82f6
+      </div>
+      <div class="cap">MySQL 복제 구조 — Primary가 Binary Log를 Replica에 전달</div>
+    </div>
+
+    <h3>샤딩(Sharding)</h3>
+    <p>단일 DB로 처리 불가한 대용량 데이터를 <strong>수평 분할</strong>하여 여러 DB 서버에 분산한다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>샤딩 전략</th><th>방법</th><th>장점</th><th>단점</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Range 샤딩</strong></td><td>키 범위로 분할 (예: 1~1M → Shard1)</td><td>Range 쿼리 효율적</td><td>핫스팟 발생 가능</td></tr>
+          <tr><td><strong>Hash 샤딩</strong></td><td>해시(key) % N으로 샤드 결정</td><td>균등 분산</td><td>Range 쿼리 비효율, 리샤딩 어려움</td></tr>
+          <tr><td><strong>Directory 샤딩</strong></td><td>별도 라우팅 테이블 관리</td><td>유연한 리샤딩</td><td>라우팅 테이블 병목</td></tr>
+          <tr><td><strong>Consistent Hashing</strong></td><td>링(Ring) 구조. 노드 추가/제거 시 최소 이동</td><td>리샤딩 최소화</td><td>핫스팟 주의 (Virtual Node로 완화)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">샤딩의 대가</div>
+      Cross-shard JOIN 불가, 분산 트랜잭션 복잡성 증가, 샤드 키 선택 실수 시 데이터 불균형. <strong>파티셔닝(Partitioning)</strong>으로 먼저 해결 가능한지 검토 후 샤딩을 고려한다.
+    </div>
+  </section>
+
+  <!-- 6. 쿼리 튜닝 -->
+  <section id="query">
+    <h2>6. 쿼리 튜닝 기초</h2>
+    <p>성능 문제의 80%는 느린 쿼리에서 발생한다. <strong>EXPLAIN / EXPLAIN ANALYZE</strong> 출력을 읽는 능력이 핵심이다.</p>
+
+    <h3>EXPLAIN 핵심 컬럼 (MySQL)</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>컬럼</th><th>의미</th><th>주의 신호</th></tr></thead>
+        <tbody>
+          <tr><td><code>type</code></td><td>접근 방식. ALL → index → range → ref → eq_ref → const 순으로 좋음</td><td><code>ALL</code> = 풀 스캔</td></tr>
+          <tr><td><code>key</code></td><td>실제 사용된 인덱스</td><td>NULL = 인덱스 미사용</td></tr>
+          <tr><td><code>rows</code></td><td>옵티마이저 예상 스캔 행 수</td><td>큰 수 = 비효율</td></tr>
+          <tr><td><code>Extra</code></td><td>부가 정보</td><td>Using filesort, Using temporary 주의</td></tr>
+          <tr><td><code>filtered</code></td><td>WHERE 조건으로 필터링되는 비율 (%)</td><td>낮으면 인덱스 효과 ↓</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>N+1 문제</h3>
+    <p>ORM(Object-Relational Mapping) 사용 시 가장 흔한 성능 함정이다.</p>
+    <pre>
+# BAD: N+1 쿼리 (주문 100개 → 쿼리 101번)
+orders = Order.findAll()          # 쿼리 1번
+for order in orders:
+    items = order.items           # 각 주문마다 쿼리 1번 × 100 = 100번
+
+# GOOD: Fetch Join / Eager Loading (쿼리 1번)
+orders = Order.findAll(join: :items)
+    </pre>
+
+    <div class="callout tip">
+      <div class="c-title">쿼리 튜닝 체크리스트</div>
+      <ol>
+        <li>EXPLAIN으로 실행 계획 확인 (type=ALL 제거)</li>
+        <li>인덱스 컬럼에 함수/형변환 사용 금지</li>
+        <li>SELECT * 대신 필요한 컬럼만 조회</li>
+        <li>페이지네이션: OFFSET 대신 Cursor 방식 사용 (대용량 테이블)</li>
+        <li>ORM N+1 → Fetch Join 또는 별도 쿼리로 해결</li>
+        <li>Slow Query Log 분석 (long_query_time=1s 설정)</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 7. NoSQL 모델링 -->
+  <section id="nosql">
+    <h2>7. NoSQL 모델링 패턴</h2>
+
+    <h3>Redis 핵심 자료구조</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>자료구조</th><th>명령</th><th>사용 패턴</th></tr></thead>
+        <tbody>
+          <tr><td><strong>String</strong></td><td>GET/SET/INCR</td><td>캐시, 카운터, 분산 락 (SET NX EX)</td></tr>
+          <tr><td><strong>Hash</strong></td><td>HGET/HSET/HMGET</td><td>사용자 세션, 객체 필드 부분 업데이트</td></tr>
+          <tr><td><strong>List</strong></td><td>LPUSH/RPOP/LRANGE</td><td>최근 활동 피드, 간단한 메시지 큐</td></tr>
+          <tr><td><strong>Set</strong></td><td>SADD/SMEMBERS/SINTERSTORE</td><td>고유 방문자 수, 팔로워 교집합</td></tr>
+          <tr><td><strong>Sorted Set</strong></td><td>ZADD/ZRANGE/ZRANGEBYSCORE</td><td>실시간 랭킹, 점수 기반 정렬</td></tr>
+          <tr><td><strong>Bitmap/HyperLogLog</strong></td><td>SETBIT/PFADD</td><td>DAU 집계, 중복 제거 근사</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>MongoDB 모델링: Embed vs Reference</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    Q{관계 데이터\n모델링 방법?}
+    Q --> E{항상 함께\n읽히는가?}
+    Q --> R{독립 생명주기\n가 있는가?}
+    E -- YES --> EM["📦 Embed (내장)\n{ order: { items: [...] } }\n한 번 읽기로 조회 완료"]
+    E -- NO --> R
+    R -- YES --> RF["🔗 Reference (참조)\n{ orderId: ObjectId }\n별도 조회 필요"]
+    R -- NO --> EM
+    EM -- 주의 --> W1["문서 크기 16MB 제한\n배열 unbounded growth 주의"]
+    RF -- 주의 --> W2["Application-level join 필요\n$lookup 성능 고려"]
+
+    style EM fill:#dcfce7,stroke:#16a34a
+    style RF fill:#dbeafe,stroke:#3b82f6
+      </div>
+      <div class="cap">MongoDB Embed vs Reference — 접근 패턴과 생명주기에 따라 결정</div>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">면접 단골 질문</div>
+      <strong>"MySQL과 Redis를 같이 쓰는 이유는?"</strong> — Redis는 인메모리(In-memory) DB이므로 MySQL의 느린 복잡한 쿼리를 캐싱해 응답 시간을 ms 단위로 줄인다. Cache-Aside(캐시 어사이드) 패턴: 캐시 미스 시 DB에서 읽어 Redis에 저장, TTL로 만료 관리. Cache Stampede(캐시 스탬피드)와 Cache Invalidation(캐시 무효화) 전략도 함께 답해야 한다.
+    </div>
+  </section>
+
+  <!-- Q&A -->
+  <section id="qa">
+    <h2>Q&amp;A 연습</h2>
+    <p>아래 질문에 직접 답변을 작성하세요. 자동 저장되며 피드백 요청 시 복사할 수 있습니다.</p>
+
+    <div class="q-card">
+      <div class="q-num">Q1 — 인덱스 기초</div>
+      <p>MySQL InnoDB에서 <code>SELECT * FROM orders WHERE user_id = 123 AND status = 'PENDING'</code> 쿼리가 있을 때, 어떤 인덱스 전략을 사용하겠습니까? Composite Index의 컬럼 순서는 어떻게 결정하나요?</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>나의 답변</span>
+          <span class="saved-badge" id="badge-db-q1">저장됨 ✓</span>
+        </div>
+        <textarea id="ans-db-q1" placeholder="답변을 입력하세요..." oninput="saveAns('db-q1',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2 — 격리 수준</div>
+      <p>결제 시스템에서 동일 주문에 대한 중복 결제를 방지하려고 합니다. REPEATABLE READ 격리 수준에서 SELECT → 조건 체크 → INSERT 패턴의 문제점은 무엇이며, 어떻게 해결하겠습니까?</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>나의 답변</span>
+          <span class="saved-badge" id="badge-db-q2">저장됨 ✓</span>
+        </div>
+        <textarea id="ans-db-q2" placeholder="답변을 입력하세요..." oninput="saveAns('db-q2',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3 — 샤딩 설계</div>
+      <p>일별 1억 건 이상의 주문 데이터가 쌓이는 시스템에서 샤딩 키(Shard Key)를 선택하려고 합니다. <code>user_id</code>와 <code>order_date</code> 중 어떤 것을 샤딩 키로 선택하겠습니까? 각각의 Trade-off를 설명하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>나의 답변</span>
+          <span class="saved-badge" id="badge-db-q3">저장됨 ✓</span>
+        </div>
+        <textarea id="ans-db-q3" placeholder="답변을 입력하세요..." oninput="saveAns('db-q3',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q4 — 재고 차감 동시성</div>
+      <p>물류 창고에서 동시 주문 100개가 같은 SKU(재고 관리 단위) 재고 1개를 차감하려고 합니다. 데이터베이스 레벨에서 어떤 방식으로 동시성을 제어하겠습니까? 각 방법의 장단점과 Deadlock 가능성을 설명하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>나의 답변</span>
+          <span class="saved-badge" id="badge-db-q4">저장됨 ✓</span>
+        </div>
+        <textarea id="ans-db-q4" placeholder="답변을 입력하세요..." oninput="saveAns('db-q4',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>작성한 답변을 복사해서 Claude에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 복사</button>
+      <div class="copy-result" id="copy-result"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>다음 학습 주제</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">MySQL 실행 계획 심화 분석</div></div>
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">Redis 분산 락 구현 (Redlock)</div></div>
+      <div class="next-card"><div class="coach">backend-dev-coach</div><div class="topic">@Transactional 함정 8가지</div></div>
+      <div class="next-card"><div class="coach">system-design-coach</div><div class="topic">대용량 데이터 파이프라인 설계</div></div>
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">PostgreSQL MVCC 내부 구조</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'neutral',securityLevel:'loose',flowchart:{htmlLabels:true,curve:'basis'}});
+
+const NS = 'jobStudy::database::00-introduction::';
+
+function saveAns(id, val) {
+  localStorage.setItem(NS + id, val);
+  const b = document.getElementById('badge-' + id);
+  if (b) { b.classList.add('show'); setTimeout(() => b.classList.remove('show'), 1800); }
+}
+
+function loadAll() {
+  document.querySelectorAll('[id^="ans-"]').forEach(el => {
+    const key = NS + el.id.replace('ans-', '');
+    const saved = localStorage.getItem(key);
+    if (saved) el.value = saved;
+  });
+}
+
+function copyForFeedback() {
+  const title = document.title;
+  const qs = document.querySelectorAll('.q-card');
+  let text = `[${title} — Q&A 피드백 요청]\n\n`;
+  qs.forEach((card, i) => {
+    const num = card.querySelector('.q-num')?.innerText || `Q${i+1}`;
+    const q = card.querySelector('p')?.innerText || '';
+    const ta = card.querySelector('textarea');
+    const ans = ta ? ta.value.trim() : '';
+    text += `${num}\n질문: ${q}\n내 답변: ${ans || '(미작성)'}\n\n`;
+  });
+  text += '위 답변들에 대해 시니어 DB 코치 관점에서 피드백 부탁드립니다.';
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('copy-result').textContent = '✓ 클립보드에 복사되었습니다. Claude 채팅창에 붙여넣기 하세요.';
+    setTimeout(() => document.getElementById('copy-result').textContent = '', 4000);
+  });
+}
+
+// IntersectionObserver sidebar highlight
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      document.querySelectorAll('#sidebar a').forEach(a => a.classList.remove('active'));
+      const id = e.target.id;
+      const link = document.querySelector(`#sidebar a[href="#${id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, {rootMargin: '-20% 0px -70% 0px'});
+
+document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+loadAll();
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>
