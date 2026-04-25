@@ -1,0 +1,60 @@
+name: Build index & deploy to GitHub Pages
+
+# main 브랜치에 push 될 때마다 contents.json 을 재빌드하고 Pages 에 배포한다.
+# Pages 설정: Settings → Pages → Source = "GitHub Actions" 로 변경 필요.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+# Pages 배포에 필요한 권한
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 동시 배포 방지 (큐 1개만 유지)
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build contents index
+        run: node scripts/build-index.mjs
+
+      - name: Show generated contents.json summary
+        run: |
+          echo "── contents.json summary ──"
+          node -e "const j=require('./data/contents.json'); console.log('items:', j.contents.length); console.log('areas:', [...new Set(j.contents.map(c=>c.area))].join(', '));"
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # 루트 전체를 업로드 (정적 사이트라 빌드 결과물이 곧 소스)
+          path: .
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

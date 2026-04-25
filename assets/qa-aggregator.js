@@ -1,0 +1,114 @@
+// jobStudy Q&A 통합 관리 모듈
+// localStorage 의 jobStudy::*::ans*  키들을 콘텐츠별로 그룹핑한다.
+
+// 콘텐츠 메타에서 NS 와 ansIds 를 받아 답변 dict 를 만든다.
+export function readAnswersFor(content) {
+  const out = {};
+  if (!content.qaNs) return out;
+  for (const suffix of content.qaIds || []) {
+    const v = localStorage.getItem(content.qaNs + suffix);
+    if (v != null) out[suffix] = v;
+  }
+  return out;
+}
+
+// 모든 콘텐츠에 대해 그룹핑된 답변 + 메타
+export function aggregate(contents) {
+  return contents
+    .map((c) => {
+      const answers = readAnswersFor(c);
+      const total = c.qaCount || 0;
+      const answered = Object.values(answers).filter((v) => v && v.trim().length > 0).length;
+      return {
+        id: c.id,
+        path: c.path,
+        title: c.title,
+        coach: c.coach,
+        area: c.area,
+        ns: c.qaNs,
+        ids: c.qaIds || [],
+        questions: c.qaQuestions || [],
+        answers,
+        total,
+        answered,
+      };
+    })
+    .filter((g) => g.total > 0);
+}
+
+// localStorage 전체 스캔 — 메타에 없는 키도 잡아낸다 (오래된 답변 보존용)
+export function scanOrphanAnswers(knownNamespaces) {
+  const known = new Set(knownNamespaces.filter(Boolean));
+  const orphan = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key || !key.startsWith('jobStudy::')) continue;
+    if (key.startsWith('jobStudy::progress::')) continue;
+    // 알려진 NS prefix 중 어느 것에도 속하지 않으면 orphan
+    if (![...known].some((ns) => key.startsWith(ns))) {
+      orphan.push({ key, value: localStorage.getItem(key) });
+    }
+  }
+  return orphan;
+}
+
+// 사람-읽기 텍스트 (기존 copyForFeedback 형식 유지)
+export function formatForFeedback(group) {
+  const lines = [`[${group.title || group.path} — Q&A 피드백 요청]`, ''];
+  group.ids.forEach((suffix, i) => {
+    const q = group.questions[i] || '(질문 추출 실패)';
+    const a = (group.answers[suffix] || '').trim();
+    lines.push(`Q${i + 1}. ${q}`);
+    lines.push(`내 답변: ${a || '(미작성)'}`);
+    lines.push('');
+  });
+  lines.push(`위 답변들에 대해 ${group.coach || '시니어 코치'} 관점에서 피드백 부탁드립니다.`);
+  return lines.join('\n');
+}
+
+export function formatAllForFeedback(groups) {
+  return groups
+    .filter((g) => g.answered > 0)
+    .map(formatForFeedback)
+    .join('\n\n──────────\n\n');
+}
+
+// JSON export — 키별 dict
+export function exportSnapshot(contents) {
+  const groups = aggregate(contents);
+  const out = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    answers: {},
+  };
+  for (const g of groups) {
+    for (const suffix of g.ids) {
+      const v = g.answers[suffix];
+      if (v != null) out.answers[g.ns + suffix] = v;
+    }
+  }
+  // orphan 도 포함
+  const orphans = scanOrphanAnswers(contents.map((c) => c.qaNs));
+  for (const o of orphans) out.answers[o.key] = o.value;
+  return out;
+}
+
+// JSON import — 키별 dict 를 localStorage 에 쓰기
+export function importSnapshot(snapshot, opts = {}) {
+  if (!snapshot || typeof snapshot.answers !== 'object') {
+    throw new Error('snapshot.answers 가 객체가 아님');
+  }
+  const overwrite = opts.overwrite ?? true;
+  let written = 0;
+  let skipped = 0;
+  for (const [key, val] of Object.entries(snapshot.answers)) {
+    if (!key.startsWith('jobStudy::') || key.startsWith('jobStudy::progress::')) {
+      skipped++; continue;
+    }
+    const existing = localStorage.getItem(key);
+    if (existing != null && !overwrite) { skipped++; continue; }
+    localStorage.setItem(key, val);
+    written++;
+  }
+  return { written, skipped };
+}

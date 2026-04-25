@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>jobStudy 대시보드</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./assets/dashboard.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-emoji">🎓</span>
+        <div>
+          <h1 class="brand-title">jobStudy 대시보드</h1>
+          <p class="brand-sub">백엔드 이직 준비 — 시스템 디자인·물류 도메인·백엔드·DB·인프라·CS</p>
+        </div>
+      </div>
+      <div class="search-wrap">
+        <input id="searchBox" class="search-box" type="search" placeholder="🔍 제목·태그·코치·키워드 검색…" autocomplete="off" />
+      </div>
+      <div class="kpis">
+        <div class="kpi"><span class="kpi-num" id="kpiProgress">–</span><span class="kpi-lbl">진도</span></div>
+        <div class="kpi"><span class="kpi-num" id="kpiReview">–</span><span class="kpi-lbl">오늘 복습</span></div>
+        <div class="kpi"><span class="kpi-num" id="kpiQa">–</span><span class="kpi-lbl">미답변 Q</span></div>
+        <button class="theme-toggle" id="themeToggle" title="다크모드 전환">🌙</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="filters" id="filters">
+      <section class="filter-block">
+        <h3>영역</h3>
+        <div class="filter-list" id="areaFilters"></div>
+      </section>
+      <section class="filter-block">
+        <h3>코치</h3>
+        <div class="filter-list" id="coachFilters"></div>
+      </section>
+      <section class="filter-block">
+        <h3>모드</h3>
+        <div class="filter-list" id="modeFilters"></div>
+      </section>
+      <section class="filter-block">
+        <h3>난이도</h3>
+        <div class="filter-list" id="difficultyFilters"></div>
+      </section>
+      <section class="filter-block">
+        <h3>학습 상태</h3>
+        <div class="filter-list" id="statusFilters"></div>
+      </section>
+      <button id="resetFilters" class="reset-btn">필터 초기화</button>
+    </aside>
+
+    <main class="content">
+      <div class="result-bar">
+        <span id="resultCount" class="result-count">로딩 중…</span>
+        <div class="sort-wrap">
+          <label for="sortSelect">정렬:</label>
+          <select id="sortSelect">
+            <option value="area">영역 → 코치순</option>
+            <option value="recent">최근 학습순</option>
+            <option value="difficulty">난이도순</option>
+            <option value="title">제목순</option>
+          </select>
+        </div>
+      </div>
+      <div id="cardGrid" class="card-grid"></div>
+      <div id="emptyState" class="empty-state" hidden>
+        <p>검색 결과가 없습니다.</p>
+        <button onclick="window.dispatchEvent(new CustomEvent('jobstudy:reset-filters'))">필터 초기화</button>
+      </div>
+    </main>
+
+    <aside class="sidebar-right" id="sidebarRight">
+      <section class="widget">
+        <h3>영역별 진도</h3>
+        <div id="areaProgress" class="area-progress"></div>
+      </section>
+      <section class="widget">
+        <h3>오늘 복습</h3>
+        <div id="reviewQueue" class="review-queue"><p class="muted">— 곧 추가됩니다 —</p></div>
+      </section>
+      <section class="widget">
+        <h3>최근 학습</h3>
+        <div id="recentList" class="recent-list"><p class="muted">— 곧 추가됩니다 —</p></div>
+      </section>
+      <section class="widget actions">
+        <button id="openQaModal" class="primary-btn">📋 Q&amp;A 통합 뷰</button>
+        <button id="openBackup" class="ghost-btn">💾 JSON 백업/복원</button>
+      </section>
+    </aside>
+  </div>
+
+  <script type="module" src="./assets/dashboard.js"></script>
+</body>
+</html>
