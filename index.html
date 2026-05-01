@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<<<<<<< claude/unruffled-saha-fd4093
   <title>jobStudy 대시보드</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -97,5 +98,209 @@
   </div>
 
   <script type="module" src="./assets/dashboard.js"></script>
+=======
+  <title>Job Study Index</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-card: #1e293b;
+      --bg-card-hover: #334155;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --border: #334155;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f8fafc;
+        --bg-card: #ffffff;
+        --bg-card-hover: #f1f5f9;
+        --text: #0f172a;
+        --text-muted: #64748b;
+        --accent: #0284c7;
+        --border: #e2e8f0;
+        --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+    .container { max-width: 1100px; margin: 0 auto; }
+    header { margin-bottom: 3rem; text-align: center; }
+    header h1 {
+      font-size: 2.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+    header p { color: var(--text-muted); font-size: 1rem; }
+    .group { margin-bottom: 2.5rem; }
+    .group-title {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .group-title h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .group-title .count {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      background: var(--bg-card);
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+    }
+    .card {
+      display: block;
+      padding: 1.25rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-decoration: none;
+      color: inherit;
+      transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+      box-shadow: var(--shadow);
+    }
+    .card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+    .card-title {
+      font-weight: 600;
+      font-size: 1.05rem;
+      margin-bottom: 0.35rem;
+      color: var(--text);
+    }
+    .card-path {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      word-break: break-all;
+    }
+    footer {
+      margin-top: 3rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Job Study</h1>
+      <p>주제별 학습 자료 모음</p>
+    </header>
+
+    <section class="group">
+      <div class="group-title">
+        <h2>Backend</h2>
+        <span class="count">2</span>
+      </div>
+      <div class="grid">
+        <a class="card" href="./backend/00-introduction.html">
+          <div class="card-title">Introduction</div>
+          <div class="card-path">backend/00-introduction.html</div>
+        </a>
+        <a class="card" href="./backend/architecture/00-introduction.html">
+          <div class="card-title">Architecture — Introduction</div>
+          <div class="card-path">backend/architecture/00-introduction.html</div>
+        </a>
+      </div>
+    </section>
+
+    <section class="group">
+      <div class="group-title">
+        <h2>CS</h2>
+        <span class="count">1</span>
+      </div>
+      <div class="grid">
+        <a class="card" href="./cs/00-introduction.html">
+          <div class="card-title">Introduction</div>
+          <div class="card-path">cs/00-introduction.html</div>
+        </a>
+      </div>
+    </section>
+
+    <section class="group">
+      <div class="group-title">
+        <h2>Database</h2>
+        <span class="count">1</span>
+      </div>
+      <div class="grid">
+        <a class="card" href="./database/00-introduction.html">
+          <div class="card-title">Introduction</div>
+          <div class="card-path">database/00-introduction.html</div>
+        </a>
+      </div>
+    </section>
+
+    <section class="group">
+      <div class="group-title">
+        <h2>Infra</h2>
+        <span class="count">1</span>
+      </div>
+      <div class="grid">
+        <a class="card" href="./infra/00-introduction.html">
+          <div class="card-title">Introduction</div>
+          <div class="card-path">infra/00-introduction.html</div>
+        </a>
+      </div>
+    </section>
+
+    <section class="group">
+      <div class="group-title">
+        <h2>Logistics</h2>
+        <span class="count">1</span>
+      </div>
+      <div class="grid">
+        <a class="card" href="./logistics/00-domain-overview.html">
+          <div class="card-title">Domain Overview</div>
+          <div class="card-path">logistics/00-domain-overview.html</div>
+        </a>
+      </div>
+    </section>
+
+    <section class="group">
+      <div class="group-title">
+        <h2>System Design</h2>
+        <span class="count">1</span>
+      </div>
+      <div class="grid">
+        <a class="card" href="./system-design/00-introduction.html">
+          <div class="card-title">Introduction</div>
+          <div class="card-path">system-design/00-introduction.html</div>
+        </a>
+      </div>
+    </section>
+
+    <footer>
+      <p>Source: <a href="https://github.com/hyeongseoblim/SystemDesign">github.com/hyeongseoblim/SystemDesign</a></p>
+    </footer>
+  </div>
+>>>>>>> main
 </body>
 </html>

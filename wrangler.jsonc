@@ -1,0 +1,5 @@
+{
+  "name": "systemdesign",
+  "main": "worker/worker.js",
+  "compatibility_date": "2025-01-01"
+}

@@ -381,5 +381,6 @@ function copyForFeedback(){const lines=['[백엔드 아키텍처 핵심 패턴 �
 const secs=document.querySelectorAll('section[id]'),links=document.querySelectorAll('#sidebar a');
 secs.forEach(s=>new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.classList.remove('active'));const a=document.querySelector(`#sidebar a[href="#${e.target.id}"]`);if(a)a.classList.add('active');}});},{threshold:.25}).observe(s));
 </script>
+<script src="../../assets/qna-sync.js?v=1"></script>
 </body>
 </html>
