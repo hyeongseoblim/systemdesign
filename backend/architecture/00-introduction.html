@@ -30,7 +30,8 @@ h3{font-size:16px;font-weight:600;margin:28px 0 12px}
 p{margin-bottom:10px}ul,ol{padding-left:22px;margin:8px 0 10px}li{margin-bottom:4px}
 .diagram-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px 24px 20px;margin:18px 0;overflow-x:auto;text-align:center}
 .diagram-wrap .cap{font-size:12px;color:var(--muted);margin-top:14px}
-.mermaid{display:inline-block}
+.mermaid{display:inline-block;max-width:100%;width:100%;height:auto}
+.mermaid svg{max-width:100%!important;height:auto!important}
 .tbl-wrap{overflow-x:auto;margin:14px 0}
 table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
 th{background:#f1f5f9;font-weight:600;font-size:12.5px;padding:9px 14px;border-bottom:1px solid var(--border);text-align:left}
@@ -368,7 +369,7 @@ flowchart LR
   </section>
 </main>
 <script>
-mermaid.initialize({startOnLoad:true,theme:'default',themeVariables:{primaryColor:'#ede9fe',primaryTextColor:'#1e293b',primaryBorderColor:'#8b5cf6',lineColor:'#64748b',fontSize:'13px'},flowchart:{curve:'basis',padding:20},sequence:{actorMargin:50,messageMargin:30}});
+mermaid.initialize({startOnLoad:true,theme:'default',securityLevel:'loose',themeVariables:{primaryColor:'#ede9fe',primaryTextColor:'#1e293b',primaryBorderColor:'#8b5cf6',lineColor:'#64748b',fontSize:'15px'},flowchart:{curve:'basis',padding:25,nodeSpacing:50,rankSpacing:60,htmlLabels:true},sequence:{actorMargin:60,messageMargin:40,boxMargin:12,noteMargin:12},state:{nodeSpacing:50,rankSpacing:60}});
 const NS='jobStudy::backend::architecture::00-introduction::';
 ['ans1','ans2','ans3'].forEach((id,i)=>{
   const el=document.getElementById(id);if(!el)return;
