@@ -174,6 +174,7 @@ function cardHtml(c) {
   const dueLbl = progress.dueLabel(rec);
   const isCompleted = status === progress._const.STATUS.COMPLETED || status === progress._const.STATUS.REVIEW_NEEDED;
   const qaAnswered = countAnswered(c);
+  const prereqHtml = renderPrereqBadge(c);
 
   return `
     <article class="card" style="--card-accent: ${accent}; --card-accent-bg: ${accentBg};" data-id="${escapeAttr(c.id)}">
@@ -195,6 +196,7 @@ function cardHtml(c) {
         ${minutes ? `<span class="meta-sep">·</span><span>${minutes}</span>` : ''}
         ${lastVisitLbl ? `<span class="meta-sep">·</span><span>${escapeHtml(lastVisitLbl)}</span>` : ''}
         ${dueLbl ? `<span class="meta-sep">·</span><span style="color:${pct === 100 && status === 'review_needed' ? 'var(--mode-interview)' : 'var(--muted)'}">${escapeHtml(dueLbl)}</span>` : ''}
+        ${prereqHtml}
       </div>
       <div class="card-progress" data-progress-slot="${escapeAttr(c.id)}">
         <div class="progress-bar"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
@@ -203,6 +205,31 @@ function cardHtml(c) {
       </div>
     </article>
   `;
+}
+
+// 선수 학습(prerequisites) 배지 — 모두 완료 시 초록, 일부 미완료 시 회색.
+// hover 툴팁에 항목 목록 표시. 선수 항목이 없으면 빈 문자열.
+function renderPrereqBadge(c) {
+  const ids = c.prerequisites || [];
+  if (!ids.length) return '';
+  const items = ids
+    .map((id) => {
+      const target = state.contents.find((x) => x.id === id);
+      if (!target) return null;
+      const rec = progress.get(id);
+      const done =
+        rec.status === progress._const.STATUS.COMPLETED ||
+        rec.status === progress._const.STATUS.REVIEW_NEEDED;
+      return { id, title: target.title || id, done };
+    })
+    .filter(Boolean);
+  if (!items.length) return '';
+  const undone = items.filter((x) => !x.done).length;
+  const tooltip = items.map((x) => `${x.done ? '✓' : '✗'} ${x.title}`).join('\n');
+  if (undone === 0) {
+    return `<span class="meta-sep">·</span><span title="${escapeAttr(tooltip)}" style="color:var(--ok,#16a34a);font-weight:500">📚 선수 ${items.length}건 완료</span>`;
+  }
+  return `<span class="meta-sep">·</span><span title="${escapeAttr(tooltip)}" style="color:var(--muted)">📚 선수 ${items.length}건 (${undone} 미완)</span>`;
 }
 
 // Q&A 답변 개수 — qa.readAnswersFor 사용 (cloud 우선, localStorage fallback)
