@@ -26,10 +26,15 @@ export async function prefetchCloud(contents) {
         if (r.ok) {
           const data = await r.json();
           cloudCache.set(pagePath, data);
+        } else if (r.status !== 404) {
+          // 404 는 "아직 답변 없음" — 정상 시나리오. 그 외 응답은 디버깅용 로그.
+          console.warn(`[qa-aggregator] cloud fetch ${pagePath} → HTTP ${r.status}`);
+          cloudCache.set(pagePath, null);
         } else {
           cloudCache.set(pagePath, null);
         }
-      } catch {
+      } catch (err) {
+        console.warn(`[qa-aggregator] cloud fetch ${pagePath} 실패:`, err?.message || err);
         cloudCache.set(pagePath, null);
       }
     })
@@ -67,19 +72,37 @@ export function cloudStats(contents) {
 }
 
 // 콘텐츠 메타에서 NS 와 ansIds 를 받아 답변 dict 를 만든다.
-// cloud 우선, 없으면 localStorage fallback. (cloud는 prefetchCloud 호출된 경우에만 사용)
+// 정책:
+//   1. cloud 답변이 비어 있으면 localStorage 사용
+//   2. localStorage 답변이 비어 있으면 cloud 사용
+//   3. 둘 다 있고 값이 다르면 — 더 긴 쪽을 사용자의 더 최신 입력으로 간주.
+//      (qna-sync 가 오프라인이거나 push 실패 후 사용자가 추가 입력한 시나리오를 보호)
+//      divergence 발생 시 console.warn 으로 추적 가능하게 한다.
 export function readAnswersFor(content) {
   const out = {};
   if (!content.qaNs) return out;
   const cloud = getCloudAnswers(content) || {};
   for (const suffix of content.qaIds || []) {
-    const cloudVal = cloud[suffix];
-    if (cloudVal != null && String(cloudVal).trim()) {
-      out[suffix] = cloudVal;
-      continue;
+    const cloudRaw = cloud[suffix];
+    const localRaw = localStorage.getItem(content.qaNs + suffix);
+    const cloudStr = cloudRaw != null && String(cloudRaw).trim() ? String(cloudRaw) : null;
+    const localStr = localRaw != null && String(localRaw).trim() ? String(localRaw) : null;
+
+    if (cloudStr != null && localStr != null && cloudStr !== localStr) {
+      // divergence — 길이 비교로 우선순위 결정
+      const cloudLen = cloudStr.trim().length;
+      const localLen = localStr.trim().length;
+      if (localLen > cloudLen) {
+        console.warn(
+          `[qa-aggregator] ${content.qaNs}${suffix} divergence: local(${localLen}) > cloud(${cloudLen}) — using local`
+        );
+        out[suffix] = localStr;
+        continue;
+      }
+      // cloud 가 같거나 더 길면 cloud 사용 (default)
     }
-    const v = localStorage.getItem(content.qaNs + suffix);
-    if (v != null) out[suffix] = v;
+    if (cloudStr != null) { out[suffix] = cloudStr; continue; }
+    if (localRaw != null) out[suffix] = localRaw;
   }
   return out;
 }
