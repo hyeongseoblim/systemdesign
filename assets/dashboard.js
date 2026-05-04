@@ -174,6 +174,7 @@ function cardHtml(c) {
   const dueLbl = progress.dueLabel(rec);
   const isCompleted = status === progress._const.STATUS.COMPLETED || status === progress._const.STATUS.REVIEW_NEEDED;
   const qaAnswered = countAnswered(c);
+  const prereqHtml = renderPrereqBadge(c);
 
   return `
     <article class="card" style="--card-accent: ${accent}; --card-accent-bg: ${accentBg};" data-id="${escapeAttr(c.id)}">
@@ -195,6 +196,7 @@ function cardHtml(c) {
         ${minutes ? `<span class="meta-sep">·</span><span>${minutes}</span>` : ''}
         ${lastVisitLbl ? `<span class="meta-sep">·</span><span>${escapeHtml(lastVisitLbl)}</span>` : ''}
         ${dueLbl ? `<span class="meta-sep">·</span><span style="color:${pct === 100 && status === 'review_needed' ? 'var(--mode-interview)' : 'var(--muted)'}">${escapeHtml(dueLbl)}</span>` : ''}
+        ${prereqHtml}
       </div>
       <div class="card-progress" data-progress-slot="${escapeAttr(c.id)}">
         <div class="progress-bar"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
@@ -205,13 +207,39 @@ function cardHtml(c) {
   `;
 }
 
-// Q&A 답변 개수 — qa-aggregator 도입 전 임시 카운터
+// 선수 학습(prerequisites) 배지 — 모두 완료 시 초록, 일부 미완료 시 회색.
+// hover 툴팁에 항목 목록 표시. 선수 항목이 없으면 빈 문자열.
+function renderPrereqBadge(c) {
+  const ids = c.prerequisites || [];
+  if (!ids.length) return '';
+  const items = ids
+    .map((id) => {
+      const target = state.contents.find((x) => x.id === id);
+      if (!target) return null;
+      const rec = progress.get(id);
+      const done =
+        rec.status === progress._const.STATUS.COMPLETED ||
+        rec.status === progress._const.STATUS.REVIEW_NEEDED;
+      return { id, title: target.title || id, done };
+    })
+    .filter(Boolean);
+  if (!items.length) return '';
+  const undone = items.filter((x) => !x.done).length;
+  const tooltip = items.map((x) => `${x.done ? '✓' : '✗'} ${x.title}`).join('\n');
+  if (undone === 0) {
+    return `<span class="meta-sep">·</span><span title="${escapeAttr(tooltip)}" style="color:var(--ok,#16a34a);font-weight:500">📚 선수 ${items.length}건 완료</span>`;
+  }
+  return `<span class="meta-sep">·</span><span title="${escapeAttr(tooltip)}" style="color:var(--muted)">📚 선수 ${items.length}건 (${undone} 미완)</span>`;
+}
+
+// Q&A 답변 개수 — qa.readAnswersFor 사용 (cloud 우선, localStorage fallback)
 function countAnswered(c) {
   if (!c.qaNs || !c.qaIds?.length) return 0;
+  const merged = qa.readAnswersFor(c);
   let n = 0;
   for (const suffix of c.qaIds) {
-    const v = localStorage.getItem(c.qaNs + suffix);
-    if (v && v.trim().length > 0) n++;
+    const v = merged[suffix];
+    if (v && String(v).trim().length > 0) n++;
   }
   return n;
 }
@@ -413,6 +441,29 @@ function renderReviewQueue() {
   }).join('');
 }
 
+// ─────────────────────────  Cloud sync status  ─────────────────────────
+function renderCloudStatus() {
+  const widget = document.getElementById('cloudWidget');
+  const target = document.getElementById('cloudStatus');
+  if (!widget || !target) return;
+  const stats = qa.cloudStats(state.contents);
+  if (!stats.pages) {
+    widget.hidden = true;
+    return;
+  }
+  widget.hidden = false;
+  const latestLbl = stats.latest
+    ? new Date(stats.latest).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' })
+    : '—';
+  target.innerHTML = `
+    <div style="font-size:12px;line-height:1.7">
+      <div><strong style="font-size:14px">${stats.answers}</strong>건 답변 / <strong>${stats.pages}</strong>개 페이지</div>
+      <div class="muted" style="font-size:11.5px">최근 업데이트: ${escapeHtml(latestLbl)}</div>
+      <div class="muted" style="font-size:11px;margin-top:6px;line-height:1.5">qna-sync.js가 답변을 GitHub <code style="font-size:10.5px">answers/</code>에 자동 백업. 인덱스가 read-only로 통합 표시.</div>
+    </div>
+  `;
+}
+
 // ─────────────────────────  KPIs  ─────────────────────────
 function renderKpis() {
   const total = state.contents.length;
@@ -438,6 +489,7 @@ function rerenderAll() {
   renderAreaProgress();
   renderRecent();
   renderReviewQueue();
+  renderCloudStatus();
 }
 const rerender = () => renderCards(applyFilters());
 
@@ -508,8 +560,10 @@ function bindUi() {
     }
   });
   // 인덱스 탭이 다시 활성화될 때(다른 탭에서 학습 후 복귀) 갱신
+  // cloud cache 도 함께 refresh — 다른 기기/세션에서 추가된 답변 반영
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) rerenderAll();
+    if (document.hidden) return;
+    qa.prefetchCloud(state.contents).then(rerenderAll, rerenderAll);
   });
 
   // Q&A 통합 뷰 / 백업 모달
@@ -584,9 +638,14 @@ function openQaModal() {
     `;
   }).join('');
 
+  const cloud = qa.cloudStats(state.contents);
+  const cloudLine = cloud.pages
+    ? `<span class="muted" style="font-size:11.5px;margin-left:12px">☁️ 클라우드 ${cloud.answers}건 통합됨</span>`
+    : '';
+
   const html = `
     <div class="qa-toolbar">
-      <span class="muted">전체 답변 <strong>${totalAnswered}/${totalQ}</strong></span>
+      <span class="muted">전체 답변 <strong>${totalAnswered}/${totalQ}</strong>${cloudLine}</span>
       <div style="margin-left:auto;display:flex;gap:8px">
         <button class="ghost-btn" data-qa-action="copy-all">📋 답변한 전체 복사</button>
         <button class="ghost-btn" data-qa-action="export-json">💾 JSON 다운로드</button>
@@ -766,7 +825,11 @@ function initTheme() {
 (async function init() {
   initTheme();
   await loadContents();
+  // cloud 답변(qna-sync.js → Cloudflare Worker가 GitHub에 저장한 answers/*.json)을
+  // 병렬 prefetch. 실패/404 는 빈 객체로 처리되어 localStorage fallback 동작.
+  await qa.prefetchCloud(state.contents);
   renderFilterBlocks();
   bindUi();
   rerenderAll();
+  renderCloudStatus();
 })();
