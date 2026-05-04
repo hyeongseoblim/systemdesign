@@ -35,6 +35,7 @@ function newRecord() {
     firstVisitedAt: null,
     lastVisitedAt: null,
     visitCount: 0,
+    dwellMs: 0,
     completedAt: null,
     srs: {
       stage: 0,
@@ -50,8 +51,9 @@ export function get(id) {
   if (!raw) return newRecord();
   try {
     const obj = JSON.parse(raw);
-    // 마이그레이션 보호: srs 누락 시 기본값
+    // 마이그레이션 보호: 누락 필드 기본값
     if (!obj.srs) obj.srs = newRecord().srs;
+    if (typeof obj.dwellMs !== 'number') obj.dwellMs = 0;
     return obj;
   } catch {
     return newRecord();
@@ -71,6 +73,26 @@ export function recordVisit(id) {
   if (rec.status === STATUS.NOT_STARTED) rec.status = STATUS.IN_PROGRESS;
   set(id, rec);
   return rec;
+}
+
+// 학습 페이지 활성 시간 누적 (ms 단위). 위젯이 visibilitychange/beforeunload 에서 호출.
+// 1초 미만이면 노이즈로 간주, 6시간 초과면 비정상으로 간주(자다 깨어나서 발생) → 무시.
+export function addDwell(id, ms) {
+  if (!ms || ms < 1000 || ms > 6 * 60 * 60 * 1000) return null;
+  const rec = get(id);
+  rec.dwellMs = (rec.dwellMs || 0) + ms;
+  set(id, rec);
+  return rec;
+}
+
+// dwell 포맷 — "12분", "1시간 23분"
+export function formatDwell(ms) {
+  if (!ms || ms < 60 * 1000) return '< 1분';
+  const totalMin = Math.floor(ms / 60000);
+  if (totalMin < 60) return `${totalMin}분`;
+  const hr = Math.floor(totalMin / 60);
+  const min = totalMin % 60;
+  return min ? `${hr}시간 ${min}분` : `${hr}시간`;
 }
 
 export function markCompleted(id) {
