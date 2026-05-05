@@ -370,7 +370,7 @@ flowchart LR
 </main>
 <script>
 mermaid.initialize({startOnLoad:true,theme:'default',securityLevel:'loose',themeVariables:{primaryColor:'#ede9fe',primaryTextColor:'#1e293b',primaryBorderColor:'#8b5cf6',lineColor:'#64748b',fontSize:'15px'},flowchart:{curve:'basis',padding:25,nodeSpacing:50,rankSpacing:60,htmlLabels:true},sequence:{actorMargin:60,messageMargin:40,boxMargin:12,noteMargin:12},state:{nodeSpacing:50,rankSpacing:60}});
-const NS='jobStudy::backend::architecture::00-introduction::';
+const NS='jobStudy::backend::architecture::00-introduction::';window.NS=NS;
 ['ans1','ans2','ans3'].forEach((id,i)=>{
   const el=document.getElementById(id);if(!el)return;
   const sv=localStorage.getItem(NS+id);if(sv)el.value=sv;
@@ -382,5 +382,6 @@ const secs=document.querySelectorAll('section[id]'),links=document.querySelector
 secs.forEach(s=>new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.classList.remove('active'));const a=document.querySelector(`#sidebar a[href="#${e.target.id}"]`);if(a)a.classList.add('active');}});},{threshold:.25}).observe(s));
 </script>
 <script src="../../assets/qna-sync.js?v=1"></script>
+<script type="module" src="../../assets/study-widget.js?v=1"></script>
 </body>
 </html>

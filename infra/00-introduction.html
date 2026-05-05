@@ -574,9 +574,9 @@ flowchart TB
 </main>
 
 <script>
-mermaid.initialize({startOnLoad:true,theme:'neutral',securityLevel:'loose',themeVariables:{fontSize:'15px',primaryTextColor:'#1e293b',lineColor:'#64748b'},flowchart:{htmlLabels:true,curve:'basis',padding:30,nodeSpacing:60,rankSpacing:70},sequence:{actorMargin:60,messageMargin:40,boxMargin:12,noteMargin:12},state:{nodeSpacing:60,rankSpacing:70}});
+mermaid.initialize({startOnLoad:true,theme:'default',securityLevel:'loose',themeVariables:{primaryColor:'#e0f2fe',primaryTextColor:'#1e293b',primaryBorderColor:'#0369a1',lineColor:'#64748b',fontSize:'15px'},flowchart:{htmlLabels:true,curve:'basis',padding:30,nodeSpacing:60,rankSpacing:70},sequence:{actorMargin:60,messageMargin:40,boxMargin:12,noteMargin:12},state:{nodeSpacing:60,rankSpacing:70}});
 
-const NS = 'jobStudy::infra::00-introduction::';
+const NS = 'jobStudy::infra::00-introduction::';window.NS=NS;
 
 function saveAns(id, val) {
   localStorage.setItem(NS + id, val);
@@ -625,5 +625,6 @@ document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
 loadAll();
 </script>
 <script src="../assets/qna-sync.js?v=1"></script>
+<script type="module" src="../assets/study-widget.js?v=1"></script>
 </body>
 </html>
