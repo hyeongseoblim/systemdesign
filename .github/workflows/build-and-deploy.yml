@@ -48,7 +48,7 @@ jobs:
           node -e "const j=require('./data/contents.json'); console.log('items:', j.contents.length); console.log('areas:', [...new Set(j.contents.map(c=>c.area))].join(', '));"
 
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
