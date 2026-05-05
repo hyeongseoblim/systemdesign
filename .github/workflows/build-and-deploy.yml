@@ -51,7 +51,7 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           # 루트 전체를 업로드 (정적 사이트라 빌드 결과물이 곧 소스)
           path: .
