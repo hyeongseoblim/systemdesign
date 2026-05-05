@@ -1,0 +1,19 @@
+# Dependabot 설정 — GitHub Actions 의 메이저 업데이트를 자동 PR 로 받는다.
+# build-and-deploy.yml 의 액션들이 새 메이저 (Node 24 native 지원) 로 올라오면
+# Dependabot 이 PR 을 열어 우리에게 알려주며, 그 시점에 임시 우회 env 인
+# FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 를 제거하면 된다.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Seoul"
+    commit-message:
+      prefix: "chore(ci)"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    open-pull-requests-limit: 5

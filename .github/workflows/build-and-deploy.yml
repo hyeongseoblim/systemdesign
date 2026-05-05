@@ -14,6 +14,14 @@ permissions:
   pages: write
   id-token: write
 
+# 2026-09-16 이전 임시 방편:
+# checkout@v4, setup-node@v4, upload-pages-artifact@v3 가 Node 20 런타임에 묶여 있고
+# GitHub는 2026-09-16 부로 Node 20 액션 deprecation 예정.
+# 이 환경변수가 Node 24 런타임으로 강제 실행시켜 deprecation 경고를 잠재운다.
+# 액션 메이저 버전(v5/v4 etc.)들이 안정화되면 이 env 를 지우고 액션 자체를 업그레이드.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 # 동시 배포 방지 (큐 1개만 유지)
 concurrency:
   group: pages
