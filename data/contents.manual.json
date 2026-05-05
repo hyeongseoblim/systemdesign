@@ -4,48 +4,55 @@
     "difficulty": 2,
     "estimatedMinutes": 45,
     "keywords": ["밸류체인", "재고 정합성", "라스트마일", "역물류"],
-    "description": "물류 도메인 전체 지도 — OMS/WMS/TMS와 라스트마일·역물류까지 한눈에"
+    "description": "물류 도메인 전체 지도 — OMS/WMS/TMS와 라스트마일·역물류까지 한눈에",
+    "prerequisites": ["system-design/00-introduction"]
   },
   "system-design/00-introduction": {
     "tags": ["framework", "capacity-estimation", "CAP", "PACELC", "trade-off"],
     "difficulty": 2,
     "estimatedMinutes": 40,
     "keywords": ["6단계 프레임워크", "용량 추정", "Building Blocks"],
-    "description": "시스템 디자인 면접의 6단계 프레임워크와 용량 추정·CAP 기초"
+    "description": "시스템 디자인 면접의 6단계 프레임워크와 용량 추정·CAP 기초",
+    "prerequisites": []
   },
   "backend/00-introduction": {
     "tags": ["Spring", "transaction", "concurrency", "test-pyramid", "observability"],
     "difficulty": 2,
     "estimatedMinutes": 40,
     "keywords": ["트랜잭션", "동시성", "테스트", "관측성"],
-    "description": "백엔드 구현 핵심 개념 — Spring 라이프사이클, 트랜잭션, 동시성, 관측성"
+    "description": "백엔드 구현 핵심 개념 — Spring 라이프사이클, 트랜잭션, 동시성, 관측성",
+    "prerequisites": ["cs/00-introduction"]
   },
   "backend/architecture/00-introduction": {
     "tags": ["MSA", "DDD", "Saga", "CQRS", "Outbox", "modular-monolith"],
     "difficulty": 3,
     "estimatedMinutes": 50,
     "keywords": ["Bounded Context", "Aggregate", "Idempotency"],
-    "description": "백엔드 아키텍처 패턴 개관 — MSA vs Modular Monolith부터 Saga·CQRS·Outbox까지"
+    "description": "백엔드 아키텍처 패턴 개관 — MSA vs Modular Monolith부터 Saga·CQRS·Outbox까지",
+    "prerequisites": ["backend/00-introduction", "database/00-introduction"]
   },
   "database/00-introduction": {
     "tags": ["index", "lock", "isolation", "replication", "B+Tree", "RDBMS", "NoSQL"],
     "difficulty": 2,
     "estimatedMinutes": 45,
     "keywords": ["격리수준", "B+Tree", "낙관적/비관적 락", "복제"],
-    "description": "데이터베이스 핵심 — 인덱스·락·격리수준·복제와 RDBMS/NoSQL 선택"
+    "description": "데이터베이스 핵심 — 인덱스·락·격리수준·복제와 RDBMS/NoSQL 선택",
+    "prerequisites": ["cs/00-introduction"]
   },
   "infra/00-introduction": {
     "tags": ["AWS", "VPC", "Kubernetes", "CI/CD", "deployment", "SRE"],
     "difficulty": 3,
     "estimatedMinutes": 50,
     "keywords": ["Blue-Green", "오토스케일", "다중 AZ", "관측성"],
-    "description": "인프라·DevOps 개관 — AWS·K8s·CI/CD·배포 전략·SRE 기본"
+    "description": "인프라·DevOps 개관 — AWS·K8s·CI/CD·배포 전략·SRE 기본",
+    "prerequisites": ["backend/00-introduction"]
   },
   "cs/00-introduction": {
     "tags": ["data-structure", "algorithm", "OS", "TCP", "TLS", "deadlock", "I/O"],
     "difficulty": 2,
     "estimatedMinutes": 45,
     "keywords": ["복잡도", "프로세스 상태", "TCP 핸드셰이크", "Deadlock"],
-    "description": "CS 기초 개관 — 자료구조·OS·네트워크(TCP/TLS)·동시성 이론"
+    "description": "CS 기초 개관 — 자료구조·OS·네트워크(TCP/TLS)·동시성 이론",
+    "prerequisites": []
   }
 }
