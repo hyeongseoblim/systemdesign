@@ -36,8 +36,10 @@ import * as progress from './progress.js';
   `;
   const style = document.createElement('style');
   style.textContent = `
+    /* 우측 상단 고정 — 사이드바 폭에 의존하지 않아 모든 페이지에서 안전.
+       qna-sync 의 동기화 pill (top:14px right:14px, z-index:9999) 보다 살짝 아래(48px)에 둔다. */
     #jobstudy-study-widget {
-      position: fixed; top: 14px; left: 264px; z-index: 9998;
+      position: fixed; top: 48px; right: 14px; z-index: 9998;
       display: inline-flex; align-items: center; gap: 8px;
       padding: 7px 13px; border-radius: 999px;
       background: #ffffff; border: 1px solid #e2e8f0;
@@ -62,7 +64,7 @@ import * as progress from './progress.js';
       background: #dcfce7; border-color: #86efac; color: #15803d;
     }
     @media (max-width: 900px) {
-      #jobstudy-study-widget { left: 14px; right: auto; top: auto; bottom: 14px; }
+      #jobstudy-study-widget { top: auto; right: 14px; bottom: 14px; }
     }
   `;
   document.head.appendChild(style);
@@ -118,9 +120,19 @@ import * as progress from './progress.js';
       activeStart = Date.now();
     }
   });
-  // 탭 닫힘 / 새로고침
+  // 탭 닫힘 / 새로고침. pagehide.persisted=true 면 BFCache 진입 — activeStart 무효화.
   window.addEventListener('beforeunload', flush);
-  window.addEventListener('pagehide', flush);
+  window.addEventListener('pagehide', (e) => {
+    flush();
+    if (e.persisted) activeStart = null;
+  });
+  // BFCache 에서 복귀 시 activeStart 재설정 — 그동안의 시간이 dwell 에 잘못 누적되는 걸 방지.
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted && !document.hidden) {
+      activeStart = Date.now();
+      render();
+    }
+  });
   // 30초마다 주기 flush — beforeunload 가 모바일에서 안정적이지 않음
   setInterval(flush, 30 * 1000);
 })();

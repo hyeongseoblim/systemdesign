@@ -7,6 +7,8 @@ const NS = 'jobStudy::progress::';
 const DWELL_DELTA_NS = 'jobStudy::dwell-delta::';
 const TAB_KEY = 'jobStudy::tab-id';
 const SRS_STAGES_DAYS = [1, 3, 7, 14, 30, 60];
+// F5 연타 / 짧은 새로고침으로 visitCount 가 부풀려지는 걸 막는다.
+const VISIT_DEBOUNCE_MS = 30 * 1000;
 
 // 같은 페이지를 여러 탭에 열어두면 두 탭이 동시에 main record 의 dwellMs 를
 // read-modify-write 해서 lost update 가 날 수 있다. 이를 피하려고 각 탭은
@@ -46,7 +48,12 @@ function absorbDwellDeltas(id) {
   const raw = localStorage.getItem(NS + id);
   let rec = newRecord();
   if (raw) {
-    try { rec = JSON.parse(raw); } catch {}
+    try {
+      rec = JSON.parse(raw);
+    } catch (e) {
+      console.warn(`[progress] ${NS}${id} JSON 파싱 실패 — record 재생성:`, e?.message || e);
+      rec = newRecord();
+    }
   }
   if (!rec.srs) rec.srs = newRecord().srs;
   if (typeof rec.dwellMs !== 'number') rec.dwellMs = 0;
@@ -107,7 +114,8 @@ export function get(id) {
     if (!obj.srs) obj.srs = newRecord().srs;
     if (typeof obj.dwellMs !== 'number') obj.dwellMs = 0;
     return obj;
-  } catch {
+  } catch (e) {
+    console.warn(`[progress] ${NS}${id} JSON 파싱 실패 — 새 record 반환:`, e?.message || e);
     return newRecord();
   }
 }
@@ -119,9 +127,13 @@ export function set(id, record) {
 export function recordVisit(id) {
   const rec = get(id);
   const now = nowIso();
+  // F5 연타로 visitCount 가 부풀려지지 않도록 30초 debounce.
+  // (lastVisitedAt 은 매번 갱신해서 "최근 학습" 표시는 정확히 유지)
+  const lastMs = rec.lastVisitedAt ? Date.parse(rec.lastVisitedAt) : 0;
+  const isFresh = !lastMs || Date.now() - lastMs > VISIT_DEBOUNCE_MS;
   if (!rec.firstVisitedAt) rec.firstVisitedAt = now;
   rec.lastVisitedAt = now;
-  rec.visitCount = (rec.visitCount || 0) + 1;
+  if (isFresh) rec.visitCount = (rec.visitCount || 0) + 1;
   if (rec.status === STATUS.NOT_STARTED) rec.status = STATUS.IN_PROGRESS;
   set(id, rec);
   return rec;
