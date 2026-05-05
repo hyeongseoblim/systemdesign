@@ -778,6 +778,10 @@ function bindBackupModal() {
       if (json.answers) {
         const r = qa.importSnapshot(json, { overwrite });
         report.push(`Q&A: ${r.written}건 복원, ${r.skipped}건 건너뜀`);
+        // import 직후 cloud cache 는 stale (방금 복원한 localStorage 와 다른 옛 값).
+        // invalidate 후 재 prefetch 해서 divergence 정책이 새 localStorage 와 정합하게 한다.
+        qa.invalidateCloudCache();
+        await qa.prefetchCloud(state.contents);
       }
       if (json.progress) {
         let n = 0;

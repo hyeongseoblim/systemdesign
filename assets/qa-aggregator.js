@@ -7,12 +7,23 @@
 const cloudCache = new Map();
 let cloudPrefetchedAt = null;
 
+// fetch 가 hang 하면 init 의 await 가 멈춰 인덱스 첫 렌더가 미뤄진다. 5초 timeout 으로 차단.
+const PREFETCH_TIMEOUT_MS = 5000;
+
 function pagePathFromNs(ns) {
   if (!ns) return null;
   return ns.replace(/^jobStudy::/, '').replace(/::$/, '').replace(/::/g, '/');
 }
 
+// 다음 prefetch 가 stale 한 답을 보지 않도록 cache 비우기. JSON import 직후 호출.
+export function invalidateCloudCache() {
+  cloudCache.clear();
+  cloudPrefetchedAt = null;
+}
+
 // 인덱스 페이지 init 시 1회 호출. 모든 콘텐츠의 cloud 답변을 병렬 fetch.
+// import 후 재호출 시는 invalidateCloudCache() 먼저 부르거나 그냥 재호출만 해도
+// 같은 key 에 새 값이 덮여진다.
 export async function prefetchCloud(contents) {
   const targets = contents
     .filter((c) => c.qaNs)
@@ -21,8 +32,13 @@ export async function prefetchCloud(contents) {
 
   await Promise.all(
     targets.map(async (pagePath) => {
+      const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timer = ctrl ? setTimeout(() => ctrl.abort(), PREFETCH_TIMEOUT_MS) : null;
       try {
-        const r = await fetch(`./answers/${pagePath}.json`, { cache: 'no-store' });
+        const r = await fetch(`./answers/${pagePath}.json`, {
+          cache: 'no-store',
+          signal: ctrl?.signal,
+        });
         if (r.ok) {
           const data = await r.json();
           cloudCache.set(pagePath, data);
@@ -34,8 +50,14 @@ export async function prefetchCloud(contents) {
           cloudCache.set(pagePath, null);
         }
       } catch (err) {
-        console.warn(`[qa-aggregator] cloud fetch ${pagePath} 실패:`, err?.message || err);
+        const isAbort = err?.name === 'AbortError';
+        console.warn(
+          `[qa-aggregator] cloud fetch ${pagePath} ${isAbort ? `시간초과(${PREFETCH_TIMEOUT_MS}ms)` : '실패'}:`,
+          err?.message || err
+        );
         cloudCache.set(pagePath, null);
+      } finally {
+        if (timer) clearTimeout(timer);
       }
     })
   );
