@@ -65,6 +65,7 @@ pre{font-family:'JetBrains Mono',monospace;font-size:13.5px;background:#1e293b;c
 .next-card .topic{font-size:13px;font-weight:500}
 @media(max-width:860px){#sidebar{display:none}main{margin-left:0;padding:24px 20px}}
 </style>
+<link rel="stylesheet" href="../assets/feedback.css?v=1">
 </head>
 <body>
 <nav id="sidebar">
@@ -465,6 +466,17 @@ sequenceDiagram
         </div>
         <textarea id="ans-cs-q1" placeholder="답변을 입력하세요..." oninput="saveAns('cs-q1',this.value)"></textarea>
       </div>
+      <div class="fb-area">
+        <div class="fb-label">
+          <span class="fb-title">🎓 코치 피드백 <span style="font-weight:400;color:#a16207;font-size:11px">(마크다운 지원)</span></span>
+          <span class="fb-controls">
+            <button type="button" class="fb-toggle" data-fb-target="fb-cs-q1">미리보기</button>
+            <span class="fb-saved-badge">저장됨 ✓</span>
+          </span>
+        </div>
+        <textarea id="fb-cs-q1" oninput="saveAns('fb-cs-q1',this.value)" placeholder="코치에게 받은 피드백을 붙여넣으세요... (자동 저장)"></textarea>
+        <div class="fb-preview" id="preview-fb-cs-q1" hidden></div>
+      </div>
     </div>
 
     <div class="q-card">
@@ -476,6 +488,17 @@ sequenceDiagram
           <span class="saved-badge" id="badge-cs-q2">저장됨 ✓</span>
         </div>
         <textarea id="ans-cs-q2" placeholder="답변을 입력하세요..." oninput="saveAns('cs-q2',this.value)"></textarea>
+      </div>
+      <div class="fb-area">
+        <div class="fb-label">
+          <span class="fb-title">🎓 코치 피드백 <span style="font-weight:400;color:#a16207;font-size:11px">(마크다운 지원)</span></span>
+          <span class="fb-controls">
+            <button type="button" class="fb-toggle" data-fb-target="fb-cs-q2">미리보기</button>
+            <span class="fb-saved-badge">저장됨 ✓</span>
+          </span>
+        </div>
+        <textarea id="fb-cs-q2" oninput="saveAns('fb-cs-q2',this.value)" placeholder="코치에게 받은 피드백을 붙여넣으세요... (자동 저장)"></textarea>
+        <div class="fb-preview" id="preview-fb-cs-q2" hidden></div>
       </div>
     </div>
 
@@ -489,6 +512,17 @@ sequenceDiagram
         </div>
         <textarea id="ans-cs-q3" placeholder="답변을 입력하세요..." oninput="saveAns('cs-q3',this.value)"></textarea>
       </div>
+      <div class="fb-area">
+        <div class="fb-label">
+          <span class="fb-title">🎓 코치 피드백 <span style="font-weight:400;color:#a16207;font-size:11px">(마크다운 지원)</span></span>
+          <span class="fb-controls">
+            <button type="button" class="fb-toggle" data-fb-target="fb-cs-q3">미리보기</button>
+            <span class="fb-saved-badge">저장됨 ✓</span>
+          </span>
+        </div>
+        <textarea id="fb-cs-q3" oninput="saveAns('fb-cs-q3',this.value)" placeholder="코치에게 받은 피드백을 붙여넣으세요... (자동 저장)"></textarea>
+        <div class="fb-preview" id="preview-fb-cs-q3" hidden></div>
+      </div>
     </div>
 
     <div class="q-card">
@@ -500,6 +534,17 @@ sequenceDiagram
           <span class="saved-badge" id="badge-cs-q4">저장됨 ✓</span>
         </div>
         <textarea id="ans-cs-q4" placeholder="답변을 입력하세요..." oninput="saveAns('cs-q4',this.value)"></textarea>
+      </div>
+      <div class="fb-area">
+        <div class="fb-label">
+          <span class="fb-title">🎓 코치 피드백 <span style="font-weight:400;color:#a16207;font-size:11px">(마크다운 지원)</span></span>
+          <span class="fb-controls">
+            <button type="button" class="fb-toggle" data-fb-target="fb-cs-q4">미리보기</button>
+            <span class="fb-saved-badge">저장됨 ✓</span>
+          </span>
+        </div>
+        <textarea id="fb-cs-q4" oninput="saveAns('fb-cs-q4',this.value)" placeholder="코치에게 받은 피드백을 붙여넣으세요... (자동 저장)"></textarea>
+        <div class="fb-preview" id="preview-fb-cs-q4" hidden></div>
       </div>
     </div>
 
@@ -575,5 +620,6 @@ loadAll();
 </script>
 <script src="../assets/qna-sync.js?v=1"></script>
 <script type="module" src="../assets/study-widget.js?v=1"></script>
+<script src="../assets/feedback.js?v=1"></script>
 </body>
 </html>

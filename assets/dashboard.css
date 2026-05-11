@@ -554,6 +554,29 @@ a:hover { text-decoration: underline; }
 .qa-a { font-size: 12.5px; color: var(--muted); white-space: pre-wrap; line-height: 1.55; }
 .qa-a.empty { color: var(--muted-light); font-style: italic; }
 .qa-a-label { font-weight: 600; color: var(--text); margin-right: 4px; }
+
+/* 코치 피드백 — 답변 아래 details 로 접힘. 마크다운 렌더된 결과 표시. */
+.qa-fb { margin-top: 8px; border-left: 2px solid #fbbf24; padding-left: 10px; background: #fffbeb; border-radius: 0 6px 6px 0; }
+.qa-fb summary { font-size: 11.5px; color: #92400e; cursor: pointer; padding: 6px 8px; list-style: none; user-select: none; }
+.qa-fb summary::-webkit-details-marker { display: none; }
+.qa-fb summary::before { content: '▶'; font-size: 9px; margin-right: 6px; transition: transform .15s; display: inline-block; color: #d97706; }
+.qa-fb[open] summary::before { transform: rotate(90deg); }
+.qa-fb-label { font-weight: 600; }
+.qa-fb-body { padding: 4px 8px 10px; font-size: 12.5px; color: #1e293b; line-height: 1.65; }
+.qa-fb-body > *:first-child { margin-top: 0; }
+.qa-fb-body > *:last-child { margin-bottom: 0; }
+.qa-fb-body h1, .qa-fb-body h2, .qa-fb-body h3 { font-size: 13.5px; font-weight: 700; margin: 8px 0 4px; color: #92400e; }
+.qa-fb-body p { margin: 4px 0; }
+.qa-fb-body ul, .qa-fb-body ol { padding-left: 18px; margin: 4px 0; }
+.qa-fb-body li { margin-bottom: 2px; }
+.qa-fb-body code { background: #fef3c7; color: #92400e; padding: 1px 4px; border-radius: 3px; font-size: 11.5px; }
+.qa-fb-body pre { background: #1e293b; color: #e2e8f0; padding: 8px 12px; border-radius: 4px; overflow-x: auto; font-size: 11.5px; margin: 6px 0; }
+.qa-fb-body pre code { background: transparent; color: inherit; padding: 0; }
+.qa-fb-body blockquote { border-left: 3px solid #fbbf24; padding-left: 10px; margin: 6px 0; color: #92400e; }
+.qa-fb-body strong { color: #92400e; font-weight: 700; }
+.qa-fb-body table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin: 6px 0; }
+.qa-fb-body th, .qa-fb-body td { border: 1px solid #fde68a; padding: 4px 8px; text-align: left; }
+.qa-fb-body th { background: #fef3c7; }
 .qa-actions {
   display: flex;
   gap: 8px;
