@@ -52,12 +52,16 @@
   }
 
   // ── 4) collect / push / pull ──
-  function collectAnswers() {
-    const out = {};
-    document.querySelectorAll('textarea[id^="ans"]').forEach((el) => {
-      if (el.value && el.value.trim()) out[el.id] = el.value;
+  // 두 영역을 별도 dict 로 분리해서 push: answers (사용자 답변), feedbacks (코치 피드백)
+  function collectFields() {
+    const answers = {};
+    const feedbacks = {};
+    document.querySelectorAll('textarea[id^="ans"], textarea[id^="fb"]').forEach((el) => {
+      if (!el.value || !el.value.trim()) return;
+      if (el.id.startsWith('ans')) answers[el.id] = el.value;
+      else if (el.id.startsWith('fb')) feedbacks[el.id] = el.value;
     });
-    return out;
+    return { answers, feedbacks };
   }
 
   let pushTimer = null;
@@ -68,13 +72,13 @@
   }
 
   async function pushToCloud() {
-    const answers = collectAnswers();
+    const { answers, feedbacks } = collectFields();
     setStatus('⟳ 동기화 중', '#0284c7');
     try {
       const r = await fetch(WORKER + '/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Study-Key': studyKey },
-        body: JSON.stringify({ path: pagePath, answers }),
+        body: JSON.stringify({ path: pagePath, answers, feedbacks }),
       });
       if (r.status === 401) { setStatus('⚠ 키 오류 (클릭 재설정)', '#dc2626'); return; }
       if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -83,6 +87,21 @@
       console.warn('[qna-sync] push failed', e);
       setStatus('⚠ 오프라인', '#dc2626');
     }
+  }
+
+  function restoreInto(dict) {
+    let restored = 0;
+    if (!dict) return restored;
+    Object.entries(dict).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el && el.tagName === 'TEXTAREA' && !el.value.trim() && val) {
+        el.value = val;
+        // Trigger existing inline handlers so localStorage stays in sync
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        restored++;
+      }
+    });
+    return restored;
   }
 
   async function pullFromCloud() {
@@ -94,17 +113,8 @@
       if (r.status === 401) { setStatus('⚠ 키 오류 (클릭 재설정)', '#dc2626'); return; }
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const data = await r.json();
-      const cloud = data.answers || {};
-      let restored = 0;
-      Object.entries(cloud).forEach(([id, val]) => {
-        const el = document.getElementById(id);
-        if (el && el.tagName === 'TEXTAREA' && !el.value.trim() && val) {
-          el.value = val;
-          // Trigger existing inline handlers so localStorage stays in sync
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-          restored++;
-        }
-      });
+      // 하위 호환: answers 만 있던 구버전 응답도 처리
+      const restored = restoreInto(data.answers) + restoreInto(data.feedbacks);
       setStatus(restored > 0 ? '✓ ' + restored + '개 복원' : '✓ 동기화됨', '#16a34a');
     } catch (e) {
       console.warn('[qna-sync] pull failed', e);
@@ -113,7 +123,7 @@
   }
 
   function attachListeners() {
-    document.querySelectorAll('textarea[id^="ans"]').forEach((el) => {
+    document.querySelectorAll('textarea[id^="ans"], textarea[id^="fb"]').forEach((el) => {
       el.addEventListener('input', schedulePush);
     });
   }

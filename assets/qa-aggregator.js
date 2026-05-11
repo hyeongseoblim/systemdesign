@@ -73,6 +73,14 @@ export function getCloudAnswers(content) {
   return c && typeof c.answers === 'object' ? c.answers : null;
 }
 
+// content 에 대응되는 cloud 코치 피드백 dict (없으면 null)
+export function getCloudFeedbacks(content) {
+  const pagePath = pagePathFromNs(content.qaNs);
+  if (!pagePath) return null;
+  const c = cloudCache.get(pagePath);
+  return c && typeof c.feedbacks === 'object' ? c.feedbacks : null;
+}
+
 // cloud 통계 — KPI/표시용
 export function cloudStats(contents) {
   let pages = 0;
@@ -101,17 +109,49 @@ export function cloudStats(contents) {
 //      (qna-sync 가 오프라인이거나 push 실패 후 사용자가 추가 입력한 시나리오를 보호)
 //      divergence 발생 시 console.warn 으로 추적 가능하게 한다.
 export function readAnswersFor(content) {
+  return mergeCloudLocal(content, content.qaIds || [], getCloudAnswers(content) || {});
+}
+
+// ans suffix(예: 'ans1', 'cs-q1')를 fb suffix(예: 'fb1', 'fb-cs-q1')로 매핑.
+// Group A: 'ans1' → 'fb1' (prefix 교체)
+// Group B: 'cs-q1' → 'fb-cs-q1' (suffix 자체가 ans- 가 없는 형태이므로 'fb-' 접두)
+//   ※ extractAnsIds 가 'ans-cs-q1' 에서 'cs-q1' 만 남겨두기 때문에, 이 경우 fb 키는
+//      'fb-cs-q1' (textarea id 와 동일). qna-sync 가 textarea id 그대로 키로 push 함.
+function ansSuffixToFbSuffix(ansSuffix) {
+  if (ansSuffix.startsWith('ans')) {
+    // 'ans1' → 'fb1', 'ans-foo' → 'fb-foo'
+    return 'fb' + ansSuffix.slice(3);
+  }
+  // 'cs-q1' → 'fb-cs-q1' (Group B 의 normalized suffix)
+  return 'fb-' + ansSuffix;
+}
+
+// 코치 피드백 dict — ans suffix 와 1:1 매핑된 fb suffix 키로 반환.
+// out['ans1'] = "코치 피드백 텍스트"  (키는 ansSuffix 그대로 — UI 매핑 편의)
+export function readFeedbacksFor(content) {
+  if (!content.qaNs) return {};
+  const cloud = getCloudFeedbacks(content) || {};
+  const fbSuffixes = (content.qaIds || []).map(ansSuffixToFbSuffix);
+  const merged = mergeCloudLocal(content, fbSuffixes, cloud);
+  // 결과 키를 ansSuffix 기준으로 재매핑 (UI 에서 답변과 짝지을 때 편함)
   const out = {};
-  if (!content.qaNs) return out;
-  const cloud = getCloudAnswers(content) || {};
-  for (const suffix of content.qaIds || []) {
+  (content.qaIds || []).forEach((ansSuffix, i) => {
+    const fbSuffix = fbSuffixes[i];
+    if (merged[fbSuffix] != null) out[ansSuffix] = merged[fbSuffix];
+  });
+  return out;
+}
+
+// cloud dict + localStorage 를 같은 정책으로 merge — answers/feedbacks 둘 다에서 재사용.
+function mergeCloudLocal(content, suffixes, cloud) {
+  const out = {};
+  for (const suffix of suffixes) {
     const cloudRaw = cloud[suffix];
     const localRaw = localStorage.getItem(content.qaNs + suffix);
     const cloudStr = cloudRaw != null && String(cloudRaw).trim() ? String(cloudRaw) : null;
     const localStr = localRaw != null && String(localRaw).trim() ? String(localRaw) : null;
 
     if (cloudStr != null && localStr != null && cloudStr !== localStr) {
-      // divergence — 길이 비교로 우선순위 결정
       const cloudLen = cloudStr.trim().length;
       const localLen = localStr.trim().length;
       if (localLen > cloudLen) {
@@ -121,7 +161,6 @@ export function readAnswersFor(content) {
         out[suffix] = localStr;
         continue;
       }
-      // cloud 가 같거나 더 길면 cloud 사용 (default)
     }
     if (cloudStr != null) { out[suffix] = cloudStr; continue; }
     if (localRaw != null) out[suffix] = localRaw;
@@ -129,13 +168,15 @@ export function readAnswersFor(content) {
   return out;
 }
 
-// 모든 콘텐츠에 대해 그룹핑된 답변 + 메타
+// 모든 콘텐츠에 대해 그룹핑된 답변 + 코치 피드백 + 메타
 export function aggregate(contents) {
   return contents
     .map((c) => {
       const answers = readAnswersFor(c);
+      const feedbacks = readFeedbacksFor(c);
       const total = c.qaCount || 0;
       const answered = Object.values(answers).filter((v) => v && v.trim().length > 0).length;
+      const feedbackCount = Object.values(feedbacks).filter((v) => v && v.trim().length > 0).length;
       return {
         id: c.id,
         path: c.path,
@@ -146,8 +187,10 @@ export function aggregate(contents) {
         ids: c.qaIds || [],
         questions: c.qaQuestions || [],
         answers,
+        feedbacks,
         total,
         answered,
+        feedbackCount,
       };
     })
     .filter((g) => g.total > 0);
@@ -170,13 +213,19 @@ export function scanOrphanAnswers(knownNamespaces) {
 }
 
 // 사람-읽기 텍스트 (기존 copyForFeedback 형식 유지)
+// 코치 피드백이 이미 있으면 함께 표시 → "재피드백" 또는 비교 요청 시 유용.
 export function formatForFeedback(group) {
   const lines = [`[${group.title || group.path} — Q&A 피드백 요청]`, ''];
   group.ids.forEach((suffix, i) => {
     const q = group.questions[i] || '(질문 추출 실패)';
     const a = (group.answers[suffix] || '').trim();
+    const fb = (group.feedbacks && group.feedbacks[suffix] || '').trim();
     lines.push(`Q${i + 1}. ${q}`);
     lines.push(`내 답변: ${a || '(미작성)'}`);
+    if (fb) {
+      lines.push(`기존 코치 피드백:`);
+      lines.push(fb);
+    }
     lines.push('');
   });
   lines.push(`위 답변들에 대해 ${group.coach || '시니어 코치'} 관점에서 피드백 부탁드립니다.`);

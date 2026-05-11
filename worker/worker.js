@@ -54,20 +54,24 @@ async function handleLoad(url, env, cors) {
   const file = `answers/${path}.json`;
   const result = await ghGet(env, file);
   if (result.status === 404) {
-    return json({ answers: {}, updatedAt: null }, 200, cors);
+    return json({ answers: {}, feedbacks: {}, updatedAt: null }, 200, cors);
   }
-  return json(result.data, 200, cors);
+  // 하위 호환: feedbacks 가 없는 구 JSON 도 빈 객체로 보강해 응답
+  const data = { feedbacks: {}, ...result.data };
+  return json(data, 200, cors);
 }
 
 async function handleSave(request, env, cors) {
   const body = await request.json();
   if (!body.path || !isSafePath(body.path)) return json({ error: 'invalid path' }, 400, cors);
   if (!body.answers || typeof body.answers !== 'object') return json({ error: 'invalid answers' }, 400, cors);
+  // feedbacks 는 옵셔널 — 미지정 시 빈 객체로 저장
+  const feedbacks = (body.feedbacks && typeof body.feedbacks === 'object') ? body.feedbacks : {};
 
   const file = `answers/${body.path}.json`;
   const existing = await ghGet(env, file);
   const payload = JSON.stringify(
-    { answers: body.answers, updatedAt: new Date().toISOString() },
+    { answers: body.answers, feedbacks, updatedAt: new Date().toISOString() },
     null,
     2
   );

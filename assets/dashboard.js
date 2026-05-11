@@ -606,26 +606,36 @@ function openQaModal() {
   const groups = qa.aggregate(state.contents);
   const totalAnswered = groups.reduce((s, g) => s + g.answered, 0);
   const totalQ = groups.reduce((s, g) => s + g.total, 0);
+  const totalFb = groups.reduce((s, g) => s + (g.feedbackCount || 0), 0);
 
   const groupHtml = groups.map((g) => {
     const dot = areaDot(g.area);
     const allAnswered = g.answered === g.total && g.total > 0;
+    const fbBadge = g.feedbackCount > 0
+      ? `<span class="qa-group-count" style="background:#fef3c7;color:#92400e;margin-left:6px">🎓 ${g.feedbackCount}</span>`
+      : '';
     return `
       <details class="qa-group" ${g.answered > 0 ? 'open' : ''}>
         <summary>
           <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${dot};margin-right:8px;vertical-align:middle"></span>
           <span class="qa-group-title">${escapeHtml(g.title || g.path)}</span>
           <span class="qa-group-count ${allAnswered ? 'done' : ''}">${g.answered}/${g.total} 답변</span>
+          ${fbBadge}
         </summary>
         <div class="qa-group-body">
           ${g.ids.map((suffix, i) => {
             const q = g.questions[i] || '(질문 추출 실패)';
             const a = (g.answers[suffix] || '').trim();
+            const fb = ((g.feedbacks && g.feedbacks[suffix]) || '').trim();
             const has = a.length > 0;
+            const fbHtml = fb
+              ? `<details class="qa-fb"><summary><span class="qa-fb-label">🎓 코치 피드백</span></summary><div class="qa-fb-body" data-md="${escapeAttr(fb)}"></div></details>`
+              : '';
             return `
               <div class="qa-item ${has ? 'answered' : 'unanswered'}">
                 <div class="qa-q"><strong>Q${i + 1}.</strong> ${escapeHtml(q)}</div>
                 ${has ? `<div class="qa-a"><span class="qa-a-label">A.</span> ${escapeHtml(a)}</div>` : `<div class="qa-a empty">✗ 미답변</div>`}
+                ${fbHtml}
               </div>
             `;
           }).join('')}
@@ -642,10 +652,13 @@ function openQaModal() {
   const cloudLine = cloud.pages
     ? `<span class="muted" style="font-size:11.5px;margin-left:12px">☁️ 클라우드 ${cloud.answers}건 통합됨</span>`
     : '';
+  const fbLine = totalFb > 0
+    ? `<span class="muted" style="font-size:11.5px;margin-left:12px">🎓 코치 피드백 ${totalFb}건</span>`
+    : '';
 
   const html = `
     <div class="qa-toolbar">
-      <span class="muted">전체 답변 <strong>${totalAnswered}/${totalQ}</strong>${cloudLine}</span>
+      <span class="muted">전체 답변 <strong>${totalAnswered}/${totalQ}</strong>${cloudLine}${fbLine}</span>
       <div style="margin-left:auto;display:flex;gap:8px">
         <button class="ghost-btn" data-qa-action="copy-all">📋 답변한 전체 복사</button>
         <button class="ghost-btn" data-qa-action="export-json">💾 JSON 다운로드</button>
@@ -658,6 +671,56 @@ function openQaModal() {
   openModal('📋 Q&A 통합 뷰', html);
 
   document.querySelector('.modal-body').addEventListener('click', handleQaModalAction);
+
+  // 코치 피드백 마크다운 렌더 — 처음 details 가 열릴 때 lazy 변환
+  renderQaFeedbackMarkdown();
+}
+
+// marked CDN — 처음 호출 시 1회 동적 로드
+let _markedReady = null;
+function ensureMarkedLib() {
+  if (typeof window.marked !== 'undefined') return Promise.resolve();
+  if (_markedReady) return _markedReady;
+  _markedReady = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/marked@11/marked.min.js';
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('marked load failed'));
+    document.head.appendChild(s);
+  });
+  return _markedReady;
+}
+
+function safeMarkdownToHtml(text) {
+  if (!text) return '';
+  let html;
+  try {
+    html = window.marked ? window.marked.parse(text, { gfm: true, breaks: true }) : escapeHtml(text);
+  } catch (_) {
+    html = escapeHtml(text);
+  }
+  return html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, '')
+    .replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, '')
+    .replace(/\son[a-z]+\s*=\s*'[^']*'/gi, '')
+    .replace(/javascript:/gi, '');
+}
+
+async function renderQaFeedbackMarkdown() {
+  const targets = document.querySelectorAll('.qa-fb-body[data-md]');
+  if (!targets.length) return;
+  try {
+    await ensureMarkedLib();
+  } catch (e) {
+    console.warn('[dashboard] marked load failed, falling back to plain text', e);
+  }
+  targets.forEach((el) => {
+    const md = el.getAttribute('data-md') || '';
+    el.innerHTML = safeMarkdownToHtml(md);
+    el.removeAttribute('data-md');
+  });
 }
 
 async function handleQaModalAction(e) {

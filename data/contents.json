@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-04-25T05:05:51.970Z",
+  "generatedAt": "2026-05-11T16:27:17.106Z",
   "contents": [
     {
       "id": "backend/00-introduction",
@@ -25,9 +25,9 @@
       ],
       "qaQuestions": [],
       "qaNs": "jobStudy::backend::00-introduction::",
-      "lineCount": 367,
-      "fileSizeKB": 22.9,
-      "updatedAt": "2026-04-25",
+      "lineCount": 404,
+      "fileSizeKB": 25,
+      "updatedAt": "2026-05-11",
       "tags": [
         "Spring",
         "transaction",
@@ -37,7 +37,9 @@
       ],
       "difficulty": 2,
       "estimatedMinutes": 40,
-      "prerequisites": [],
+      "prerequisites": [
+        "cs/00-introduction"
+      ],
       "keywords": [
         "트랜잭션",
         "동시성",
@@ -69,9 +71,9 @@
       ],
       "qaQuestions": [],
       "qaNs": "jobStudy::backend::architecture::00-introduction::",
-      "lineCount": 386,
-      "fileSizeKB": 22.4,
-      "updatedAt": "2026-04-25",
+      "lineCount": 423,
+      "fileSizeKB": 24.5,
+      "updatedAt": "2026-05-11",
       "tags": [
         "MSA",
         "DDD",
@@ -82,7 +84,10 @@
       ],
       "difficulty": 3,
       "estimatedMinutes": 50,
-      "prerequisites": [],
+      "prerequisites": [
+        "backend/00-introduction",
+        "database/00-introduction"
+      ],
       "keywords": [
         "Bounded Context",
         "Aggregate",
@@ -114,9 +119,9 @@
       ],
       "qaQuestions": [],
       "qaNs": "jobStudy::cs::00-introduction::",
-      "lineCount": 578,
-      "fileSizeKB": 33.3,
-      "updatedAt": "2026-04-25",
+      "lineCount": 626,
+      "fileSizeKB": 36.3,
+      "updatedAt": "2026-05-11",
       "tags": [
         "data-structure",
         "algorithm",
@@ -161,9 +166,9 @@
       ],
       "qaQuestions": [],
       "qaNs": "jobStudy::database::00-introduction::",
-      "lineCount": 596,
-      "fileSizeKB": 33,
-      "updatedAt": "2026-04-25",
+      "lineCount": 644,
+      "fileSizeKB": 36,
+      "updatedAt": "2026-05-11",
       "tags": [
         "index",
         "lock",
@@ -175,7 +180,9 @@
       ],
       "difficulty": 2,
       "estimatedMinutes": 45,
-      "prerequisites": [],
+      "prerequisites": [
+        "cs/00-introduction"
+      ],
       "keywords": [
         "격리수준",
         "B+Tree",
@@ -208,9 +215,9 @@
       ],
       "qaQuestions": [],
       "qaNs": "jobStudy::infra::00-introduction::",
-      "lineCount": 629,
-      "fileSizeKB": 31.5,
-      "updatedAt": "2026-04-25",
+      "lineCount": 677,
+      "fileSizeKB": 34.5,
+      "updatedAt": "2026-05-11",
       "tags": [
         "AWS",
         "VPC",
@@ -221,7 +228,9 @@
       ],
       "difficulty": 3,
       "estimatedMinutes": 50,
-      "prerequisites": [],
+      "prerequisites": [
+        "backend/00-introduction"
+      ],
       "keywords": [
         "Blue-Green",
         "오토스케일",
@@ -258,9 +267,9 @@
         "Q3. \"주문 1건 = 배송 1건\"이 깨지는 구체 시나리오 2개와, Order ↔ Shipment의 카디널리티·상태 전이 설계에 미치는 영향을 설명해보세요."
       ],
       "qaNs": "jobStudy::logistics::00-domain-overview::",
-      "lineCount": 803,
-      "fileSizeKB": 37.1,
-      "updatedAt": "2026-04-25",
+      "lineCount": 840,
+      "fileSizeKB": 39.2,
+      "updatedAt": "2026-05-11",
       "tags": [
         "OMS",
         "WMS",
@@ -272,7 +281,9 @@
       ],
       "difficulty": 2,
       "estimatedMinutes": 45,
-      "prerequisites": [],
+      "prerequisites": [
+        "system-design/00-introduction"
+      ],
       "keywords": [
         "밸류체인",
         "재고 정합성",
@@ -304,9 +315,9 @@
       ],
       "qaQuestions": [],
       "qaNs": "jobStudy::system-design::00-introduction::",
-      "lineCount": 350,
-      "fileSizeKB": 24.1,
-      "updatedAt": "2026-04-25",
+      "lineCount": 387,
+      "fileSizeKB": 26.2,
+      "updatedAt": "2026-05-11",
       "tags": [
         "framework",
         "capacity-estimation",
