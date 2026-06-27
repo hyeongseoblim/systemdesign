@@ -23,6 +23,22 @@ server:
 app:
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:3000}
+  generation:
+    enabled: ${GEN_ENABLED:true}
+    # 매일 09:00 KST 배치 (초 분 시 일 월 요일)
+    cron: ${GEN_CRON:0 0 9 * * *}
+    zone: ${GEN_ZONE:Asia/Seoul}
+    # 품질 게이트 3 — 예산 캡
+    daily-card-limit: ${GEN_DAILY_CARDS:3}
+    daily-token-limit: ${GEN_DAILY_TOKENS:200000}
+    # 품질 게이트 2 — 자가 검증 통과 임계치(미달이면 draft 보류)
+    quality-threshold: ${GEN_QUALITY_THRESHOLD:70}
+    claude:
+      base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com}
+      api-key: ${ANTHROPIC_API_KEY:}
+      model: ${ANTHROPIC_MODEL:claude-sonnet-4-6}
+      version: "2023-06-01"
+      max-tokens: ${ANTHROPIC_MAX_TOKENS:4096}
 
 logging:
   level:
