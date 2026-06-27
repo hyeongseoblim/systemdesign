@@ -21,6 +21,8 @@ server:
 
 # CORS: 프론트(Vercel/로컬) 허용. Phase 3에서 도메인 확정 후 좁힘
 app:
+  admin:
+    token: ${ADMIN_TOKEN:}
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:3000}
   generation:
