@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OMS 심화 — 주문 수명주기 · 할당 · 분할출고</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; font-size: 14.5px; line-height: 1.75; }
+    #sidebar { width: 248px; min-height: 100vh; background: var(--card); border-right: 1px solid var(--border); padding: 24px 0; position: fixed; left: 0; top: 0; overflow-y: auto; z-index: 50; }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a { display: block; padding: 7px 20px; font-size: 13px; color: var(--muted); text-decoration: none; border-left: 3px solid transparent; transition: all .15s; }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip { font-size: 12px; font-weight: 500; padding: 3px 11px; border-radius: 20px; background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 { font-size: 20px; font-weight: 700; padding-bottom: 12px; border-bottom: 2px solid var(--border); margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+    .diagram-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px 20px; margin: 18px 0; overflow-x: auto; text-align: center; }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    .sys-card { border-radius: 10px; padding: 18px 22px; margin-bottom: 20px; border-left: 4px solid; }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .sys-card.lm  { background: var(--lm);  border-color: var(--lm-b);  color: var(--lm-t);  }
+    .sys-card.ret { background: var(--ret); border-color: var(--ret-b); color: var(--ret-t); }
+    .callout { border-radius: 8px; padding: 13px 16px; margin: 14px 0; border-left: 4px solid; font-size: 13.5px; }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea { width: 100%; min-height: 110px; border: 1.5px solid var(--border); border-radius: 8px; padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif; font-size: 14px; line-height: 1.7; resize: vertical; background: #fafcff; color: var(--text); transition: border-color .15s, background .15s; }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+    .feedback-box { background: var(--card); border: 1.5px dashed var(--border); border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center; }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; transition: background .15s; }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🚚 logistics-domain-coach</div>
+    <h2>OMS 심화<br/>주문관리 시스템</h2>
+  </div>
+  <div class="group-label">핵심 개념</div>
+  <a href="#role">1. OMS의 역할 경계</a>
+  <a href="#lifecycle">2. 주문 수명주기 상태머신</a>
+  <a href="#allocation">3. Allocation (할당)</a>
+  <a href="#split">4. 분할출고 · Order↔Shipment</a>
+  <a href="#payment">5. 결제 연동 (Auth/Capture)</a>
+  <div class="group-label">사례 & 연결</div>
+  <a href="#cases">6. 사례 비교</a>
+  <a href="#design">7. 시스템 디자인 연결</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">8. 이해도 확인 질문</a>
+  <a href="#next">9. 다음 학습 후보</a>
+</nav>
+
+<main>
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">logistics-domain-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">OMS 심화</span>
+    </div>
+    <h1>OMS 심화<br>주문 수명주기 · 할당 · 분할출고</h1>
+    <p>주문(Order)이라는 비즈니스 객체의 전체 라이프사이클을 상태 머신으로 강제하고, 할당(Allocation)·분할출고·결제 연동을 백엔드 설계 관점에서 연결한다.</p>
+  </header>
+
+  <!-- 1 -->
+  <section id="role">
+    <h2>1. OMS의 역할 경계 — 주문의 두뇌</h2>
+    <div class="sys-card oms">
+      <div class="sys-label">핵심 책임</div>
+      <div class="sys-title">멀티 채널에서 들어온 주문을 검증·할당·추적하며, <em>결제·정산·CS의 단일 진실 원천(Source of Truth)</em>이 된다.</div>
+    </div>
+    <p>OMS(Order Management System, 주문관리 시스템)는 주문을 받는 곳이 아니라 <strong>주문의 상태를 책임지는 곳</strong>이다. WMS는 실물을, TMS는 운송을 책임지지만, "이 주문이 지금 어디까지 왔는가"의 정답은 항상 OMS가 들고 있어야 한다.</p>
+    <h3>왜 분리되는가 — Bounded Context</h3>
+    <ul>
+      <li><strong>멀티 소스</strong>: 자사 앱·오픈마켓(쿠팡/네이버)·B2B EDI(Electronic Data Interchange, 전자문서교환) 등 채널마다 포맷이 다름. OMS가 정규화 허브 역할.</li>
+      <li><strong>멀티 싱크</strong>: 한 주문이 여러 창고·여러 파트너(3PL)로 갈라짐. 할당 결정의 두뇌가 필요.</li>
+      <li><strong>결제·쿠폰·정산·CS</strong>가 모두 주문에 엮임. WMS/TMS에 섞으면 경계가 무너진다.</li>
+    </ul>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>구분</th><th>OMS</th><th>WMS</th><th>TMS</th></tr></thead>
+        <tbody>
+          <tr><td>관리 대상</td><td>주문(논리)</td><td>재고(실물)</td><td>운송(이동)</td></tr>
+          <tr><td>핵심 질문</td><td>"이 주문 상태는?"</td><td>"이 SKU 어디 있나?"</td><td>"언제 도착하나?"</td></tr>
+          <tr><td>대표 Entity</td><td><code>Order</code>, <code>OrderLine</code>, <code>Allocation</code>, <code>Payment</code></td><td><code>Inventory</code>, <code>Bin</code>, <code>PickList</code></td><td><code>Shipment</code>, <code>Waybill</code>, <code>Route</code></td></tr>
+          <tr><td>SLA 책임</td><td>주문 수락·Cut-off 판정</td><td>피킹 정확도·출고 리드타임</td><td>OTD(정시배송률)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="lifecycle">
+    <h2>2. 주문 수명주기 상태 머신 (State Machine)</h2>
+    <p>주문 상태를 Boolean 플래그(<code>isPaid</code>, <code>isShipped</code> …)로 관리하면 조합 폭발이 일어난다. 반드시 <strong>Enum + 명시적 전이 규칙</strong>으로 강제한다.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> PLACED : OrderPlaced
+    PLACED --> VALIDATED : 재고·주소·Fraud 검증 통과
+    PLACED --> REJECTED : 검증 실패
+    VALIDATED --> PAID : PaymentCaptured
+    VALIDATED --> CANCELED : CancelByCustomer
+    PAID --> ALLOCATED : AllocationDecided
+    PAID --> CANCELED : CancelBeforeAllocation (전액 환불)
+    ALLOCATED --> FULFILLING : PickingStarted
+    ALLOCATED --> PARTIALLY_CANCELED : 일부 라인 취소 (부분 환불)
+    FULFILLING --> SHIPPED : OutboundShipped
+    SHIPPED --> DELIVERED : DeliveryConfirmed
+    SHIPPED --> DELIVERY_FAILED : DeliveryFailed
+    DELIVERY_FAILED --> SHIPPED : ReAttempt
+    DELIVERY_FAILED --> RETURNED : ReturnToSender
+    DELIVERED --> CLOSED : 반품 기한 경과
+    DELIVERED --> RETURN_REQUESTED : ReturnRequested
+    RETURN_REQUESTED --> REFUNDED : RefundProcessed
+    REJECTED --> [*]
+    CANCELED --> [*]
+    CLOSED --> [*]
+    REFUNDED --> [*]
+      </div>
+      <div class="cap">주문 상태 전이 — 각 화살표가 도메인 이벤트. 전이 외의 변경은 코드에서 차단해야 함</div>
+    </div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 부분 상태</div>
+      라인 5개 중 2개만 취소되면 주문 전체 상태는? → <code>PARTIALLY_CANCELED</code> 같은 별도 상태가 필요하거나, <strong>OrderLine 단위 상태</strong>를 따로 둬야 한다. 헤더 1개 상태로는 표현 불가.
+    </div>
+    <h3>왜 상태 머신을 코드로 강제하나</h3>
+    <ul>
+      <li><strong>불법 전이 차단</strong>: <code>DELIVERED → PAID</code> 같은 역행을 컴파일/런타임에서 막음.</li>
+      <li><strong>감사 추적(Audit)</strong>: 전이마다 이벤트를 남기면 "왜 이 상태가 됐나" 추적 가능.</li>
+      <li><strong>멱등성</strong>: 같은 이벤트가 두 번 와도(네트워크 재시도) 상태가 한 번만 바뀌게.</li>
+    </ul>
+  </section>
+
+  <!-- 3 -->
+  <section id="allocation">
+    <h2>3. Allocation (할당) — 어느 창고에서 보낼까</h2>
+    <p>Allocation(할당)은 "주문의 각 라인을 어느 창고의 어느 재고로 채울지" 결정하는 과정이다. 단순해 보이지만 비용·SLA·재고를 모두 종합하는 최적화 문제다.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    Start(["주문 ALLOCATED 진입 요청"]) --> Check{"가용 재고 충분?"}
+    Check -->|"단일 창고에 전량"| Single["단일 창고 할당\n(배송비 최소)"]
+    Check -->|"한 창고 부족"| Multi{"분할출고 허용?"}
+    Multi -->|"Yes"| Split["복수 창고 분할출고\n→ Shipment N개"]
+    Multi -->|"No"| Backorder["Backorder 대기\n또는 입고 ETA 안내"]
+    Check -->|"자사 재고 없음"| Drop["드랍쉬핑\n판매자 직배송"]
+    Single --> Reserve["WMS Reserve 요청"]
+    Split --> Reserve
+    Drop --> Vendor["판매자에 발주"]
+    Reserve --> Done(["Allocation 확정"])
+
+    style Single fill:#dbeafe,stroke:#3b82f6
+    style Split fill:#fef3c7,stroke:#f59e0b
+    style Drop fill:#dcfce7,stroke:#22c55e
+    style Backorder fill:#fee2e2,stroke:#ef4444
+      </div>
+      <div class="cap">할당 의사결정 트리 — 재고·비용·SLA를 종합한 라우팅</div>
+    </div>
+    <h3>할당 비용 함수의 변수</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>변수</th><th>설명</th><th>Trade-off</th></tr></thead>
+        <tbody>
+          <tr><td>배송 거리</td><td>창고 → 수령지 거리</td><td>가까울수록 비용↓ 리드타임↓</td></tr>
+          <tr><td>재고 보유</td><td>해당 창고의 가용 재고량</td><td>편중 출고는 특정 창고 재고 고갈 유발</td></tr>
+          <tr><td>분할 페널티</td><td>여러 박스로 쪼개면 박스·운임 증가</td><td>리드타임 vs 비용: 분할하면 빨라지나 비쌈</td></tr>
+          <tr><td>SLA 마감</td><td>Cut-off 내 출고 가능한 창고만 후보</td><td>새벽배송은 후보 창고가 권역으로 제한됨</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트</div>
+      "멀티 창고에서 동시에 같은 SKU를 할당하면?" → <strong>Race condition(경쟁 상태)</strong>. WMS의 Reserve가 원자적이어야 하고, 할당 실패 시 다른 창고로 <strong>재할당(re-allocation)</strong>하는 보상 흐름이 필요. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section id="split">
+    <h2>4. 분할출고 — Order ↔ Shipment는 1:N</h2>
+    <p>"주문 1건 = 배송 1건"은 입문자의 가장 흔한 오해다. 현실에서는 한 주문이 여러 배송으로 갈라진다.</p>
+    <h3>분할이 발생하는 시나리오</h3>
+    <ul>
+      <li><strong>재고 분산</strong>: A 창고에 2개, B 창고에 1개 → 2개 Shipment.</li>
+      <li><strong>부분 출고</strong>: 일부는 즉시 출고, 나머지는 입고 대기(Backorder) → 시간차 분할.</li>
+      <li><strong>상품 특성</strong>: 냉장/상온 분리, 대형/소형 분리 포장.</li>
+    </ul>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+erDiagram
+    ORDER ||--|{ ORDER_LINE : contains
+    ORDER ||--o{ SHIPMENT : "1:N (분할출고)"
+    SHIPMENT ||--|{ SHIPMENT_LINE : packs
+    ORDER_LINE ||--o{ SHIPMENT_LINE : "fulfilled-by"
+    ORDER ||--|| PAYMENT : "결제(부분환불 가능)"
+    ORDER {
+        string orderId PK
+        string status
+        string customerId
+    }
+    ORDER_LINE {
+        string lineId PK
+        string sku
+        int qty
+        string lineStatus
+    }
+    SHIPMENT {
+        string shipmentId PK
+        string warehouseId
+        string waybillNo
+        string status
+    }
+    SHIPMENT_LINE {
+        string sku
+        int qty
+    }
+      </div>
+      <div class="cap">Order ↔ Shipment 도메인 모델 — OrderLine과 ShipmentLine이 다대다로 연결됨</div>
+    </div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 상태 합산</div>
+      주문 전체 상태는 하위 Shipment 상태의 <strong>집계(aggregation)</strong>로 결정된다. Shipment 2개 중 1개만 배송완료면 주문은 <code>PARTIALLY_DELIVERED</code>. 헤더 상태를 단순 덮어쓰면 정보 손실 발생.
+    </div>
+    <h3>분할출고 vs 묶음출고 Trade-off</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>분할출고 (Split)</th><th>묶음출고 (Hold & Consolidate)</th></tr></thead>
+        <tbody>
+          <tr><td>리드타임</td><td>빠름 (있는 것 먼저)</td><td>느림 (다 모일 때까지 대기)</td></tr>
+          <tr><td>물류비</td><td>높음 (박스·운임 N배)</td><td>낮음 (1박스)</td></tr>
+          <tr><td>고객 경험</td><td>여러 번 도착(혼란)</td><td>한 번에 도착(깔끔)</td></tr>
+          <tr><td>대표 정책</td><td>쿠팡 로켓(속도 우선)</td><td>해외직구·일부 묶음배송</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="payment">
+    <h2>5. 결제 연동 — Auth / Capture / Refund</h2>
+    <p>주문과 결제는 별도 시스템(PG, Payment Gateway)이지만 상태가 강하게 결합된다. 핵심은 <strong>승인(Authorization)과 매입(Capture)의 분리</strong>다.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant C as 고객
+    participant OMS as OMS
+    participant PG as 결제 PG
+    participant WMS as WMS
+
+    C->>OMS: 주문 요청
+    OMS->>PG: Authorize (한도 확보, 미청구)
+    PG-->>OMS: AuthOK (authId)
+    Note over OMS: 주문 VALIDATED → 재고 Reserve
+    OMS->>WMS: Reserve(sku, qty)
+    WMS-->>OMS: Reserved
+    OMS->>PG: Capture(authId) (실제 청구)
+    PG-->>OMS: Captured → 주문 PAID
+    Note over OMS,PG: 출고 시점 Capture가 원칙\n(미출고 청구 방지)
+    OMS->>PG: Refund (취소 시 부분/전액)
+      </div>
+      <div class="cap">결제 흐름 — Auth로 한도만 잡고, 출고 확정 시 Capture. 부분취소는 부분환불로 연결</div>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 분산 트랜잭션</div>
+      "결제 성공 + 재고 차감 실패"는 어떻게? → 2PC(2단계 커밋)는 비현실적. <strong>Saga 패턴</strong>으로 보상 트랜잭션(Refund)을 발행한다. 그리고 PG 호출에는 반드시 <code>Idempotency-Key(멱등키)</code>를 붙여 중복 청구를 막는다. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="cases">
+    <h2>6. 사례 비교 — 채널·정책별 OMS</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>사례</th><th>OMS 특징</th><th>핵심 정책</th></tr></thead>
+        <tbody>
+          <tr><td><strong>쿠팡 로켓배송</strong></td><td>자정 Cut-off, 익일 도착 SLA 판정</td><td>속도 우선 → 분할출고 적극, 자체 FC 할당</td></tr>
+          <tr><td><strong>네이버 스마트스토어</strong></td><td>판매자 위탁 중심, 주문 정보만 중계</td><td>드랍쉬핑·판매자 직배송 비중 높음</td></tr>
+          <tr><td><strong>컬리 샛별배송</strong></td><td>23시 Cut-off, 냉장/냉동/상온 분리</td><td>온도대 분할 패킹, 권역 창고 제한 할당</td></tr>
+          <tr><td><strong>Amazon</strong></td><td>FBA + 멀티 FC 글로벌 할당</td><td>비용 최소화 라우팅, Backorder/입고 ETA 정교</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 정량 감각</div>
+      대형 이커머스 OMS는 Cut-off 직전 1시간에 <strong>일일 주문의 20~30%</strong>가 몰린다. 이 피크에서 결제·재고 트랜잭션 경쟁이 폭증하므로, 할당을 동기 처리하면 병목이 된다 → 큐 기반 비동기 할당이 표준.
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section id="design">
+    <h2>7. 백엔드 시스템 디자인 연결</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>OMS 이슈</th><th>설계 패턴</th><th>이유</th></tr></thead>
+        <tbody>
+          <tr><td>주문-결제-재고 일관성</td><td><strong>Saga + 보상 트랜잭션</strong></td><td>분산 환경에서 2PC 회피, 실패 시 Refund/Release</td></tr>
+          <tr><td>이벤트 발행 신뢰성</td><td><strong>Transactional Outbox</strong></td><td>DB 커밋과 이벤트 발행의 원자성 보장</td></tr>
+          <tr><td>중복 주문·중복 결제</td><td><strong>Idempotency-Key</strong></td><td>네트워크 재시도 시 한 번만 처리</td></tr>
+          <tr><td>Cut-off 피크 주문 폭주</td><td><strong>Kafka 큐 + 비동기 할당</strong></td><td>동기 트랜잭션 경쟁 완화, 백프레셔 흡수</td></tr>
+          <tr><td>주문 상태 조회 폭주</td><td><strong>CQRS 읽기 모델</strong></td><td>쓰기 정규화 모델과 분리된 조회 최적화 뷰</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 정리 — 한 문장</div>
+      "OMS는 멀티 채널 주문을 <strong>상태 머신</strong>으로 관리하고, 할당은 <strong>비용·SLA 최적화</strong> 문제이며, 분할출고로 <strong>Order↔Shipment가 1:N</strong>이 되고, 결제는 <strong>Auth/Capture 분리 + Saga</strong>로 일관성을 맞춘다."
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section id="quiz">
+    <h2>8. 이해도 확인 질문</h2>
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>주문 상태를 <code>isPaid</code>, <code>isShipped</code>, <code>isCanceled</code> 같은 Boolean 플래그 조합으로 관리할 때 발생하는 문제를 설명하고, 상태 머신(Enum + 전이)으로 전환하면 무엇이 해결되는지 서술해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div><textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>한 주문의 라인 3개가 서로 다른 창고에 분산되어 분할출고됩니다. 이때 <code>Order</code> 헤더 상태를 어떻게 결정해야 하며, 한 Shipment만 배송 실패했을 때 어떤 상태/보상 흐름이 필요한지 설명해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div><textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>"결제는 성공했는데 재고 Reserve가 실패"하는 상황을 Saga로 처리한다고 할 때, 어떤 보상 트랜잭션이 필요하고 Idempotency-Key가 왜 필수인지, Capture를 출고 시점에 하는 이유와 함께 설명해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div><textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section id="next">
+    <h2>9. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">logistics-domain-coach</div><div class="topic">WMS 심화 — 재고 상태와 Reserve→Commit→Ship</div></div>
+      <div class="next-card"><div class="coach">backend-architecture-coach</div><div class="topic">주문-결제-배송 Saga 설계 (Design 모드)</div></div>
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">Outbox 패턴과 CDC 구현</div></div>
+      <div class="next-card"><div class="coach">system-design-coach</div><div class="topic">Cut-off 피크 주문 폭주 처리 설계</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'default',
+    themeVariables: { primaryColor: '#dbeafe', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#fef3c7', tertiaryColor: '#ede9fe', fontSize: '13px' },
+    flowchart: { curve: 'basis', padding: 20 }, sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  const NS = 'jobStudy::logistics::01-oms-order-management::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(NS + id);
+    if (saved) el.value = saved;
+    let timer;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(NS + id, el.value);
+        const badge = document.getElementById('saved' + (i + 1));
+        if (badge) { badge.classList.add('show'); setTimeout(() => badge.classList.remove('show'), 1800); }
+      }, 400);
+    });
+  });
+
+  function copyForFeedback() {
+    const questions = [
+      'Q1. 주문 상태를 Boolean 플래그 조합으로 관리할 때의 문제와, 상태 머신(Enum+전이) 전환의 이점을 설명해보세요.',
+      'Q2. 분할출고 시 Order 헤더 상태를 어떻게 결정하고, 한 Shipment만 배송 실패했을 때 필요한 상태/보상 흐름을 설명해보세요.',
+      'Q3. "결제 성공 + 재고 Reserve 실패"의 Saga 처리, 필요한 보상 트랜잭션, Idempotency-Key의 필요성, 출고 시점 Capture의 이유를 설명해보세요.'
+    ];
+    const lines = ['[OMS 주문관리 심화 — 이해도 확인 Q&A 피드백 요청]\n세션: logistics/01-oms-order-management.html\n'];
+    ansIds.forEach((id, i) => {
+      const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)';
+      lines.push(questions[i]); lines.push('A' + (i + 1) + '. ' + ans + '\n');
+    });
+    const text = lines.join('\n');
+    const resultEl = document.getElementById('copyResult');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.';
+      }).catch(() => fallbackCopy(text, resultEl));
+    } else { fallbackCopy(text, resultEl); }
+  }
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.'; }
+    catch { el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.'; }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

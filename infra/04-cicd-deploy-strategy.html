@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CI/CD · 배포 전략 — Rolling / Blue-Green / Canary</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; font-size: 14.5px; line-height: 1.75; }
+    #sidebar { width: 248px; min-height: 100vh; background: var(--card); border-right: 1px solid var(--border); padding: 24px 0; position: fixed; left: 0; top: 0; overflow-y: auto; z-index: 50; }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a { display: block; padding: 7px 20px; font-size: 13px; color: var(--muted); text-decoration: none; border-left: 3px solid transparent; transition: all .15s; }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip { font-size: 12px; font-weight: 500; padding: 3px 11px; border-radius: 20px; background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 { font-size: 20px; font-weight: 700; padding-bottom: 12px; border-bottom: 2px solid var(--border); margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+    .diagram-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px 20px; margin: 18px 0; overflow-x: auto; text-align: center; }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    .sys-card { border-radius: 10px; padding: 18px 22px; margin-bottom: 20px; border-left: 4px solid; }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .sys-card.lm  { background: var(--lm);  border-color: var(--lm-b);  color: var(--lm-t);  }
+    .sys-card.ret { background: var(--ret); border-color: var(--ret-b); color: var(--ret-t); }
+    .callout { border-radius: 8px; padding: 13px 16px; margin: 14px 0; border-left: 4px solid; font-size: 13.5px; }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea { width: 100%; min-height: 110px; border: 1.5px solid var(--border); border-radius: 8px; padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif; font-size: 14px; line-height: 1.7; resize: vertical; background: #fafcff; color: var(--text); transition: border-color .15s, background .15s; }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+    .feedback-box { background: var(--card); border: 1.5px dashed var(--border); border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center; }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; transition: background .15s; }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">☁️ infra-coach</div>
+    <h2>CI/CD · 배포 전략<br/>무중단 · 롤백</h2>
+  </div>
+  <div class="group-label">파이프라인</div>
+  <a href="#pipeline">1. CI/CD 파이프라인</a>
+  <a href="#cicd-diff">2. CI vs CD vs CD</a>
+  <div class="group-label">배포 전략</div>
+  <a href="#rolling">3. Rolling</a>
+  <a href="#bluegreen">4. Blue-Green</a>
+  <a href="#canary">5. Canary</a>
+  <a href="#compare">6. 전략 비교표</a>
+  <div class="group-label">안전장치</div>
+  <a href="#rollback">7. 롤백</a>
+  <a href="#flag">8. 피처 플래그</a>
+  <div class="group-label">사례 & 점검</div>
+  <a href="#case">9. 물류 무중단 배포</a>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+
+<main>
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">infra-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">CI/CD · 배포</span>
+    </div>
+    <h1>CI/CD · 배포 전략<br>Rolling · Blue-Green · Canary · 무중단 · 롤백</h1>
+    <p>"배포 어떻게 하세요"는 시니어 면접 단골. 각 전략의 <strong>리스크·비용·롤백 속도</strong> Trade-off를 숫자로 말할 수 있어야 한다. 배포(Deploy)와 릴리스(Release) 분리까지. <span class="deep">🔥 Deep-dive</span>.</p>
+  </header>
+
+  <!-- 1 -->
+  <section id="pipeline">
+    <h2>1. CI/CD 파이프라인 — 전체 흐름</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    Code["커밋/PR"] --> Build["Build\n빌드"]
+    Build --> Test["Test\n단위·통합"]
+    Test --> Scan["Scan\nSAST·SCA·이미지"]
+    Scan --> Art["Artifact\n이미지 레지스트리"]
+    Art --> Deploy["Deploy\n배포"]
+    Deploy --> Smoke["Smoke\n핵심 경로 검증"]
+    Smoke --> Mon["Monitor\n메트릭·알림"]
+    Mon -.->|"이상 시"| RB["자동 롤백"]
+
+    style Build fill:#dbeafe,stroke:#3b82f6
+    style Scan fill:#fef3c7,stroke:#f59e0b
+    style Deploy fill:#ede9fe,stroke:#8b5cf6
+    style Mon fill:#dcfce7,stroke:#22c55e
+    style RB fill:#fee2e2,stroke:#ef4444
+      </div>
+      <div class="cap">표준 파이프라인 — Build → Test → Scan → Artifact → Deploy → Smoke → Monitor. 마지막 Monitor가 롤백 트리거</div>
+    </div>
+    <ul>
+      <li><strong>SAST(Static Application Security Testing, 정적 분석)</strong>: 소스코드 취약점.</li>
+      <li><strong>SCA(Software Composition Analysis)</strong>: 의존 라이브러리 취약점(CVE).</li>
+      <li><strong>Container scan</strong>: 베이스 이미지 OS 패키지 취약점.</li>
+    </ul>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정</div>
+      Smoke test(배포 후 핵심 경로 자동 검증)와 모니터링이 없으면, 배포는 "성공"인데 실제 서비스는 죽어있는 상황을 한참 뒤에야 안다. <strong>Deploy의 마지막 게이트는 항상 "관측"</strong>이어야 한다.
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="cicd-diff">
+    <h2>2. CI / Continuous Delivery / Continuous Deployment</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>용어</th><th>의미</th><th>사람 개입</th></tr></thead>
+        <tbody>
+          <tr><td><strong>CI (Continuous Integration, 지속적 통합)</strong></td><td>커밋마다 빌드·테스트 자동화</td><td>—</td></tr>
+          <tr><td><strong>Continuous Delivery (지속적 전달)</strong></td><td>언제든 배포 가능한 상태 유지, <strong>배포 버튼은 사람이</strong></td><td>승인 1회</td></tr>
+          <tr><td><strong>Continuous Deployment (지속적 배포)</strong></td><td>테스트 통과 시 <strong>자동으로 프로덕션까지</strong></td><td>없음 (완전 자동)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 DORA 4 지표로 성숙도 측정</div>
+      <strong>Deployment Frequency(배포 빈도), Lead Time(변경 리드타임), Change Failure Rate(변경 실패율), MTTR(Mean Time To Restore, 평균 복구 시간)</strong>. 엘리트 조직은 하루 여러 번 배포하면서 실패율은 낮고 복구는 1시간 이내. "자주·작게·안전하게" 배포가 핵심.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="rolling">
+    <h2>3. Rolling Update(롤링 업데이트)</h2>
+    <p>구버전 인스턴스를 <strong>조금씩 신버전으로 교체</strong>. K8s Deployment 기본 전략.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    subgraph Before["진행 중"]
+        A1["v1"]
+        A2["v1 → v2"]
+        A3["v2"]
+    end
+    Note["한 번에 N개씩 교체\n(maxSurge / maxUnavailable)"]
+
+    style A1 fill:#dbeafe,stroke:#3b82f6
+    style A2 fill:#fef3c7,stroke:#f59e0b
+    style A3 fill:#dcfce7,stroke:#22c55e
+      </div>
+      <div class="cap">Rolling — 점진 교체. 추가 인프라 비용 거의 없음. 단, 배포 중 v1·v2 공존</div>
+    </div>
+    <ul>
+      <li><strong>장점</strong>: 추가 비용 적음, 자연스러운 무중단.</li>
+      <li><strong>단점</strong>: 배포 중 <strong>두 버전 공존</strong> → API 하위호환·DB 스키마 호환 필수. 롤백이 또 다른 롤링이라 느림.</li>
+    </ul>
+  </section>
+
+  <!-- 4 -->
+  <section id="bluegreen">
+    <h2>4. Blue-Green Deployment(블루-그린 배포)</h2>
+    <p>현재(Blue)와 똑같은 신버전 환경(Green)을 <strong>통째로 띄운 뒤, 트래픽을 한 번에 전환</strong>.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    LB["로드밸런서 / DNS"]
+    LB -->|"현재 100%"| Blue["🟦 Blue (v1)"]
+    LB -.->|"검증 후 전환"| Green["🟩 Green (v2)"]
+    Green -.->|"문제 시 즉시 Blue 복귀"| LB
+
+    style Blue fill:#dbeafe,stroke:#3b82f6
+    style Green fill:#dcfce7,stroke:#22c55e
+      </div>
+      <div class="cap">Blue-Green — 트래픽 스위치 한 번. 롤백이 "다시 Blue로" 라 즉각적</div>
+    </div>
+    <ul>
+      <li><strong>장점</strong>: 즉각적 전환·롤백, 배포 중 단일 버전만 노출, Green에서 충분히 검증 가능.</li>
+      <li><strong>단점</strong>: 일시적으로 <strong>인프라 2배</strong> 비용. DB는 공유하므로 스키마 호환 여전히 필요.</li>
+    </ul>
+  </section>
+
+  <!-- 5 -->
+  <section id="canary">
+    <h2>5. Canary Deployment(카나리 배포)</h2>
+    <p>신버전에 <strong>소수 트래픽(1%→5%→25%→100%)만 점진적으로</strong> 흘리며 메트릭을 보고 확대/중단.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant LB as 트래픽 분배
+    participant V1 as v1 (안정)
+    participant V2 as v2 (카나리)
+    participant Mon as 모니터링
+
+    LB->>V2: 5% 트래픽
+    LB->>V1: 95% 트래픽
+    V2->>Mon: 에러율·지연 측정
+    Mon-->>LB: 정상 → 25%로 확대
+    Mon-->>LB: 이상 → 0%로 롤백 + 알림
+    Note over LB,Mon: Argo Rollouts / Flagger가 자동 판정
+      </div>
+      <div class="cap">Canary — 폭발 반경(Blast radius)을 5%로 제한. 자동 분석으로 확대/중단 결정</div>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트</div>
+      "Canary와 Blue-Green 차이?" → Blue-Green은 <strong>0% 또는 100%</strong>(전부 전환), Canary는 <strong>점진 비율 + 실시간 메트릭 기반 자동 판정</strong>. Canary는 폭발 반경을 최소화하지만 트래픽 라우팅·메트릭 분석 인프라(Argo Rollouts/Flagger, Service Mesh)가 필요해 복잡하다. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="compare">
+    <h2>6. 배포 전략 비교표</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>전략</th><th>추가 비용</th><th>롤백 속도</th><th>폭발 반경</th><th>버전 공존</th><th>적합 상황</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Rolling</strong></td><td>거의 없음</td><td>느림 (역롤링)</td><td>중</td><td>O</td><td>일반 무상태 서비스 기본</td></tr>
+          <tr><td><strong>Recreate</strong></td><td>없음</td><td>느림</td><td>전체 (다운타임)</td><td>X</td><td>다운타임 허용·동시 버전 불가</td></tr>
+          <tr><td><strong>Blue-Green</strong></td><td><strong>2배 (일시)</strong></td><td><strong>즉시</strong></td><td>전체(전환 후)</td><td>X (단일 노출)</td><td>즉각 롤백 중요, 비용 여유</td></tr>
+          <tr><td><strong>Canary</strong></td><td>소폭</td><td>빠름 (비율 0%)</td><td><strong>최소 (1~5%)</strong></td><td>O</td><td>고트래픽·고위험 변경</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section id="rollback">
+    <h2>7. 롤백(Rollback) 전략</h2>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — "앞으로만 가는" 배포</div>
+      롤백 전략 없이 배포하면, 장애 시 "급하게 핫픽스 또 배포"라는 도박을 한다. <strong>모든 배포는 롤백 경로가 먼저 정의</strong>돼야 한다. K8s면 <code>kubectl rollout undo</code>, GitOps면 <code>git revert</code>, Blue-Green이면 트래픽 스위치 복귀.
+    </div>
+    <h3>DB 마이그레이션과 롤백 — 가장 위험한 지점</h3>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 (최상위 단골)</div>
+      "배포 롤백했는데 DB는 이미 마이그레이션됐다면?" → 코드는 되돌려도 <strong>스키마 변경은 비가역</strong>일 수 있다. 해법은 <strong>Expand-Contract(확장-수축) 패턴</strong>: ① 컬럼 추가는 nullable로(구버전 호환) ② 신버전 배포·안정화 ③ 그 다음 배포에서 구컬럼 제거. <strong>"배포와 동시에 파괴적 마이그레이션 실행"은 절대 금지</strong> — 롤백 불가 상태를 만든다. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section id="flag">
+    <h2>8. Feature Flag(피처 플래그) — 배포 ≠ 릴리스</h2>
+    <div class="sys-card lm">
+      <div class="sys-label">핵심 개념</div>
+      <div class="sys-title"><strong>Deploy(배포)</strong>는 코드를 서버에 올리는 것, <strong>Release(릴리스)</strong>는 사용자에게 기능을 켜는 것. 피처 플래그가 이 둘을 <em>분리</em>한다.</div>
+    </div>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> Deployed : 코드 배포 (플래그 OFF)
+    Deployed --> InternalOnly : 내부 직원만 ON
+    InternalOnly --> Percentage : 5% 사용자 ON
+    Percentage --> FullRelease : 100% ON
+    Percentage --> KillSwitch : 문제 발생 → 즉시 OFF
+    KillSwitch --> Deployed
+    FullRelease --> [*]
+      </div>
+      <div class="cap">피처 플래그 — 배포된 코드를 점진 노출. 문제 시 재배포 없이 즉시 끄는 Kill Switch</div>
+    </div>
+    <ul>
+      <li><strong>장점</strong>: 배포 리스크 분리, A/B 테스트, 즉시 끄기(Kill Switch), 점진 노출.</li>
+      <li><strong>도구</strong>: LaunchDarkly, Unleash, 자체 구현.</li>
+      <li><strong>주의</strong>: 플래그가 쌓이면 기술 부채. 수명 다한 플래그는 제거(flag debt 관리).</li>
+    </ul>
+  </section>
+
+  <!-- 9 -->
+  <section id="case">
+    <h2>9. 물류 연결 — 라스트마일 배차 로직 무중단 배포</h2>
+    <div class="callout tip">
+      <div class="c-title">💡 시나리오 — 새 배차 알고리즘 출시</div>
+      라스트마일 배차(기사에게 주문 할당) 로직을 새 알고리즘(v2)으로 바꾼다. 잘못되면 <strong>기사 동선이 꼬여 배송 지연·기사 불만</strong>이 즉시 터진다.
+      <ul>
+        <li><strong>Canary + 피처 플래그 조합</strong>: 특정 캠프(예: 1개 권역) 트래픽 5%에만 v2 배차 적용.</li>
+        <li>핵심 메트릭(평균 배차 거리, 기사당 처리 건수, 배송 지연율)을 v1 대비 비교.</li>
+        <li>지표 악화 시 <strong>플래그 OFF로 즉시 v1 복귀</strong> (재배포 불필요).</li>
+        <li>양호하면 권역을 25%→100%로 확대.</li>
+      </ul>
+      <strong>Trade-off</strong>: 배차는 상태가 있는(기사-주문 매핑) 로직이라, 전환 순간 진행 중인 배차의 일관성을 어떻게 유지할지(새 주문만 v2 / 기존은 v1 유지)를 설계해야 한다. 단순 무상태 API보다 까다롭다.
+    </div>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    New["새 배차 v2"] --> Flag["피처 플래그\n(권역·비율 제어)"]
+    Flag -->|"5% 권역 A"| V2["v2 배차"]
+    Flag -->|"95%"| V1["v1 배차"]
+    V2 --> KPI["KPI 비교\n동선·지연·처리량"]
+    KPI -->|"악화"| Off["플래그 OFF\n즉시 v1"]
+    KPI -->|"양호"| Up["25%→100% 확대"]
+
+    style Flag fill:#ede9fe,stroke:#8b5cf6
+    style V2 fill:#dcfce7,stroke:#22c55e
+    style Off fill:#fee2e2,stroke:#ef4444
+      </div>
+      <div class="cap">배차 로직 Canary + 피처 플래그 — 폭발 반경을 권역·비율로 이중 제한</div>
+    </div>
+  </section>
+
+  <!-- Quiz -->
+  <section id="quiz">
+    <h2>10. 이해도 확인 질문</h2>
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>고트래픽 결제 API에 위험한 변경을 배포해야 합니다. Blue-Green과 Canary 중 무엇을 택할지, <strong>폭발 반경·비용·롤백 속도</strong> Trade-off로 근거를 들어 결정해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div><textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>코드를 롤백했는데 DB는 이미 컬럼을 삭제하는 마이그레이션이 적용됐습니다. 왜 위험하며, <strong>Expand-Contract 패턴</strong>으로 어떻게 처음부터 안전하게 설계했어야 하는지 설명해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div><textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>"배포(Deploy)와 릴리스(Release)를 분리한다"는 말의 의미를 <strong>피처 플래그</strong>로 설명하고, 라스트마일 배차 알고리즘 교체 같은 위험한 기능 출시에 이 분리가 왜 유리한지 답해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div><textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>11. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">infra-coach</div><div class="topic">관측성 스택 (05)</div></div>
+      <div class="next-card"><div class="coach">infra-coach</div><div class="topic">SRE · 장애 대응 (06)</div></div>
+      <div class="next-card"><div class="coach">infra-coach</div><div class="topic">IaC / Terraform (03)</div></div>
+      <div class="next-card"><div class="coach">backend-architecture-coach</div><div class="topic">Expand-Contract DB 마이그레이션 심화</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'default',
+    themeVariables: { primaryColor: '#dbeafe', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#fef3c7', tertiaryColor: '#ede9fe', fontSize: '13px' },
+    flowchart: { curve: 'basis', padding: 20 }, sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { navLinks.forEach(a => a.classList.remove('active')); const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`); if (active) active.classList.add('active'); } });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  const NS = 'jobStudy::infra::04-cicd-deploy-strategy::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(NS + id);
+    if (saved) el.value = saved;
+    let timer;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(NS + id, el.value);
+        const badge = document.getElementById('saved' + (i + 1));
+        if (badge) { badge.classList.add('show'); setTimeout(() => badge.classList.remove('show'), 1800); }
+      }, 400);
+    });
+  });
+  function copyForFeedback() {
+    const questions = [
+      'Q1. 고트래픽 결제 API의 위험 변경에 Blue-Green vs Canary 중 무엇을 택할지 폭발 반경·비용·롤백 속도 Trade-off로 결정해보세요.',
+      'Q2. 코드는 롤백했지만 DB 컬럼 삭제 마이그레이션이 적용된 상황의 위험과, Expand-Contract 패턴으로 안전 설계하는 방법을 설명해보세요.',
+      'Q3. 배포와 릴리스의 분리를 피처 플래그로 설명하고, 라스트마일 배차 알고리즘 교체 같은 위험한 출시에 왜 유리한지 답해보세요.'
+    ];
+    const lines = ['[CI/CD · 배포 전략 — 이해도 확인 Q&A 피드백 요청]\n세션: infra/04-cicd-deploy-strategy.html\n'];
+    ansIds.forEach((id, i) => {
+      const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)';
+      lines.push(questions[i]); lines.push('A' + (i + 1) + '. ' + ans + '\n');
+    });
+    const text = lines.join('\n');
+    const resultEl = document.getElementById('copyResult');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => { resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.'; }).catch(() => fallbackCopy(text, resultEl));
+    } else { fallbackCopy(text, resultEl); }
+  }
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.'; }
+    catch { el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.'; }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

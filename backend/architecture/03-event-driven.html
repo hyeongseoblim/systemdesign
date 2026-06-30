@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event-Driven Architecture — 도메인/통합 이벤트 · Choreography vs Orchestration</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg); color: var(--text);
+      display: flex; min-height: 100vh;
+      font-size: 14.5px; line-height: 1.75;
+    }
+
+    #sidebar {
+      width: 248px; min-height: 100vh;
+      background: var(--card); border-right: 1px solid var(--border);
+      padding: 24px 0; position: fixed; left: 0; top: 0;
+      overflow-y: auto; z-index: 50;
+    }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a {
+      display: block; padding: 7px 20px;
+      font-size: 13px; color: var(--muted);
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip {
+      font-size: 12px; font-weight: 500;
+      padding: 3px 11px; border-radius: 20px;
+      background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+    }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 {
+      font-size: 20px; font-weight: 700;
+      padding-bottom: 12px; border-bottom: 2px solid var(--border);
+      margin-bottom: 24px; display: flex; align-items: center; gap: 8px;
+    }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+
+    .diagram-wrap {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 28px 24px 20px;
+      margin: 18px 0; overflow-x: auto; text-align: center;
+    }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 13.5px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    .sys-card {
+      border-radius: 10px; padding: 18px 22px;
+      margin-bottom: 20px; border-left: 4px solid;
+    }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .sys-card.lm  { background: var(--lm);  border-color: var(--lm-b);  color: var(--lm-t);  }
+    .sys-card.ret { background: var(--ret); border-color: var(--ret-b); color: var(--ret-t); }
+
+    .callout {
+      border-radius: 8px; padding: 13px 16px;
+      margin: 14px 0; border-left: 4px solid; font-size: 13.5px;
+    }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea {
+      width: 100%; min-height: 110px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif;
+      font-size: 14px; line-height: 1.7; resize: vertical;
+      background: #fafcff; color: var(--text);
+      transition: border-color .15s, background .15s;
+    }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+
+    .feedback-box {
+      background: var(--card); border: 1.5px dashed var(--border);
+      border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center;
+    }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 8px; padding: 10px 22px;
+      font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🏛 backend-architecture-coach</div>
+    <h2>Event-Driven<br/>Architecture</h2>
+  </div>
+  <div class="group-label">기본 개념</div>
+  <a href="#why">1. 왜 이벤트 기반인가</a>
+  <a href="#types">2. Event vs Command vs Query</a>
+  <a href="#kinds">3. 도메인 vs 통합 이벤트</a>
+  <div class="group-label">흐름 설계</div>
+  <a href="#flow">4. 이벤트 흐름 설계</a>
+  <a href="#choreo">5. Choreography vs Orchestration</a>
+  <a href="#delivery">6. 전달 보장과 함정</a>
+  <a href="#case">7. 실제 사례</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+
+<main>
+
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">backend-architecture-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">Event-Driven Architecture</span>
+    </div>
+    <h1>Event-Driven Architecture<br>도메인/통합 이벤트 · Choreography vs Orchestration</h1>
+    <p>동기 호출의 시간 결합을 끊고 <strong>이벤트로 느슨하게</strong> 연결한다. 이벤트의 종류와 흐름 제어 방식의 Trade-off를 그림으로 정리. Deep-dive는 <span class="deep">🔥 Deep-dive</span>.</p>
+  </header>
+
+  <!-- ── Section 1 ── -->
+  <section id="why">
+    <h2>1. 왜 이벤트 기반인가 — 문제 → 해결</h2>
+
+    <p><strong>문제</strong>: 주문 완료 후 재고차감·포인트적립·알림발송·정산을 동기 호출하면, 한 호출만 느려도/죽어도 주문 전체가 실패한다(시간 결합 Temporal coupling). 새 후속 작업이 생길 때마다 주문 코드를 고쳐야 한다.</p>
+    <p><strong>해결</strong>: 주문은 <code>OrderPlaced</code> 이벤트만 발행하고 떠난다. 관심 있는 컨슈머가 알아서 구독한다. <strong>발행자는 소비자를 모른다</strong> → 느슨한 결합과 확장성.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    subgraph SYNC["동기 호출 — 강결합"]
+      O1["Order"] --> Inv1["Inventory"]
+      O1 --> Pt1["Point"]
+      O1 --> Noti1["Notify"]
+    end
+    subgraph EVT["이벤트 기반 — 느슨한 결합"]
+      O2["Order"] -->|"OrderPlaced"| B[("Event Broker\nKafka")]
+      B --> Inv2["Inventory"]
+      B --> Pt2["Point"]
+      B --> Noti2["Notify"]
+      B -.->|"신규 컨슈머\n주문코드 수정 0"| Fraud["Fraud 분석"]
+    end
+
+    style SYNC fill:#fee2e2,stroke:#ef4444
+    style EVT fill:#dcfce7,stroke:#22c55e
+    style B fill:#ede9fe,stroke:#8b5cf6
+      </div>
+      <div class="cap">동기(좌)는 컨슈머 추가마다 발행자 수정. 이벤트(우)는 발행자 변경 없이 컨슈머만 늘린다.</div>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 Trade-off</div>
+      이벤트 기반은 결합도↓·확장성↑·장애 격리↑를 주지만, 대가로 <strong>최종 일관성(Eventual Consistency)</strong>, 흐름 추적 난이도↑, 디버깅 복잡도↑를 받는다. 강한 일관성이 필수인 곳(잔액 차감 즉시 반영 등)은 동기가 낫다.
+    </div>
+  </section>
+
+  <!-- ── Section 2 ── -->
+  <section id="types">
+    <h2>2. Event vs Command vs Query — 명확히 구분</h2>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th></th><th>Command(명령)</th><th>Event(이벤트)</th><th>Query(조회)</th></tr></thead>
+        <tbody>
+          <tr><td>의미</td><td>"~을 해라"</td><td>"~이 일어났다"(사실)</td><td>"~을 알려달라"</td></tr>
+          <tr><td>시제</td><td>명령형</td><td><strong>과거형</strong></td><td>질문형</td></tr>
+          <tr><td>수신자</td><td>1명 (특정)</td><td>0~N명 (모름)</td><td>1명</td></tr>
+          <tr><td>거부 가능</td><td>가능 (검증 후 실패)</td><td>불가 (이미 발생함)</td><td>해당 없음</td></tr>
+          <tr><td>예시</td><td><code>ReserveInventory</code></td><td><code>InventoryReserved</code></td><td><code>GetOrderStatus</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — Event와 Command 혼용</div>
+      이벤트 이름을 <code>ReserveInventory</code>(명령형)로 지으면 발행자가 컨슈머의 행동을 지시하는 셈 → 결합이 다시 강해진다. 이벤트는 <strong>과거의 사실</strong>(<code>OrderPlaced</code>)만 알리고, 무엇을 할지는 컨슈머가 결정해야 한다.
+    </div>
+  </section>
+
+  <!-- ── Section 3 ── -->
+  <section id="kinds">
+    <h2>3. Domain Event vs Integration Event</h2>
+
+    <p>둘 다 "과거의 사실"이지만 <strong>범위와 계약(Contract)</strong>이 다르다. 이 구분을 못 하면 내부 모델이 외부로 새어 강결합이 된다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th></th><th>Domain Event (도메인 이벤트)</th><th>Integration Event (통합 이벤트)</th></tr></thead>
+        <tbody>
+          <tr><td>범위</td><td>한 Bounded Context <strong>내부</strong></td><td>컨텍스트/서비스 <strong>경계 간</strong></td></tr>
+          <tr><td>전달</td><td>in-process (메모리 디스패처)</td><td>메시지 브로커 (Kafka/SQS)</td></tr>
+          <tr><td>스키마</td><td>내부용, 자유롭게 변경</td><td><strong>공개 계약</strong> — 하위호환 필수</td></tr>
+          <tr><td>내용</td><td>풍부한 도메인 객체 가능</td><td>최소·안정 필드 (ID 중심)</td></tr>
+          <tr><td>예시</td><td>Order Aggregate가 발행한 <code>OrderPlaced</code></td><td>외부로 나가는 <code>order.placed.v1</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    subgraph BC["Ordering 컨텍스트"]
+      AGG["Order Aggregate"] -->|"Domain Event\n(in-process)"| H["이벤트 핸들러"]
+      H -->|"번역 + 안정 스키마"| OUT["Integration Event\norder.placed.v1"]
+    end
+    OUT -->|"브로커"| K[("Kafka")]
+    K --> INV["Inventory 서비스"]
+    K --> SHIP["Shipping 서비스"]
+
+    style BC fill:#dbeafe,stroke:#3b82f6
+    style AGG fill:#fff,stroke:#3b82f6
+    style OUT fill:#dcfce7,stroke:#22c55e
+    style K fill:#ede9fe,stroke:#8b5cf6
+      </div>
+      <div class="cap">도메인 이벤트는 내부에서, 통합 이벤트는 안정된 공개 스키마로 번역해 밖으로. 내부 모델을 외부에 그대로 노출하지 마라.</div>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 스키마 진화</div>
+      통합 이벤트는 <strong>하위 호환(Backward compatibility)</strong>이 생명. 필드 추가는 OK, 삭제·의미 변경은 금지. <code>Schema Registry(Avro/Protobuf)</code>와 버전 태깅(<code>v1</code>)으로 관리. <code>Consumer-Driven Contracts(Pact)</code>로 컨슈머가 깨지지 않게 검증. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- ── Section 4 ── -->
+  <section id="flow">
+    <h2>4. 이벤트 흐름 설계 — 물류 주문 파이프라인</h2>
+
+    <p>주문이 들어오면 이벤트가 컨텍스트를 타고 흐른다. 각 컨슈머는 자기 일을 하고 다음 이벤트를 발행한다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant O as Ordering
+    participant K as Kafka
+    participant I as Inventory
+    participant F as Fulfillment
+    participant S as Shipping
+    participant N as Notification
+
+    O->>K: OrderPlaced
+    K->>I: OrderPlaced 구독
+    I->>I: 재고 예약(Reserve)
+    I->>K: InventoryReserved
+    K->>F: InventoryReserved 구독
+    F->>F: 피킹/패킹
+    F->>K: PackagePrepared
+    K->>S: PackagePrepared 구독
+    S->>S: 운송장 발행
+    S->>K: ShipmentDispatched
+    K->>N: 각 이벤트 구독
+    N->>N: 고객 알림 발송
+      </div>
+      <div class="cap">물류 주문 이벤트 파이프라인 — 각 컨텍스트가 사실을 발행하고 다음이 반응한다(Choreography).</div>
+    </div>
+
+    <h3>이벤트 설계 체크리스트</h3>
+    <ul>
+      <li><strong>이벤트는 자기완결적</strong>: 컨슈머가 매번 발행자에게 되묻지(콜백) 않아도 되게 필요한 ID·핵심 필드 포함.</li>
+      <li><strong>too fat / too thin 균형</strong>: 전체 객체를 다 넣으면 결합·페이로드 비대, 너무 적으면 컨슈머가 추가 조회 폭주. 보통 ID + 핵심 필드.</li>
+      <li><strong>순서 보장 범위</strong>: Kafka는 파티션 내 순서만 보장 → 같은 <code>orderId</code>는 같은 파티션 키로.</li>
+    </ul>
+  </section>
+
+  <!-- ── Section 5 ── -->
+  <section id="choreo">
+    <h2>5. Choreography vs Orchestration</h2>
+
+    <p>여러 단계의 흐름을 누가 제어하는가의 문제. <strong>Choreography(코레오그래피)</strong>는 각자 이벤트를 듣고 자율적으로 반응, <strong>Orchestration(오케스트레이션)</strong>은 중앙 조정자가 단계를 지시한다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    subgraph CHOREO["Choreography — 분산 자율"]
+      direction LR
+      A1["Order"] -->|"이벤트"| A2["Inventory"]
+      A2 -->|"이벤트"| A3["Shipping"]
+    end
+    subgraph ORCH["Orchestration — 중앙 조정"]
+      direction LR
+      ORCa(["Orchestrator"])
+      ORCa -->|"명령"| B1["Order"]
+      ORCa -->|"명령"| B2["Inventory"]
+      ORCa -->|"명령"| B3["Shipping"]
+      B1 -.->|"응답"| ORCa
+      B2 -.->|"응답"| ORCa
+      B3 -.->|"응답"| ORCa
+    end
+
+    style CHOREO fill:#dcfce7,stroke:#22c55e
+    style ORCH fill:#dbeafe,stroke:#3b82f6
+    style ORCa fill:#fff,stroke:#3b82f6
+      </div>
+      <div class="cap">Choreography는 결합도 낮지만 흐름이 코드에 흩어진다. Orchestration은 흐름이 한곳에 보이지만 조정자가 핵심 지점.</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>Choreography</th><th>Orchestration</th></tr></thead>
+        <tbody>
+          <tr><td>결합도</td><td><strong>낮음</strong> (서로 모름)</td><td>중간 (조정자가 다 앎)</td></tr>
+          <tr><td>흐름 가시성</td><td>낮음 (전체 추적 어려움)</td><td><strong>높음</strong> (한곳에 정의)</td></tr>
+          <tr><td>단일 지점</td><td>없음</td><td>조정자 (장애·병목 가능)</td></tr>
+          <tr><td>적합 상황</td><td>단계 적고 자율적, 느슨한 흐름</td><td>단계 많고 복잡, 보상·롤백 필요</td></tr>
+          <tr><td>디버깅</td><td>어려움 (분산 추적 필수)</td><td>쉬움 (상태 머신 추적)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 선택 기준</div>
+      단계가 <strong>2~3개로 단순</strong>하면 Choreography. <strong>4단계 이상 + 실패 보상이 복잡</strong>(주문-결제-재고-배송 + 각 단계 롤백)하면 Orchestration이 흐름 가시성에서 유리. 이게 다음 장(04 Saga)의 두 변형으로 직결된다.
+    </div>
+  </section>
+
+  <!-- ── Section 6 ── -->
+  <section id="delivery">
+    <h2>6. 전달 보장과 함정</h2>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>전달 의미론</th><th>의미</th><th>현실</th></tr></thead>
+        <tbody>
+          <tr><td>At-most-once</td><td>최대 1번 (유실 가능)</td><td>중요 이벤트에 부적합</td></tr>
+          <tr><td>At-least-once</td><td>최소 1번 (중복 가능)</td><td><strong>표준</strong> — 중복은 멱등성으로 흡수</td></tr>
+          <tr><td>Exactly-once</td><td>정확히 1번</td><td>네트워크상 수학적으로 불가 — "Effectively once"로 근사</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — DB 커밋 후 이벤트 발행</div>
+      "주문 저장 → 그 다음 줄에서 Kafka 발행"은 위험하다. 저장 후 발행 직전에 프로세스가 죽으면 <strong>이벤트 유실</strong>(Dual-write 문제). 반대로 발행 후 커밋 실패면 <strong>유령 이벤트</strong>. 해결은 <code>Transactional Outbox(트랜잭셔널 아웃박스)</code> — DB 트랜잭션과 이벤트 적재를 원자화. 06장에서 깊게 다룬다. <span class="deep">🔥 Deep-dive</span>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트</div>
+      "이벤트가 중복으로 오면?" → 컨슈머를 <strong>멱등(Idempotent)</strong>하게 설계. 운송장 <code>TrackingEvent</code>가 여러 경로로 중복 수신되어도 같은 <code>eventId</code>를 이미 처리했으면 무시(Inbox 패턴). At-least-once + 멱등 컨슈머 = Effectively once.
+    </div>
+  </section>
+
+  <!-- ── Section 7 ── -->
+  <section id="case">
+    <h2>7. 실제 사례</h2>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>회사</th><th>이벤트 활용</th></tr></thead>
+        <tbody>
+          <tr><td><strong>우아한형제들(배민)</strong></td><td>주문 도메인을 Kafka 이벤트로 결제·정산·배달대행에 전파. 주문 발생 시 다수 컨슈머가 비동기 반응</td></tr>
+          <tr><td><strong>쿠팡</strong></td><td>풀필먼트·물류 상태 변화를 이벤트 스트림으로 — 수천만 건/일 TrackingEvent fan-out에 Kafka + CDC</td></tr>
+          <tr><td><strong>토스</strong></td><td>금융 이벤트를 비동기로 처리하되 핵심 트랜잭션은 동기 강일관성 유지 (혼합 전략)</td></tr>
+          <tr><td><strong>Netflix</strong></td><td>대규모 이벤트 파이프라인 + 스트림 처리로 추천·시청 로그 처리</td></tr>
+          <tr><td><strong>Uber</strong></td><td>배차·결제·위치 업데이트를 이벤트 기반으로, Orchestration(Cadence/Temporal) 활용</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 물류 맥락</div>
+      운송장 상태 변화(<code>PickedUp</code>→<code>InTransit</code>→<code>Delivered</code>)는 이벤트 기반의 교과서. 기사 앱 오프라인 동기화·중복 스캔 때문에 <strong>멱등 + 순서 키(orderId 파티셔닝)</strong>가 필수다.
+    </div>
+  </section>
+
+  <!-- ── Section 8: 이해도 확인 ── -->
+  <section id="quiz">
+    <h2>8. 이해도 확인 질문</h2>
+
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>Domain Event와 Integration Event의 차이를 <strong>스키마 진화·전달 방식·결합도</strong> 관점에서 설명하고, 내부 도메인 이벤트를 그대로 외부에 발행하면 어떤 문제가 생기는지 말해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div>
+        <textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>주문-재고-배송 흐름을 Choreography로 갈지 Orchestration으로 갈지 결정하는 기준을 제시하고, 실패 보상이 복잡해질수록 왜 Orchestration이 유리해지는지 설명해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div>
+        <textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>운송장 <code>TrackingEvent</code>가 At-least-once로 전달되어 중복·순서 뒤바뀜이 발생할 수 있을 때, 컨슈머를 어떻게 설계해야 정확히 한 번 처리한 효과(Effectively once)를 낼 수 있는지 설명해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div>
+        <textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <!-- ── Section 9: 다음 학습 ── -->
+  <section id="next">
+    <h2>9. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card">
+        <div class="coach">backend-architecture-coach</div>
+        <div class="topic">Saga · 분산 트랜잭션 (04)</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">backend-architecture-coach</div>
+        <div class="topic">Outbox · Idempotency (06)</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">infra-coach</div>
+        <div class="topic">Kafka 운영 · 파티셔닝 · 컨슈머 그룹</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">system-design-coach</div>
+        <div class="topic">TrackingEvent Fan-out 시스템 설계</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    themeVariables: {
+      primaryColor: '#dbeafe',
+      primaryTextColor: '#1e293b',
+      primaryBorderColor: '#3b82f6',
+      lineColor: '#64748b',
+      secondaryColor: '#fef3c7',
+      tertiaryColor: '#ede9fe',
+      fontSize: '13px'
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  const NS = 'jobStudy::backend::architecture::03-event-driven::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(NS + id);
+    if (saved) el.value = saved;
+
+    let timer;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(NS + id, el.value);
+        const badge = document.getElementById('saved' + (i + 1));
+        if (badge) {
+          badge.classList.add('show');
+          setTimeout(() => badge.classList.remove('show'), 1800);
+        }
+      }, 400);
+    });
+  });
+
+  function copyForFeedback() {
+    const questions = [
+      'Q1. Domain Event vs Integration Event를 스키마 진화·전달 방식·결합도 관점에서 설명하고, 내부 이벤트를 그대로 외부 발행 시 문제를 말해보세요.',
+      'Q2. 주문-재고-배송을 Choreography vs Orchestration으로 결정하는 기준과, 실패 보상이 복잡할수록 Orchestration이 유리한 이유를 설명해보세요.',
+      'Q3. TrackingEvent가 At-least-once로 중복·순서 뒤바뀜이 발생할 때 Effectively once 효과를 내는 컨슈머 설계를 설명해보세요.'
+    ];
+
+    const lines = ['[Event-Driven Architecture — 이해도 확인 Q&A 피드백 요청]\n세션: backend/architecture/03-event-driven.html\n'];
+    ansIds.forEach((id, i) => {
+      const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)';
+      lines.push(questions[i]);
+      lines.push('A' + (i + 1) + '. ' + ans + '\n');
+    });
+
+    const text = lines.join('\n');
+    const resultEl = document.getElementById('copyResult');
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.';
+      }).catch(() => fallbackCopy(text, resultEl));
+    } else {
+      fallbackCopy(text, resultEl);
+    }
+  }
+
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try {
+      document.execCommand('copy');
+      el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.';
+    } catch {
+      el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.';
+    }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

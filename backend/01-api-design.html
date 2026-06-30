@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>REST API 설계 — 리소스·버저닝·페이지네이션·에러 모델</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg); color: var(--text);
+      display: flex; min-height: 100vh;
+      font-size: 14.5px; line-height: 1.75;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 248px; min-height: 100vh;
+      background: var(--card); border-right: 1px solid var(--border);
+      padding: 24px 0; position: fixed; left: 0; top: 0;
+      overflow-y: auto; z-index: 50;
+    }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a {
+      display: block; padding: 7px 20px;
+      font-size: 13px; color: var(--muted);
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+
+    /* ── Main ── */
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+
+    /* ── Page header ── */
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip {
+      font-size: 12px; font-weight: 500;
+      padding: 3px 11px; border-radius: 20px;
+      background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+    }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+
+    /* ── Sections ── */
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 {
+      font-size: 20px; font-weight: 700;
+      padding-bottom: 12px; border-bottom: 2px solid var(--border);
+      margin-bottom: 24px; display: flex; align-items: center; gap: 8px;
+    }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+
+    /* ── Diagrams ── */
+    .diagram-wrap {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 28px 24px 20px;
+      margin: 18px 0; overflow-x: auto; text-align: center;
+    }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+
+    /* ── Tables ── */
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 13.5px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    /* ── System cards ── */
+    .sys-card {
+      border-radius: 10px; padding: 18px 22px;
+      margin-bottom: 20px; border-left: 4px solid;
+    }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .sys-card.lm  { background: var(--lm);  border-color: var(--lm-b);  color: var(--lm-t);  }
+    .sys-card.ret { background: var(--ret); border-color: var(--ret-b); color: var(--ret-t); }
+
+    /* ── Callouts ── */
+    .callout {
+      border-radius: 8px; padding: 13px 16px;
+      margin: 14px 0; border-left: 4px solid; font-size: 13.5px;
+    }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+
+    /* ── Badges ── */
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+
+    /* ── Code blocks ── */
+    pre { background: #0f172a; border-radius: 10px; padding: 18px 20px; margin: 14px 0; overflow-x: auto; }
+    pre code { background: none; color: #e2e8f0; padding: 0; font-size: 12.5px; line-height: 1.7; }
+    pre .cmt { color: #64748b; }
+    pre .kw  { color: #c084fc; }
+    pre .str { color: #86efac; }
+    pre .fn  { color: #93c5fd; }
+    .code-cap { font-size: 11.5px; color: var(--muted); margin: -6px 0 16px; padding-left: 4px; }
+
+    /* ── Q&A cards ── */
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+
+    /* ── Next steps ── */
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+
+    /* ── Q&A Input ── */
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea {
+      width: 100%; min-height: 110px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif;
+      font-size: 14px; line-height: 1.7; resize: vertical;
+      background: #fafcff; color: var(--text);
+      transition: border-color .15s, background .15s;
+    }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+
+    /* ── Feedback button section ── */
+    .feedback-box {
+      background: var(--card); border: 1.5px dashed var(--border);
+      border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center;
+    }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 8px; padding: 10px 22px;
+      font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════ SIDEBAR ══════════════════ -->
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">⚙️ backend-dev-coach</div>
+    <h2>REST API 설계<br/>원칙과 함정</h2>
+  </div>
+  <div class="group-label">설계 기초</div>
+  <a href="#rest">1. REST 제약과 성숙도</a>
+  <a href="#resource">2. 리소스 모델링</a>
+  <a href="#method">3. HTTP 메서드 · 멱등성</a>
+  <a href="#status">4. 상태 코드</a>
+  <div class="group-label">실무 패턴</div>
+  <a href="#version">5. API 버저닝</a>
+  <a href="#paging">6. 페이지네이션</a>
+  <a href="#error">7. 에러 모델 (RFC 7807)</a>
+  <a href="#hateoas">8. HATEOAS 개요</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+
+<!-- ══════════════════ MAIN ══════════════════ -->
+<main>
+
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">backend-dev-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">REST API 설계</span>
+    </div>
+    <h1>REST API 설계<br>리소스 · 버저닝 · 페이지네이션 · 에러 모델</h1>
+    <p>면접에서 "API 잘 설계한다"는 추상적 평가가 아니라, <strong>리소스 경계·멱등성·에러 계약(Contract)·진화 전략</strong>을 구체적으로 말할 수 있느냐로 갈린다. 6년차라면 "동작하는 API"가 아니라 "운영·진화 가능한 API"를 설명해야 한다.</p>
+  </header>
+
+  <!-- ── 1. REST ── -->
+  <section id="rest">
+    <h2>1. REST 제약과 Richardson 성숙도 모델</h2>
+
+    <p><code>REST(Representational State Transfer, 표현 상태 전이)</code>는 프로토콜이 아니라 <strong>아키텍처 제약(Constraints)의 집합</strong>이다. 핵심 6개 제약 중 면접에서 자주 묻는 것은 <strong>Stateless(무상태)</strong>와 <strong>Uniform Interface(균일 인터페이스)</strong>다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    L0["Level 0\nThe Swamp of POX\n단일 endpoint\nRPC over HTTP"]
+    L1["Level 1\nResources\n리소스마다 URI 분리"]
+    L2["Level 2\nHTTP Verbs\nGET/POST/PUT/DELETE\n상태 코드 활용"]
+    L3["Level 3\nHATEOAS\n응답에 다음 액션\n링크 포함"]
+    L0 --> L1 --> L2 --> L3
+    style L0 fill:#fee2e2,stroke:#ef4444
+    style L1 fill:#fef3c7,stroke:#f59e0b
+    style L2 fill:#dcfce7,stroke:#22c55e
+    style L3 fill:#dbeafe,stroke:#3b82f6
+      </div>
+      <div class="cap">Richardson Maturity Model — 실무 대부분은 Level 2에서 멈춘다. Level 3는 비용 대비 효용 논쟁이 있음</div>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 현실적 목표</div>
+      국내 대부분 서비스(토스·배민·쿠팡 내부 API)는 <strong>Level 2</strong>를 표준으로 둔다. Level 3(HATEOAS)는 공개 API나 장기 진화가 중요한 경우 부분 채택. "우리는 Level 2를 기본으로 하되, 결제 흐름처럼 상태 전이가 복잡한 곳은 next-action 링크를 제공한다"가 시니어다운 답변.
+    </div>
+  </section>
+
+  <!-- ── 2. 리소스 모델링 ── -->
+  <section id="resource">
+    <h2>2. 리소스 모델링 — 명사로 쪼개기</h2>
+
+    <p>리소스는 <strong>명사(Noun)</strong>로, 행위는 <strong>HTTP 메서드(Verb)</strong>로 표현한다. <code>/getOrders</code>, <code>/createOrder</code> 같은 동사형 URI는 RPC 사고방식의 잔재다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>안티패턴 (동사형)</th><th>권장 (리소스 + 메서드)</th><th>의미</th></tr></thead>
+        <tbody>
+          <tr><td><code>POST /createOrder</code></td><td><code>POST /orders</code></td><td>주문 생성</td></tr>
+          <tr><td><code>GET /getOrder?id=42</code></td><td><code>GET /orders/42</code></td><td>단건 조회</td></tr>
+          <tr><td><code>POST /cancelOrder?id=42</code></td><td><code>POST /orders/42/cancellation</code><br>또는 <code>PATCH /orders/42</code> (status 변경)</td><td>취소 — 상태 전이</td></tr>
+          <tr><td><code>GET /orderLines?orderId=42</code></td><td><code>GET /orders/42/lines</code></td><td>하위 리소스 (Sub-resource)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>물류 도메인 예시 — 주문·배송 리소스 계층</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    O["/orders/{orderId}\n주문"]
+    OL["/orders/{orderId}/lines\n주문 라인"]
+    SH["/shipments/{shipmentId}\n배송 (독립 리소스)"]
+    TR["/shipments/{shipmentId}/tracking\n추적 이벤트"]
+    O -->|"1:N"| OL
+    O -.->|"1:N (분할출고)"| SH
+    SH -->|"1:N"| TR
+    style O fill:#dbeafe,stroke:#3b82f6
+    style OL fill:#dbeafe,stroke:#3b82f6
+    style SH fill:#ede9fe,stroke:#8b5cf6
+    style TR fill:#dcfce7,stroke:#22c55e
+      </div>
+      <div class="cap">Order ↔ Shipment는 분할출고로 1:N. Shipment를 Order 하위가 아닌 <strong>독립 리소스</strong>로 둬야 라이프사이클이 분리됨</div>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 중첩 깊이</div>
+      <code>/orders/42/lines/3/items/7/...</code> 처럼 3단계 이상 중첩하면 URI가 깨지기 쉽다. 식별자가 전역 유일하면 <strong>최상위 리소스로 평탄화</strong>(<code>/shipments/{id}</code>)하고, 관계는 쿼리 파라미터나 링크로 표현하는 게 진화에 유리.
+    </div>
+
+    <h3>컬렉션 vs 단일 리소스 규칙</h3>
+    <ul>
+      <li><strong>컬렉션</strong>: 복수형 명사 — <code>/orders</code>, <code>/shipments</code></li>
+      <li><strong>필터·정렬·검색</strong>은 쿼리 파라미터 — <code>/orders?status=PAID&amp;sort=-createdAt</code></li>
+      <li><strong>표현형(Representation) 협상</strong>은 <code>Accept</code> 헤더 — URI에 <code>.json</code> 박지 않기</li>
+    </ul>
+  </section>
+
+  <!-- ── 3. 메서드 멱등성 ── -->
+  <section id="method">
+    <h2>3. HTTP 메서드 · 안전성 · 멱등성</h2>
+
+    <p>면접 단골: <strong>"PUT과 POST의 차이?"</strong> → 단순히 "수정/생성"이 아니라 <code>Idempotency(멱등성)</code>로 답해야 한다. 멱등성은 <em>같은 요청을 N번 보내도 서버 상태가 1번 보낸 것과 동일</em>한 성질이다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>메서드</th><th>Safe (안전·읽기전용)</th><th>Idempotent (멱등)</th><th>용도</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td>✅</td><td>✅</td><td>조회</td></tr>
+          <tr><td><code>HEAD</code></td><td>✅</td><td>✅</td><td>메타데이터만</td></tr>
+          <tr><td><code>PUT</code></td><td>❌</td><td>✅</td><td>전체 교체 (Upsert)</td></tr>
+          <tr><td><code>DELETE</code></td><td>❌</td><td>✅</td><td>삭제 (이미 없어도 결과 동일)</td></tr>
+          <tr><td><code>PATCH</code></td><td>❌</td><td>⚠️ 보통 비멱등</td><td>부분 수정</td></tr>
+          <tr><td><code>POST</code></td><td>❌</td><td>❌</td><td>생성 — N번 보내면 N개 생성 위험</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — POST 중복 방지</div>
+      "결제 API에 네트워크 타임아웃 후 클라이언트가 재시도하면 이중 결제가 나는데 어떻게 막나요?" → <strong>비멱등 POST를 멱등하게 만드는 Idempotency-Key 헤더</strong>를 설명해야 한다. 자세한 구현은 <a href="04-resilience-idempotency.html" style="color:#dc2626;">04. 복원력·멱등성</a> 페이지에서 다룸. <span class="deep">🔥 Deep-dive</span>
+    </div>
+
+    <h3>왜 PATCH는 보통 비멱등인가</h3>
+    <p><code>{ "balance": "+100" }</code> 처럼 <strong>상대적 변경</strong>을 표현하면 N번 호출 시 N번 증가 → 비멱등. 반면 <code>{ "balance": 100 }</code> 같은 <strong>절대값 교체</strong>는 멱등하다. PATCH의 멱등성은 페이로드 설계에 달려 있다.</p>
+  </section>
+
+  <!-- ── 4. 상태 코드 ── -->
+  <section id="status">
+    <h2>4. HTTP 상태 코드 — 정확하게 쓰기</h2>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>상황</th><th>코드</th><th>흔한 실수</th></tr></thead>
+        <tbody>
+          <tr><td>리소스 생성 성공</td><td><code>201 Created</code> + <code>Location</code> 헤더</td><td>200으로 퉁치기</td></tr>
+          <tr><td>비동기 접수 (처리 진행 중)</td><td><code>202 Accepted</code></td><td>처리 끝나지도 않았는데 200</td></tr>
+          <tr><td>본문 없는 성공 (DELETE)</td><td><code>204 No Content</code></td><td>빈 body + 200</td></tr>
+          <tr><td>입력 검증 실패</td><td><code>400 Bad Request</code> / <code>422 Unprocessable</code></td><td>모든 에러를 500으로</td></tr>
+          <tr><td>인증 안 됨 / 권한 없음</td><td><code>401</code> / <code>403</code></td><td>401과 403 혼동</td></tr>
+          <tr><td>버전 충돌 (낙관적 락)</td><td><code>409 Conflict</code></td><td>500으로 던지기</td></tr>
+          <tr><td>멱등 키 처리 중</td><td><code>409</code> 또는 원래 결과 반환</td><td>재처리 후 중복 생성</td></tr>
+          <tr><td>Rate limit 초과</td><td><code>429 Too Many Requests</code> + <code>Retry-After</code></td><td>503으로 던져 재시도 폭주 유발</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 200 OK + body에 에러</div>
+      "항상 200을 주고 body의 <code>{"success": false}</code>로 판단" 패턴은 <strong>관측성을 망친다</strong>. APM·로드밸런서·재시도 미들웨어는 상태 코드로 에러율을 집계하는데, 전부 200이면 5xx 알람이 절대 안 울린다. 실제 장애가 대시보드에서 초록불로 보이는 참사가 발생.
+    </div>
+  </section>
+
+  <!-- ── 5. 버저닝 ── -->
+  <section id="version">
+    <h2>5. API 버저닝 — 진화 전략</h2>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>방식</th><th>예시</th><th>장점</th><th>단점</th></tr></thead>
+        <tbody>
+          <tr><td><strong>URI 경로</strong></td><td><code>/v1/orders</code></td><td>명확·캐시 친화·디버깅 쉬움</td><td>URI가 리소스 정체성 위반(같은 리소스 다른 URI)</td></tr>
+          <tr><td><strong>헤더</strong></td><td><code>Accept: application/vnd.api.v2+json</code></td><td>URI 깔끔·콘텐츠 협상 정석</td><td>브라우저 테스트 어려움·캐시 키 복잡</td></tr>
+          <tr><td><strong>쿼리 파라미터</strong></td><td><code>/orders?version=2</code></td><td>도입 쉬움</td><td>기본값 누락 시 혼란·캐시 오염</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 실무 합의</div>
+      논쟁은 많지만 <strong>실무 다수는 URI 경로 버저닝</strong>을 택한다(Stripe·GitHub은 변형 사용). 이유: 운영·디버깅·CDN 캐싱·문서화가 압도적으로 쉽다. 순수주의보다 운영성이 이긴 사례. 단, <strong>버전을 남발하지 않는 것</strong>이 핵심 — 하위 호환(Backward compatible) 변경(필드 추가)은 버전을 올리지 않는다.
+    </div>
+
+    <h3>하위 호환 변경 vs 깨는 변경</h3>
+    <ul>
+      <li><strong>호환(버전 유지)</strong>: 선택 필드 추가, 새 엔드포인트 추가, 응답에 필드 추가</li>
+      <li><strong>깨짐(버전 올림)</strong>: 필드 삭제·이름 변경, 타입 변경, 필수 파라미터 추가, 의미 변경</li>
+    </ul>
+    <p>클라이언트는 <strong>Tolerant Reader(관대한 파서)</strong> 원칙 — 모르는 필드는 무시 — 를 지켜야 서버 진화가 자유로워진다.</p>
+  </section>
+
+  <!-- ── 6. 페이지네이션 ── -->
+  <section id="paging">
+    <h2>6. 페이지네이션 — Offset vs Cursor</h2>
+
+    <p>면접에서 <strong>"수천만 건 목록을 페이징하라"</strong>는 거의 항상 나온다. Offset 기반의 함정을 모르면 감점이다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant S as Server
+    participant DB as Database
+    Note over C,DB: Offset 방식 — LIMIT 20 OFFSET 1000000
+    C->>S: GET /orders?offset=1000000&limit=20
+    S->>DB: SELECT ... LIMIT 20 OFFSET 1000000
+    DB-->>S: 100만 행 스캔 후 버리고 20행만 반환 😱
+    S-->>C: 느림 + 중간 INSERT 시 중복/누락
+    Note over C,DB: Cursor(Keyset) 방식 — WHERE id < last_id
+    C->>S: GET /orders?cursor=eyJpZCI6...&limit=20
+    S->>DB: SELECT ... WHERE (created_at, id) < (?, ?) LIMIT 20
+    DB-->>S: 인덱스 타고 즉시 20행 🚀
+    S-->>C: 일정한 성능 + 안정적 페이징
+      </div>
+      <div class="cap">Offset은 뒤로 갈수록 느려지고(O(offset)), 데이터 변경 시 중복·누락. Cursor는 인덱스 범위 스캔으로 일정</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>Offset 기반</th><th>Cursor (Keyset) 기반</th></tr></thead>
+        <tbody>
+          <tr><td>깊은 페이지 성능</td><td>O(offset) — 뒤로 갈수록 급격히 느림</td><td>O(limit) — 일정</td></tr>
+          <tr><td>임의 페이지 점프</td><td>가능 (5페이지로 바로)</td><td>불가 (다음/이전만)</td></tr>
+          <tr><td>실시간 데이터 안정성</td><td>중간 INSERT/DELETE 시 중복·누락</td><td>안정적</td></tr>
+          <tr><td>전체 개수</td><td>쉬움</td><td>비싸거나 근사치</td></tr>
+          <tr><td>적합 케이스</td><td>관리자 페이지·소규모·페이지 번호 필요</td><td>무한스크롤·피드·대용량 (배민 가게목록, 토스 거래내역)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>Cursor 페이지네이션 응답 형태</h4>
+    <pre><code><span class="cmt">// 커서는 정렬 키를 base64 인코딩 — 내부 구조 노출 방지</span>
+{
+  <span class="str">"items"</span>: [ ... ],
+  <span class="str">"pageInfo"</span>: {
+    <span class="str">"nextCursor"</span>: <span class="str">"eyJjcmVhdGVkQXQiOiIyMDI2LTA3LTAxVDEyOjAwOjAwWiIsImlkIjo0Mn0="</span>,
+    <span class="str">"hasNext"</span>: true
+  }
+}</code></pre>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 정렬 키 유일성</div>
+      Cursor 정렬 키가 <code>created_at</code> 하나면 같은 시각 행에서 누락 발생. 반드시 <strong>(created_at, id)</strong> 같은 <strong>유일성 보장 복합 키</strong>로 정렬하고 커서를 구성해야 한다.
+    </div>
+  </section>
+
+  <!-- ── 7. 에러 모델 ── -->
+  <section id="error">
+    <h2>7. 에러 모델 — RFC 7807 Problem Details</h2>
+
+    <p>제각각인 에러 포맷(<code>{"msg":...}</code>, <code>{"error":...}</code>, <code>{"code":...}</code>)은 클라이언트를 괴롭힌다. <code>RFC 7807(Problem Details for HTTP APIs, HTTP API 문제 상세)</code>은 표준 에러 바디를 정의한다.</p>
+
+    <pre><code><span class="cmt">// Content-Type: application/problem+json</span>
+{
+  <span class="str">"type"</span>:     <span class="str">"https://api.shop.com/problems/insufficient-stock"</span>,
+  <span class="str">"title"</span>:    <span class="str">"재고 부족"</span>,
+  <span class="str">"status"</span>:   409,
+  <span class="str">"detail"</span>:   <span class="str">"SKU-1234의 가용 재고가 2개인데 5개를 요청했습니다."</span>,
+  <span class="str">"instance"</span>: <span class="str">"/orders/42"</span>,
+  <span class="cmt">// 확장 필드 — 도메인 고유 정보</span>
+  <span class="str">"sku"</span>:        <span class="str">"SKU-1234"</span>,
+  <span class="str">"available"</span>:  2,
+  <span class="str">"requested"</span>:  5,
+  <span class="str">"traceId"</span>:    <span class="str">"4bf92f3577b34da6a3ce929d0e0e4736"</span>
+}</code></pre>
+    <div class="code-cap">필드: type(문제 종류 URI)·title(요약)·status·detail(이번 발생 상세)·instance(발생 위치) + 확장</div>
+
+    <h4>Spring Boot 구현 — @RestControllerAdvice</h4>
+    <pre><code><span class="kw">@RestControllerAdvice</span>
+<span class="kw">class</span> <span class="fn">GlobalExceptionHandler</span> {
+
+    <span class="kw">@ExceptionHandler</span>(InsufficientStockException::<span class="kw">class</span>)
+    <span class="kw">fun</span> <span class="fn">handleStock</span>(e: InsufficientStockException): ResponseEntity&lt;ProblemDetail&gt; {
+        <span class="kw">val</span> pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.message)
+        pd.type = URI.create(<span class="str">"https://api.shop.com/problems/insufficient-stock"</span>)
+        pd.title = <span class="str">"재고 부족"</span>
+        pd.setProperty(<span class="str">"sku"</span>, e.sku)
+        pd.setProperty(<span class="str">"available"</span>, e.available)
+        pd.setProperty(<span class="str">"traceId"</span>, MDC.get(<span class="str">"traceId"</span>))   <span class="cmt">// 추적 연결</span>
+        <span class="kw">return</span> ResponseEntity.status(HttpStatus.CONFLICT).body(pd)
+    }
+}</code></pre>
+    <div class="code-cap">Spring 6 / Boot 3는 <code>ProblemDetail</code>을 기본 제공. traceId를 넣어 로그·추적과 연결하는 게 핵심</div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 에러 분류 체계</div>
+      에러는 <strong>(1) 클라이언트 잘못(4xx, 재시도 무의미)</strong>과 <strong>(2) 서버/일시적(5xx·429, 재시도 가능)</strong>으로 명확히 나눠야 한다. 클라이언트가 <code>type</code> URI로 분기하고, <code>status</code>로 재시도 여부를 판단하게 만들면 양쪽 코드가 단순해진다.
+    </div>
+  </section>
+
+  <!-- ── 8. HATEOAS ── -->
+  <section id="hateoas">
+    <h2>8. HATEOAS 개요 — 상태 기반 액션 노출</h2>
+
+    <p><code>HATEOAS(Hypermedia As The Engine Of Application State, 애플리케이션 상태 엔진으로서의 하이퍼미디어)</code>는 응답에 <strong>"지금 이 리소스에서 가능한 다음 액션"</strong>을 링크로 담는다. 클라이언트가 상태 전이 규칙을 하드코딩하지 않아도 된다.</p>
+
+    <pre><code><span class="cmt">// 결제 완료(PAID) 상태의 주문 — 가능한 액션만 링크로 제공</span>
+{
+  <span class="str">"orderId"</span>: 42,
+  <span class="str">"status"</span>: <span class="str">"PAID"</span>,
+  <span class="str">"_links"</span>: {
+    <span class="str">"self"</span>:   { <span class="str">"href"</span>: <span class="str">"/orders/42"</span> },
+    <span class="str">"cancel"</span>: { <span class="str">"href"</span>: <span class="str">"/orders/42/cancellation"</span>, <span class="str">"method"</span>: <span class="str">"POST"</span> }
+    <span class="cmt">// SHIPPED 상태였다면 cancel 링크는 사라지고 track 링크가 등장</span>
+  }
+}</code></pre>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> PAID
+    PAID --> CANCELED : cancel 링크 노출
+    PAID --> SHIPPED : (시스템)
+    SHIPPED --> DELIVERED : track 링크 노출
+    note right of PAID : _links.cancel 있음
+    note right of SHIPPED : _links.cancel 없음\n_links.track 있음
+      </div>
+      <div class="cap">상태에 따라 노출 링크가 달라짐 — 클라이언트가 "취소 가능 여부"를 직접 판단하지 않게 함</div>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — HATEOAS 채택 Trade-off</div>
+      "왜 대부분 HATEOAS를 안 쓰나요?" → <strong>(1) 페이로드 비대화, (2) 클라이언트가 실제로 링크를 따라가도록 구현하는 비용, (3) 모바일 앱은 어차피 화면 흐름을 하드코딩</strong>. 반대로 채택 가치가 큰 곳은 <strong>장기 진화하는 공개 API, 워크플로 엔진, 결제 같은 복잡 상태 전이</strong>. "무조건 좋다/나쁘다"가 아니라 맥락으로 답하는 게 핵심.
+    </div>
+  </section>
+
+  <!-- ── Quiz ── -->
+  <section id="quiz">
+    <h2>9. 이해도 확인 질문</h2>
+
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p><code>PUT</code>은 멱등하고 <code>POST</code>는 멱등하지 않은 이유를 정의 수준에서 설명하고, "주문 생성" API를 <strong>멱등하게 만드는 방법</strong>을 클라이언트·서버 양쪽 관점에서 제시해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div>
+        <textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>토스 거래내역처럼 수천만 건을 무한스크롤로 보여줘야 합니다. Offset 페이지네이션을 쓰면 안 되는 이유 2가지와, Cursor 방식의 <strong>커서 구성·정렬 키 선택</strong>을 구체적으로 설명해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div>
+        <textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>"모든 응답을 200으로 주고 body에서 성공/실패를 판단하자"는 동료의 제안을 <strong>관측성·운영 관점</strong>에서 반박하고, RFC 7807을 어떻게 도입할지 설명해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div>
+        <textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <!-- ── Next ── -->
+  <section id="next">
+    <h2>10. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">backend-dev-coach</div><div class="topic">02. 동시성 — 재고 차감 Race Condition</div></div>
+      <div class="next-card"><div class="coach">backend-dev-coach</div><div class="topic">04. 멱등성 키 설계 (Idempotency-Key)</div></div>
+      <div class="next-card"><div class="coach">backend-architecture-coach</div><div class="topic">API Gateway · BFF 패턴</div></div>
+      <div class="next-card"><div class="coach">system-design-coach</div><div class="topic">대규모 목록 API 캐싱 전략</div></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    themeVariables: {
+      primaryColor: '#dbeafe', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6',
+      lineColor: '#64748b', secondaryColor: '#fef3c7', tertiaryColor: '#ede9fe', fontSize: '13px'
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  const NS = 'jobStudy::backend::01-api-design::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(NS + id);
+    if (saved) el.value = saved;
+    let timer;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(NS + id, el.value);
+        const badge = document.getElementById('saved' + (i + 1));
+        if (badge) { badge.classList.add('show'); setTimeout(() => badge.classList.remove('show'), 1800); }
+      }, 400);
+    });
+  });
+
+  function copyForFeedback() {
+    const questions = [
+      'Q1. PUT은 멱등하고 POST는 비멱등인 이유를 정의 수준에서 설명하고, "주문 생성" API를 멱등하게 만드는 방법을 클라이언트·서버 양쪽 관점에서 제시해보세요.',
+      'Q2. 수천만 건 무한스크롤에서 Offset 페이지네이션을 쓰면 안 되는 이유 2가지와, Cursor 방식의 커서 구성·정렬 키 선택을 구체적으로 설명해보세요.',
+      'Q3. "모든 응답을 200으로 주고 body에서 성공/실패 판단" 제안을 관측성·운영 관점에서 반박하고, RFC 7807 도입 방안을 설명해보세요.'
+    ];
+    const lines = ['[REST API 설계 — 이해도 확인 Q&A 피드백 요청]\n세션: backend/01-api-design.html\n'];
+    ansIds.forEach((id, i) => {
+      const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)';
+      lines.push(questions[i]);
+      lines.push('A' + (i + 1) + '. ' + ans + '\n');
+    });
+    const text = lines.join('\n');
+    const resultEl = document.getElementById('copyResult');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.';
+      }).catch(() => fallbackCopy(text, resultEl));
+    } else { fallbackCopy(text, resultEl); }
+  }
+
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.'; }
+    catch { el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.'; }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>테스트 — 피라미드·Testcontainers·Contract·동시성</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root { --bg:#f8fafc; --card:#fff; --border:#e2e8f0; --text:#1e293b; --muted:#64748b; --accent:#6366f1; --oms:#dbeafe; --oms-b:#3b82f6; --oms-t:#1e3a8a; --wms:#fef3c7; --wms-b:#f59e0b; --wms-t:#78350f; --tms:#ede9fe; --tms-b:#8b5cf6; --tms-t:#3b0764; --lm:#dcfce7; --lm-b:#22c55e; --lm-t:#14532d; --ret:#fce7f3; --ret-b:#ec4899; --ret-t:#831843; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; font-size: 14.5px; line-height: 1.75; }
+    #sidebar { width: 248px; min-height: 100vh; background: var(--card); border-right: 1px solid var(--border); padding: 24px 0; position: fixed; left: 0; top: 0; overflow-y: auto; z-index: 50; }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a { display: block; padding: 7px 20px; font-size: 13px; color: var(--muted); text-decoration: none; border-left: 3px solid transparent; transition: all .15s; }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip { font-size: 12px; font-weight: 500; padding: 3px 11px; border-radius: 20px; background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 { font-size: 20px; font-weight: 700; padding-bottom: 12px; border-bottom: 2px solid var(--border); margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+    .diagram-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px 20px; margin: 18px 0; overflow-x: auto; text-align: center; }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    .sys-card { border-radius: 10px; padding: 18px 22px; margin-bottom: 20px; border-left: 4px solid; }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .callout { border-radius: 8px; padding: 13px 16px; margin: 14px 0; border-left: 4px solid; font-size: 13.5px; }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; } .callout.interview .c-title { color: #dc2626; }
+    .callout.warn { background: #fff7ed; border-color: #ea580c; } .callout.warn .c-title { color: #ea580c; }
+    .callout.tip { background: #f0fdf4; border-color: #16a34a; } .callout.tip .c-title { color: #16a34a; }
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+    pre { background: #0f172a; border-radius: 10px; padding: 18px 20px; margin: 14px 0; overflow-x: auto; }
+    pre code { background: none; color: #e2e8f0; padding: 0; font-size: 12.5px; line-height: 1.7; }
+    pre .cmt { color: #64748b; } pre .kw { color: #c084fc; } pre .str { color: #86efac; } pre .fn { color: #93c5fd; } pre .err { color: #fca5a5; }
+    .code-cap { font-size: 11.5px; color: var(--muted); margin: -6px 0 16px; padding-left: 4px; }
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea { width: 100%; min-height: 110px; border: 1.5px solid var(--border); border-radius: 8px; padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif; font-size: 14px; line-height: 1.7; resize: vertical; background: #fafcff; color: var(--text); transition: border-color .15s, background .15s; }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+    .feedback-box { background: var(--card); border: 1.5px dashed var(--border); border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center; }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; transition: background .15s; }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">⚙️ backend-dev-coach</div>
+    <h2>테스트<br/>피라미드 · Testcontainers</h2>
+  </div>
+  <div class="group-label">전략</div>
+  <a href="#pyramid">1. 테스트 피라미드</a>
+  <a href="#double">2. 테스트 더블</a>
+  <div class="group-label">레이어별</div>
+  <a href="#unit">3. Unit 테스트</a>
+  <a href="#integration">4. Integration · Testcontainers ⭐</a>
+  <a href="#contract">5. Contract 테스트</a>
+  <a href="#concurrency">6. 동시성 테스트</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+
+<main>
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">backend-dev-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">테스트</span>
+    </div>
+    <h1>테스트(Testing)<br>피라미드 · Testcontainers · Contract · 동시성</h1>
+    <p>6년차 면접에서 "테스트 짜세요"는 곧 <strong>"어떤 레이어를 어떤 비율로, 무엇으로 격리해서, 무엇을 진짜로 검증하느냐"</strong>다. 특히 <strong>H2로 통합 테스트하는 안티패턴</strong>과 <strong>동시성 버그를 어떻게 재현하느냐</strong>가 변별점이다.</p>
+  </header>
+
+  <!-- 1 -->
+  <section id="pyramid">
+    <h2>1. 테스트 피라미드</h2>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    E2E["E2E (소수)\n느림 · 깨지기 쉬움 · 비쌈\n핵심 사용자 흐름만"]
+    INT["Integration (중간)\nDB · Kafka · 외부 연동\nTestcontainers"]
+    UNIT["Unit (다수)\n빠름 · 결정적 · 격리됨\n도메인 로직 집중"]
+    E2E --> INT --> UNIT
+    style E2E fill:#fee2e2,stroke:#ef4444
+    style INT fill:#fef3c7,stroke:#f59e0b
+    style UNIT fill:#dcfce7,stroke:#22c55e
+      </div>
+      <div class="cap">아래로 갈수록 많고 빠르게. E2E를 너무 많이 쌓으면 "아이스크림 콘 안티패턴" — 느리고 불안정</div>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 안티패턴 — Ice Cream Cone</div>
+      Unit이 적고 E2E·수동 테스트가 많은 역피라미드. 빌드가 30분씩 걸리고 Flaky(불안정) 테스트로 신뢰를 잃는다. 도메인 로직은 <strong>빠른 Unit으로 두텁게</strong>, 연동 지점만 Integration으로 검증하는 게 원칙.
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="double">
+    <h2>2. 테스트 더블 (Test Doubles)</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>종류</th><th>역할</th><th>예시</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Dummy</strong></td><td>전달만 되고 안 쓰임</td><td>채우기용 인자</td></tr>
+          <tr><td><strong>Stub</strong></td><td>정해진 값 반환</td><td><code>when(repo.find()).thenReturn(x)</code></td></tr>
+          <tr><td><strong>Mock</strong></td><td>호출 여부·횟수 검증</td><td><code>verify(client).send(...)</code></td></tr>
+          <tr><td><strong>Spy</strong></td><td>실제 객체 일부만 가로채기</td><td>실 객체 + 특정 메서드 stub</td></tr>
+          <tr><td><strong>Fake</strong></td><td>가벼운 실제 구현</td><td>인메모리 Repository</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 Mock 남용 경계</div>
+      모든 의존을 Mock하면 "구현을 테스트"하게 되어 리팩터링마다 깨진다. <strong>경계(외부 시스템)는 Mock/Fake, 도메인 내부는 실제 객체</strong>로 두는 게 견고한 테스트의 핵심. "Mockist vs Classicist" 논쟁의 실용적 절충.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="unit">
+    <h2>3. Unit 테스트 — 도메인 로직</h2>
+    <pre><code><span class="cmt">// 테스트 이름: 메서드_상황_기대결과</span>
+<span class="kw">class</span> StockTest {
+    <span class="kw">@Test</span>
+    <span class="kw">fun</span> `decrease_재고보다많이차감_예외발생`() {
+        <span class="kw">val</span> stock = Stock(quantity = 3)
+        assertThrows&lt;InsufficientStockException&gt; {
+            stock.decrease(5)
+        }
+    }
+
+    <span class="kw">@Test</span>
+    <span class="kw">fun</span> `decrease_정상차감_수량감소`() {
+        <span class="kw">val</span> stock = Stock(quantity = 3)
+        stock.decrease(2)
+        assertThat(stock.quantity).isEqualTo(1)
+    }
+}</code></pre>
+    <div class="code-cap">도메인 불변식(재고는 음수 불가)을 객체 자체가 강제하는지 검증 — DB·스프링 없이 즉시 실행</div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 좋은 Unit 테스트 — F.I.R.S.T</div>
+      <strong>F</strong>ast(빠름)·<strong>I</strong>solated(독립)·<strong>R</strong>epeatable(반복 가능)·<strong>S</strong>elf-validating(자가 검증)·<strong>T</strong>imely(적시). 시간(<code>now()</code>)·랜덤·순서 의존을 주입 가능하게 만들면 Flaky가 사라진다.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section id="integration">
+    <h2>4. ⭐ Integration 테스트 — Testcontainers</h2>
+
+    <div class="sys-card wms">
+      <div class="sys-label">핵심 메시지</div>
+      <div class="sys-title">통합 테스트는 <em>진짜 DB·Kafka</em>로 — H2로는 잡을 수 없는 버그가 있다</div>
+    </div>
+
+    <pre><code><span class="kw">@SpringBootTest</span>
+<span class="kw">@Testcontainers</span>
+<span class="kw">class</span> OrderRepositoryTest {
+
+    companion <span class="kw">object</span> {
+        <span class="kw">@Container</span>
+        <span class="kw">val</span> postgres = PostgreSQLContainer(<span class="str">"postgres:16"</span>)   <span class="cmt">// 운영과 동일 엔진</span>
+
+        <span class="kw">@JvmStatic</span> <span class="kw">@DynamicPropertySource</span>
+        <span class="kw">fun</span> <span class="fn">props</span>(registry: DynamicPropertyRegistry) {
+            registry.add(<span class="str">"spring.datasource.url"</span>, postgres::getJdbcUrl)
+            registry.add(<span class="str">"spring.datasource.username"</span>, postgres::getUsername)
+            registry.add(<span class="str">"spring.datasource.password"</span>, postgres::getPassword)
+        }
+    }
+
+    <span class="kw">@Test</span>
+    <span class="kw">fun</span> `재고차감_조건부UPDATE_부족시0행`() {
+        <span class="kw">val</span> updated = repository.decreaseStock(id = 1L, qty = 999)
+        assertThat(updated).isEqualTo(0)   <span class="cmt">// 실제 PostgreSQL에서 검증</span>
+    }
+}</code></pre>
+    <div class="code-cap">Docker로 실제 PostgreSQL 컨테이너를 띄워 테스트. 배민·토스 등 다수 기업이 표준으로 사용</div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 왜 H2로 통합 테스트하면 안 되나</div>
+      <strong>(1) SQL 방언 차이</strong>(<code>FOR UPDATE</code>, upsert, JSON 함수가 다르게 동작), <strong>(2) 격리수준 기본값 차이</strong>(03번 페이지), <strong>(3) 시퀀스·인덱스·제약 동작 차이</strong>. H2에서 통과한 테스트가 운영 MySQL/PostgreSQL에서 깨지는 일이 흔하다. Testcontainers로 <strong>운영과 같은 엔진</strong>을 써야 진짜 검증이 된다. <span class="deep">🔥 Deep-dive</span>
+    </div>
+
+    <h4>슬라이스 테스트 — 필요한 만큼만</h4>
+    <ul>
+      <li><code>@DataJpaTest</code> — JPA 레이어만 (단, 기본 H2 → Testcontainers로 교체 권장)</li>
+      <li><code>@WebMvcTest</code> — 컨트롤러·직렬화·검증만, 서비스는 Mock</li>
+      <li><code>@SpringBootTest</code> — 전체 컨텍스트 (느림, 핵심 흐름만)</li>
+    </ul>
+  </section>
+
+  <!-- 5 -->
+  <section id="contract">
+    <h2>5. Contract 테스트 — 서비스 간 계약</h2>
+    <p>MSA에서 OMS와 WMS가 각자 배포된다. WMS가 응답 필드를 바꾸면 OMS가 깨진다. <code>Contract(계약) 테스트</code>는 <strong>"이 API는 이런 형태로 응답한다"</strong>는 계약을 양쪽이 공유·검증한다(Pact, Spring Cloud Contract).</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant C as Consumer (OMS)
+    participant Pact as Pact Broker
+    participant P as Provider (WMS)
+    C->>C: 기대 계약 작성 (요청→응답 형태)
+    C->>Pact: 계약 발행
+    P->>Pact: 계약 가져오기
+    P->>P: 실제 응답이 계약 만족하는지 검증
+    Note over C,P: Provider 배포 전 계약 위반 감지<br/>→ 통합 환경 없이도 호환성 보장
+      </div>
+      <div class="cap">Consumer-Driven Contract — 소비자가 정의한 기대를 제공자가 CI에서 검증. E2E 없이 호환성 확보</div>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 Contract 테스트의 가치</div>
+      전체 환경을 띄우는 E2E보다 <strong>훨씬 빠르고 안정적</strong>으로 "API 깨짐"을 잡는다. MSA가 많아질수록 E2E는 조합 폭발하므로, Contract가 그 빈틈을 메운다. 단, 비즈니스 로직 자체는 검증 안 함(형태/호환성만).
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="concurrency">
+    <h2>6. 동시성 테스트 — 재고 차감 검증</h2>
+    <p>02번에서 만든 재고 차감이 정말 동시성 안전한지, <strong>여러 스레드로 동시에 때려서</strong> 검증한다. 단일 스레드 테스트로는 Race Condition을 절대 못 잡는다.</p>
+
+    <pre><code><span class="kw">@Test</span>
+<span class="kw">fun</span> `재고100_100명동시주문_정확히0`() {
+    <span class="kw">val</span> threads = 100
+    <span class="kw">val</span> latch = CountDownLatch(threads)
+    <span class="kw">val</span> pool = Executors.newFixedThreadPool(32)
+
+    repeat(threads) {
+        pool.submit {
+            <span class="kw">try</span> { stockService.decrease(productId = 1L, qty = 1) }
+            <span class="kw">catch</span> (e: Exception) { <span class="cmt">/* 부족 예외 카운트 */</span> }
+            <span class="kw">finally</span> { latch.countDown() }
+        }
+    }
+    latch.await(10, TimeUnit.SECONDS)   <span class="cmt">// 모든 스레드 완료 대기</span>
+
+    <span class="kw">val</span> remaining = repository.findById(1L).stock
+    assertThat(remaining).isEqualTo(0)  <span class="cmt">// Oversell 없으면 정확히 0</span>
+    <span class="cmt">// 버그 있으면(naive read-modify-write) remaining > 0 으로 깨짐</span>
+}</code></pre>
+    <div class="code-cap"><code>CountDownLatch</code>로 모든 스레드를 동시 출발·완료 대기. 동시성 버그가 있으면 이 테스트가 실패</div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — Flaky 동시성 테스트</div>
+      동시성 테스트는 타이밍 의존이라 가끔 통과/실패할 수 있다. (1) 충분한 스레드 수·반복, (2) 명확한 동기화(latch), (3) <code>@DirtiesContext</code>로 상태 격리. 그래도 불안정하면 부하 테스트(Gatling/JMeter)로 보완. <strong>Testcontainers + 실제 DB</strong>에서 돌려야 락 동작까지 검증된다.
+    </div>
+  </section>
+
+  <!-- Quiz -->
+  <section id="quiz">
+    <h2>7. 이해도 확인 질문</h2>
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>"통합 테스트는 빠른 H2로 하자"는 동료에게 <strong>왜 Testcontainers로 실제 DB를 써야 하는지</strong>를 구체적인 차이(방언·격리수준·제약) 3가지로 반박해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div><textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>재고 차감 로직이 동시성 안전한지 검증하는 테스트를 어떻게 설계할지, <code>CountDownLatch</code>·스레드풀·검증 단언을 포함해 설명하고, 이 테스트가 Flaky해지지 않게 하는 방법도 답해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div><textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>MSA에서 OMS와 WMS가 독립 배포됩니다. 전체 E2E 없이 API 호환성 깨짐을 조기에 잡는 <strong>Contract 테스트</strong>의 동작과, E2E 대비 장점을 설명해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div><textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>8. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">backend-dev-coach</div><div class="topic">06. 관측성 — 테스트 환경 추적</div></div>
+      <div class="next-card"><div class="coach">infra-coach</div><div class="topic">CI/CD에 Testcontainers 통합</div></div>
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">락·격리수준 테스트로 재현</div></div>
+      <div class="next-card"><div class="coach">backend-architecture-coach</div><div class="topic">MSA Contract 테스트 전략</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', themeVariables: { primaryColor: '#dbeafe', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#fef3c7', tertiaryColor: '#ede9fe', fontSize: '13px' }, flowchart: { curve: 'basis', padding: 20 }, sequence: { actorMargin: 50, messageMargin: 35 } });
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => { entries.forEach(e => { if (e.isIntersecting) { navLinks.forEach(a => a.classList.remove('active')); const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`); if (active) active.classList.add('active'); } }); }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+  const NS = 'jobStudy::backend::05-testing::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id); if (!el) return;
+    const saved = localStorage.getItem(NS + id); if (saved) el.value = saved;
+    let timer;
+    el.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { localStorage.setItem(NS + id, el.value); const badge = document.getElementById('saved' + (i + 1)); if (badge) { badge.classList.add('show'); setTimeout(() => badge.classList.remove('show'), 1800); } }, 400); });
+  });
+  function copyForFeedback() {
+    const questions = [
+      'Q1. "통합 테스트는 빠른 H2로 하자"는 동료에게 왜 Testcontainers로 실제 DB를 써야 하는지 방언·격리수준·제약 3가지 차이로 반박해보세요.',
+      'Q2. 재고 차감 로직의 동시성 안전성 검증 테스트를 CountDownLatch·스레드풀·단언으로 설계하고, Flaky 방지법도 답해보세요.',
+      'Q3. MSA에서 OMS·WMS 독립 배포 시 전체 E2E 없이 API 호환성 깨짐을 조기에 잡는 Contract 테스트의 동작과 E2E 대비 장점을 설명해보세요.'
+    ];
+    const lines = ['[테스트 — 이해도 확인 Q&A 피드백 요청]\n세션: backend/05-testing.html\n'];
+    ansIds.forEach((id, i) => { const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)'; lines.push(questions[i]); lines.push('A' + (i + 1) + '. ' + ans + '\n'); });
+    const text = lines.join('\n'); const resultEl = document.getElementById('copyResult');
+    if (navigator.clipboard) { navigator.clipboard.writeText(text).then(() => { resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.'; }).catch(() => fallbackCopy(text, resultEl)); } else { fallbackCopy(text, resultEl); }
+  }
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.'; } catch { el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.'; }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

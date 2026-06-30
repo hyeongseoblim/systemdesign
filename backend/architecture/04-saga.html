@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saga 패턴 — 분산 트랜잭션 · 보상 트랜잭션 · 주문-결제-배송</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg); color: var(--text);
+      display: flex; min-height: 100vh;
+      font-size: 14.5px; line-height: 1.75;
+    }
+
+    #sidebar {
+      width: 248px; min-height: 100vh;
+      background: var(--card); border-right: 1px solid var(--border);
+      padding: 24px 0; position: fixed; left: 0; top: 0;
+      overflow-y: auto; z-index: 50;
+    }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a {
+      display: block; padding: 7px 20px;
+      font-size: 13px; color: var(--muted);
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip {
+      font-size: 12px; font-weight: 500;
+      padding: 3px 11px; border-radius: 20px;
+      background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+    }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 {
+      font-size: 20px; font-weight: 700;
+      padding-bottom: 12px; border-bottom: 2px solid var(--border);
+      margin-bottom: 24px; display: flex; align-items: center; gap: 8px;
+    }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+
+    .diagram-wrap {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 28px 24px 20px;
+      margin: 18px 0; overflow-x: auto; text-align: center;
+    }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 13.5px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    .sys-card {
+      border-radius: 10px; padding: 18px 22px;
+      margin-bottom: 20px; border-left: 4px solid;
+    }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .sys-card.lm  { background: var(--lm);  border-color: var(--lm-b);  color: var(--lm-t);  }
+    .sys-card.ret { background: var(--ret); border-color: var(--ret-b); color: var(--ret-t); }
+
+    .callout {
+      border-radius: 8px; padding: 13px 16px;
+      margin: 14px 0; border-left: 4px solid; font-size: 13.5px;
+    }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea {
+      width: 100%; min-height: 110px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif;
+      font-size: 14px; line-height: 1.7; resize: vertical;
+      background: #fafcff; color: var(--text);
+      transition: border-color .15s, background .15s;
+    }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+
+    .feedback-box {
+      background: var(--card); border: 1.5px dashed var(--border);
+      border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center;
+    }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 8px; padding: 10px 22px;
+      font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🏛 backend-architecture-coach</div>
+    <h2>Saga 패턴<br/>분산 트랜잭션</h2>
+  </div>
+  <div class="group-label">문제와 대안</div>
+  <a href="#problem">1. 분산 트랜잭션 문제</a>
+  <a href="#2pc">2. 2PC를 왜 피하는가</a>
+  <a href="#saga">3. Saga란</a>
+  <div class="group-label">두 변형</div>
+  <a href="#choreo">4. Choreography Saga</a>
+  <a href="#orch">5. Orchestration Saga</a>
+  <a href="#compensate">6. 보상 트랜잭션</a>
+  <div class="group-label">실전</div>
+  <a href="#example">7. 주문-결제-배송 예제</a>
+  <a href="#pitfall">8. 함정과 사례</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+
+<main>
+
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">backend-architecture-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">Saga · 분산 트랜잭션</span>
+    </div>
+    <h1>Saga 패턴<br>분산 트랜잭션 · 보상 트랜잭션 · 주문-결제-배송</h1>
+    <p>서비스마다 DB가 다르면 ACID 트랜잭션이 안 걸린다. <strong>로컬 트랜잭션 체인 + 보상(Compensation)</strong>으로 최종 일관성을 달성하는 Saga를 그림으로 마스터한다. Deep-dive는 <span class="deep">🔥 Deep-dive</span>.</p>
+  </header>
+
+  <!-- ── Section 1 ── -->
+  <section id="problem">
+    <h2>1. 분산 트랜잭션 문제</h2>
+
+    <p>모놀리스에서는 주문·결제·재고가 하나의 DB 트랜잭션으로 묶여 <strong>All-or-nothing</strong>이 공짜다. MSA에서는 각 서비스 DB가 분리되어 하나의 트랜잭션으로 묶을 수 없다. 그런데 비즈니스적으로는 "결제됐는데 재고가 없는" 어중간한 상태를 허용할 수 없다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    subgraph MONO["모놀리스 — 단일 트랜잭션"]
+      direction TB
+      M["BEGIN TX"] --> M1["주문 저장"] --> M2["결제 차감"] --> M3["재고 차감"] --> M4["COMMIT / ROLLBACK"]
+    end
+    subgraph MSA["MSA — 분리된 DB"]
+      direction LR
+      S1["Order DB"]
+      S2["Payment DB"]
+      S3["Inventory DB"]
+      S1 -. "트랜잭션 못 묶음" .- S2
+      S2 -. "트랜잭션 못 묶음" .- S3
+    end
+
+    style MONO fill:#dcfce7,stroke:#22c55e
+    style MSA fill:#fee2e2,stroke:#ef4444
+      </div>
+      <div class="cap">DB가 분리되면 단일 ACID 트랜잭션이 불가능. 그래서 분산 트랜잭션 전략이 필요하다.</div>
+    </div>
+  </section>
+
+  <!-- ── Section 2 ── -->
+  <section id="2pc">
+    <h2>2. 2PC를 왜 피하는가</h2>
+
+    <p><strong>2PC(Two-Phase Commit, 2단계 커밋)</strong>는 코디네이터가 Prepare → Commit으로 모든 참여자를 원자적으로 커밋하는 고전 기법이다. 이론상 강일관성을 주지만 현대 MSA에서는 거의 피한다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>2PC의 문제</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Blocking</strong></td><td>Prepare 후 코디네이터 응답까지 참여자가 락을 잡고 대기 → 처리량 급락</td></tr>
+          <tr><td><strong>가용성 저하</strong></td><td>코디네이터 단일 장애점. 죽으면 참여자가 락 잡은 채 무한 대기</td></tr>
+          <tr><td><strong>확장성 한계</strong></td><td>참여자가 많고 지연이 클수록 락 보유 시간↑ → 동시성 붕괴</td></tr>
+          <tr><td><strong>이종 시스템 미지원</strong></td><td>Kafka·외부 결제 API 등은 XA 트랜잭션을 지원 안 함</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트</div>
+      "분산 환경에서 트랜잭션을 어떻게 보장하나요?"에 "2PC 쓰면 됩니다"는 위험한 답. <strong>2PC의 blocking·가용성 문제를 설명하고 "그래서 대신 Saga로 최종 일관성을 택한다"</strong>가 시니어 답변. 강일관성 vs 가용성의 Trade-off를 짚어야 한다.
+    </div>
+  </section>
+
+  <!-- ── Section 3 ── -->
+  <section id="saga">
+    <h2>3. Saga(사가)란</h2>
+
+    <p><strong>Saga</strong>는 하나의 큰 분산 트랜잭션을 <strong>여러 개의 로컬 트랜잭션 시퀀스</strong>로 쪼갠 것이다. 각 단계는 자기 DB에서 로컬 커밋한다. 중간에 실패하면, 이미 커밋된 앞 단계들을 <strong>보상 트랜잭션(Compensating Transaction)</strong>으로 의미적으로 되돌린다(롤백이 아니라 "상쇄").</p>
+
+    <div class="callout tip">
+      <div class="c-title">💡 핵심 — ACID가 아니라 ACD + 최종 일관성</div>
+      Saga는 Isolation(격리성)을 포기한다. 중간 단계가 외부에 보일 수 있다(주문은 PENDING으로 노출). 대신 가용성과 확장성을 얻는다. 보상으로 <strong>의미적 원자성(Semantic atomicity)</strong>을 달성한다.
+    </div>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    T1["T1\n주문 생성"] --> T2["T2\n결제 승인"] --> T3["T3\n재고 예약"] --> T4["T4\n배송 생성"]
+    T4 -.->|"실패 시"| C3["C3\n재고 해제"]
+    C3 -.-> C2["C2\n결제 취소"]
+    C2 -.-> C1["C1\n주문 취소"]
+
+    style T1 fill:#dbeafe,stroke:#3b82f6
+    style T2 fill:#fce7f3,stroke:#ec4899
+    style T3 fill:#fef3c7,stroke:#f59e0b
+    style T4 fill:#ede9fe,stroke:#8b5cf6
+    style C1 fill:#fee2e2,stroke:#ef4444
+    style C2 fill:#fee2e2,stroke:#ef4444
+    style C3 fill:#fee2e2,stroke:#ef4444
+      </div>
+      <div class="cap">정방향 T1~T4가 진행되다 실패하면 역방향 보상 C3→C2→C1이 <strong>역순</strong>으로 실행된다.</div>
+    </div>
+  </section>
+
+  <!-- ── Section 4 ── -->
+  <section id="choreo">
+    <h2>4. Choreography Saga (코레오그래피 사가)</h2>
+
+    <p>중앙 조정자 없이 각 서비스가 <strong>이벤트를 구독하고 다음 이벤트를 발행</strong>한다. 흐름이 이벤트 체인으로 흩어진다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant O as Order
+    participant P as Payment
+    participant I as Inventory
+    participant S as Shipping
+
+    O->>O: 주문 생성 (PENDING)
+    O-->>P: OrderCreated
+    P->>P: 결제 승인
+    P-->>I: PaymentApproved
+    I->>I: 재고 예약
+    alt 재고 충분
+        I-->>S: InventoryReserved
+        S->>S: 배송 생성
+        S-->>O: ShipmentCreated → CONFIRMED
+    else 재고 부족 (보상)
+        I-->>P: InventoryFailed (보상 트리거)
+        P->>P: 결제 취소 (보상)
+        P-->>O: PaymentCanceled
+        O->>O: 주문 취소 (CANCELED)
+    end
+      </div>
+      <div class="cap">Choreography Saga — 각 서비스가 자율적으로 이벤트를 듣고 반응. 실패 시 역방향 보상 이벤트가 전파.</div>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정</div>
+      단계가 많아지면 "지금 전체 흐름이 어디까지 왔는지" 추적이 매우 어렵다. 누가 어떤 이벤트를 구독하는지가 코드 곳곳에 흩어져 <strong>순환 의존·암묵적 결합</strong>이 생긴다. 4단계를 넘으면 Orchestration을 고려.
+    </div>
+  </section>
+
+  <!-- ── Section 5 ── -->
+  <section id="orch">
+    <h2>5. Orchestration Saga (오케스트레이션 사가)</h2>
+
+    <p>중앙 <strong>Saga Orchestrator(오케스트레이터)</strong>가 상태 머신을 들고 각 단계를 명령하고 응답을 받아 다음을 결정한다. 흐름이 한곳에 보인다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant SO as Saga Orchestrator
+    participant P as Payment
+    participant I as Inventory
+    participant S as Shipping
+
+    SO->>P: ApprovePayment (command)
+    P-->>SO: PaymentApproved
+    SO->>I: ReserveInventory (command)
+    alt 성공
+        I-->>SO: InventoryReserved
+        SO->>S: CreateShipment (command)
+        S-->>SO: ShipmentCreated
+        SO->>SO: Saga 완료 (CONFIRMED)
+    else 재고 실패 → 보상 시퀀스
+        I-->>SO: InventoryFailed
+        SO->>P: CancelPayment (보상 command)
+        P-->>SO: PaymentCanceled
+        SO->>SO: Saga 실패 (CANCELED)
+    end
+      </div>
+      <div class="cap">Orchestration Saga — 오케스트레이터가 상태 머신으로 전체 흐름과 보상을 한곳에서 제어.</div>
+    </div>
+
+    <h3>오케스트레이터 상태 머신</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> PAYMENT_PENDING : 주문 시작
+    PAYMENT_PENDING --> INVENTORY_PENDING : PaymentApproved
+    PAYMENT_PENDING --> CANCELED : PaymentFailed
+    INVENTORY_PENDING --> SHIPPING_PENDING : InventoryReserved
+    INVENTORY_PENDING --> COMPENSATING : InventoryFailed
+    SHIPPING_PENDING --> CONFIRMED : ShipmentCreated
+    SHIPPING_PENDING --> COMPENSATING : ShippingFailed
+    COMPENSATING --> CANCELED : 보상 완료
+    CONFIRMED --> [*]
+    CANCELED --> [*]
+      </div>
+      <div class="cap">Saga 상태 머신 — COMPENSATING 상태가 보상 트랜잭션 진행을 명시적으로 표현한다.</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>Choreography Saga</th><th>Orchestration Saga</th></tr></thead>
+        <tbody>
+          <tr><td>흐름 가시성</td><td>낮음 (흩어짐)</td><td><strong>높음</strong> (한곳)</td></tr>
+          <tr><td>결합도</td><td><strong>낮음</strong></td><td>중간 (조정자가 다 앎)</td></tr>
+          <tr><td>단일 지점</td><td>없음</td><td>오케스트레이터</td></tr>
+          <tr><td>보상 로직 관리</td><td>분산 (실수하기 쉬움)</td><td><strong>중앙 집중 (안전)</strong></td></tr>
+          <tr><td>적합</td><td>2~3단계 단순</td><td>4단계+ 복잡, 보상 많음</td></tr>
+          <tr><td>도구</td><td>Kafka 이벤트</td><td>Temporal, Camunda, AWS Step Functions</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Section 6 ── -->
+  <section id="compensate">
+    <h2>6. 보상 트랜잭션 (Compensating Transaction)</h2>
+
+    <p>이미 커밋된 단계를 <strong>의미적으로 상쇄</strong>하는 별도 트랜잭션. DB 롤백이 아니라 "반대 행위"다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>정방향 (T)</th><th>보상 (C)</th><th>주의</th></tr></thead>
+        <tbody>
+          <tr><td>결제 승인 (Capture)</td><td>결제 취소/환불</td><td>이미 정산됐으면 환불 처리 — 완전 역행 아님</td></tr>
+          <tr><td>재고 예약</td><td>재고 예약 해제</td><td>이미 출고됐으면 보상 불가 → 순서 설계 중요</td></tr>
+          <tr><td>포인트 적립</td><td>포인트 회수</td><td>이미 사용됐으면 마이너스 잔액 처리</td></tr>
+          <tr><td>운송장 발행</td><td>운송장 취소</td><td>이미 집하됐으면 회수(역물류) 필요</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 보상 누락과 비가역성</div>
+      <strong>실패 경로를 설계 안 하는 것</strong>이 Saga 최대 실수. 또한 "메일 발송"처럼 <strong>되돌릴 수 없는(irreversible)</strong> 단계는 보상이 불가능 → 이런 단계는 <strong>Saga 맨 끝</strong>에 배치(Pivot transaction 이후). 비가역 작업 전까지가 취소 가능 구간.
+    </div>
+
+    <h3>보상 설계 3원칙</h3>
+    <ul>
+      <li><strong>보상은 멱등(Idempotent)해야</strong> — 보상이 재시도돼도 안전. "이미 취소된 결제 또 취소" → 무시.</li>
+      <li><strong>보상은 실패하면 안 됨(또는 재시도로 반드시 성공)</strong> — 보상이 실패하면 시스템이 불일치 상태로 고착. 재시도 + Dead Letter Queue + 수동 개입 알림.</li>
+      <li><strong>Pivot 단계 식별</strong> — 그 이후로는 되돌릴 수 없는 "확정점"을 정하고, 그 전까지만 자동 취소.</li>
+    </ul>
+  </section>
+
+  <!-- ── Section 7 ── -->
+  <section id="example">
+    <h2>7. 주문-결제-배송 Saga 예제 (물류)</h2>
+
+    <div class="sys-card oms">
+      <div class="sys-label">시나리오</div>
+      <div class="sys-title">고객이 로켓배송 주문 → 결제 승인 → 재고 예약 → 출고/배송 생성. 각 단계 실패 시 보상.</div>
+    </div>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant C as Customer
+    participant SO as Order Saga Orchestrator
+    participant Pay as Payment
+    participant Inv as Inventory(WMS)
+    participant Ship as Shipping(TMS)
+
+    C->>SO: 주문 요청
+    SO->>Pay: ApprovePayment
+    Pay-->>SO: PaymentApproved ✅
+    SO->>Inv: ReserveInventory
+    Inv-->>SO: InventoryReserved ✅
+    SO->>Ship: CreateShipment
+    Ship-->>SO: ShipmentFailed ❌ (배차 불가)
+    Note over SO: 보상 시퀀스 시작 (역순)
+    SO->>Inv: ReleaseInventory (보상)
+    Inv-->>SO: InventoryReleased ✅
+    SO->>Pay: CancelPayment (보상)
+    Pay-->>SO: PaymentCanceled ✅
+    SO->>C: 주문 취소 안내 (CANCELED)
+      </div>
+      <div class="cap">배송 생성 실패 → 재고 해제 → 결제 취소 역순 보상. 고객은 "결제됐다가 취소"를 경험(격리성 포기의 대가).</div>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 정량 근거 & 설계 팁</div>
+      Cut-off 직전 주문 폭주(초당 수천 건) 상황에서 Saga는 각 단계가 독립 확장 가능해 2PC보다 처리량이 훨씬 높다. 단, 각 단계 호출에 <strong>Idempotency-Key</strong>와 <strong>타임아웃 + 재시도</strong>가 필수. 오케스트레이터 상태는 DB에 영속화해 장애 후 복구(Recovery)가 되어야 한다. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- ── Section 8 ── -->
+  <section id="pitfall">
+    <h2>8. 함정과 실제 사례</h2>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>함정</th><th>대응</th></tr></thead>
+        <tbody>
+          <tr><td>보상 트랜잭션 누락 (실패 경로 미설계)</td><td>모든 단계에 대응 보상 정의 + 테스트</td></tr>
+          <tr><td>중복 이벤트로 이중 처리</td><td>각 단계·보상 멱등 + Idempotency-Key</td></tr>
+          <tr><td>오케스트레이터 상태 휘발</td><td>상태 DB 영속화 + 재시작 복구</td></tr>
+          <tr><td>비가역 단계를 중간에 배치</td><td>Pivot 이후로 이동, 그 전까지만 취소 가능</td></tr>
+          <tr><td>이벤트 발행과 DB 커밋 불일치</td><td>Outbox 패턴으로 원자화 (06장)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>회사</th><th>활용</th></tr></thead>
+        <tbody>
+          <tr><td><strong>우아한형제들(배민)</strong></td><td>주문-결제-배달대행 흐름에 Saga + 이벤트로 정합성 보장, 실패 시 보상</td></tr>
+          <tr><td><strong>쿠팡</strong></td><td>주문-결제-풀필먼트-배송 다단계 Saga, 출고 전까지 취소 가능 구간 관리</td></tr>
+          <tr><td><strong>Uber</strong></td><td>Cadence/Temporal로 결제·배차 워크플로우를 Orchestration Saga로 운영</td></tr>
+          <tr><td><strong>Netflix</strong></td><td>Conductor 오케스트레이터로 복잡한 미디어 처리 워크플로우 제어</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 (압박 질문)</div>
+      "Saga 중간에 오케스트레이터가 죽으면?" → 상태를 DB에 영속화했으니 재시작 후 마지막 상태부터 복구. "보상도 실패하면?" → 재시도 + DLQ + 알림 → 최후엔 수동 개입. 이 두 질문에 막힘없이 답하면 시니어 신호. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- ── Section 9: 이해도 확인 ── -->
+  <section id="quiz">
+    <h2>9. 이해도 확인 질문</h2>
+
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>2PC와 Saga를 <strong>일관성·가용성·격리성·확장성</strong> 관점에서 비교하고, 현대 MSA에서 왜 2PC 대신 Saga를 택하는지 설명해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div>
+        <textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>주문-결제-재고-배송 4단계 Saga에서 <strong>"운송장 발행 후 집하 완료"</strong>처럼 비가역 단계가 있을 때, Pivot 트랜잭션 개념을 사용해 어떻게 단계 순서와 취소 가능 구간을 설계할지 설명해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div>
+        <textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>Orchestration Saga에서 오케스트레이터가 결제 승인 직후 죽었다가 재시작했습니다. <strong>이중 결제</strong>를 막으면서 정확히 다음 단계부터 이어가려면 어떤 메커니즘(상태 영속화·멱등·Idempotency-Key)이 필요한지 설명해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div>
+        <textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <!-- ── Section 10: 다음 학습 ── -->
+  <section id="next">
+    <h2>10. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card">
+        <div class="coach">backend-architecture-coach</div>
+        <div class="topic">CQRS · Event Sourcing (05)</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">backend-architecture-coach</div>
+        <div class="topic">Outbox · Idempotency (06)</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">database-coach</div>
+        <div class="topic">재고 예약 동시성 · 조건부 UPDATE</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">infra-coach</div>
+        <div class="topic">Temporal / Step Functions 운영</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    themeVariables: {
+      primaryColor: '#dbeafe',
+      primaryTextColor: '#1e293b',
+      primaryBorderColor: '#3b82f6',
+      lineColor: '#64748b',
+      secondaryColor: '#fef3c7',
+      tertiaryColor: '#ede9fe',
+      fontSize: '13px'
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  const NS = 'jobStudy::backend::architecture::04-saga::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(NS + id);
+    if (saved) el.value = saved;
+
+    let timer;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(NS + id, el.value);
+        const badge = document.getElementById('saved' + (i + 1));
+        if (badge) {
+          badge.classList.add('show');
+          setTimeout(() => badge.classList.remove('show'), 1800);
+        }
+      }, 400);
+    });
+  });
+
+  function copyForFeedback() {
+    const questions = [
+      'Q1. 2PC와 Saga를 일관성·가용성·격리성·확장성 관점에서 비교하고, 현대 MSA에서 2PC 대신 Saga를 택하는 이유를 설명해보세요.',
+      'Q2. 주문-결제-재고-배송 4단계 Saga에서 비가역 단계가 있을 때 Pivot 트랜잭션으로 단계 순서와 취소 가능 구간을 어떻게 설계할지 설명해보세요.',
+      'Q3. Orchestration Saga에서 결제 승인 직후 오케스트레이터가 죽었다 재시작 시, 이중 결제를 막고 다음 단계부터 이어가는 메커니즘을 설명해보세요.'
+    ];
+
+    const lines = ['[Saga 패턴 — 이해도 확인 Q&A 피드백 요청]\n세션: backend/architecture/04-saga.html\n'];
+    ansIds.forEach((id, i) => {
+      const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)';
+      lines.push(questions[i]);
+      lines.push('A' + (i + 1) + '. ' + ans + '\n');
+    });
+
+    const text = lines.join('\n');
+    const resultEl = document.getElementById('copyResult');
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.';
+      }).catch(() => fallbackCopy(text, resultEl));
+    } else {
+      fallbackCopy(text, resultEl);
+    }
+  }
+
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try {
+      document.execCommand('copy');
+      el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.';
+    } catch {
+      el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.';
+    }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

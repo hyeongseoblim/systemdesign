@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>트랜잭션 — ACID·격리수준·전파·분산 트랜잭션</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root { --bg:#f8fafc; --card:#fff; --border:#e2e8f0; --text:#1e293b; --muted:#64748b; --accent:#6366f1; --oms:#dbeafe; --oms-b:#3b82f6; --oms-t:#1e3a8a; --wms:#fef3c7; --wms-b:#f59e0b; --wms-t:#78350f; --tms:#ede9fe; --tms-b:#8b5cf6; --tms-t:#3b0764; --lm:#dcfce7; --lm-b:#22c55e; --lm-t:#14532d; --ret:#fce7f3; --ret-b:#ec4899; --ret-t:#831843; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; font-size: 14.5px; line-height: 1.75; }
+    #sidebar { width: 248px; min-height: 100vh; background: var(--card); border-right: 1px solid var(--border); padding: 24px 0; position: fixed; left: 0; top: 0; overflow-y: auto; z-index: 50; }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a { display: block; padding: 7px 20px; font-size: 13px; color: var(--muted); text-decoration: none; border-left: 3px solid transparent; transition: all .15s; }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip { font-size: 12px; font-weight: 500; padding: 3px 11px; border-radius: 20px; background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 { font-size: 20px; font-weight: 700; padding-bottom: 12px; border-bottom: 2px solid var(--border); margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+    .diagram-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px 20px; margin: 18px 0; overflow-x: auto; text-align: center; }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    .sys-card { border-radius: 10px; padding: 18px 22px; margin-bottom: 20px; border-left: 4px solid; }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .callout { border-radius: 8px; padding: 13px 16px; margin: 14px 0; border-left: 4px solid; font-size: 13.5px; }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; } .callout.interview .c-title { color: #dc2626; }
+    .callout.warn { background: #fff7ed; border-color: #ea580c; } .callout.warn .c-title { color: #ea580c; }
+    .callout.tip { background: #f0fdf4; border-color: #16a34a; } .callout.tip .c-title { color: #16a34a; }
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+    pre { background: #0f172a; border-radius: 10px; padding: 18px 20px; margin: 14px 0; overflow-x: auto; }
+    pre code { background: none; color: #e2e8f0; padding: 0; font-size: 12.5px; line-height: 1.7; }
+    pre .cmt { color: #64748b; } pre .kw { color: #c084fc; } pre .str { color: #86efac; } pre .fn { color: #93c5fd; } pre .err { color: #fca5a5; }
+    .code-cap { font-size: 11.5px; color: var(--muted); margin: -6px 0 16px; padding-left: 4px; }
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea { width: 100%; min-height: 110px; border: 1.5px solid var(--border); border-radius: 8px; padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif; font-size: 14px; line-height: 1.7; resize: vertical; background: #fafcff; color: var(--text); transition: border-color .15s, background .15s; }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+    .feedback-box { background: var(--card); border: 1.5px dashed var(--border); border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center; }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; transition: background .15s; }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">⚙️ backend-dev-coach</div>
+    <h2>트랜잭션<br/>ACID · 격리 · 전파</h2>
+  </div>
+  <div class="group-label">기초</div>
+  <a href="#acid">1. ACID</a>
+  <a href="#isolation">2. 격리수준 · 이상현상</a>
+  <div class="group-label">Spring</div>
+  <a href="#propagation">3. 전파 (Propagation)</a>
+  <a href="#boundary">4. 트랜잭션 경계 안티패턴</a>
+  <div class="group-label">분산</div>
+  <a href="#distributed">5. 분산 트랜잭션 개요</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+
+<main>
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">backend-dev-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">트랜잭션</span>
+    </div>
+    <h1>트랜잭션(Transaction)<br>ACID · 격리수준 · 전파 · 분산 트랜잭션</h1>
+    <p>"<code>@Transactional</code> 붙이면 되죠"는 6년차에게 위험한 답이다. 면접관은 <strong>격리수준의 이상현상, 전파 속성의 의도, 트랜잭션 경계 안에서 외부 호출하면 안 되는 이유</strong>를 파고든다.</p>
+  </header>
+
+  <!-- 1 -->
+  <section id="acid">
+    <h2>1. ACID</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>속성</th><th>의미</th><th>보장 주체</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Atomicity</strong> (원자성)</td><td>전부 성공 or 전부 롤백 — 부분 반영 없음</td><td>Undo log</td></tr>
+          <tr><td><strong>Consistency</strong> (일관성)</td><td>제약조건·불변식이 트랜잭션 전후로 유지</td><td>DB 제약 + 애플리케이션</td></tr>
+          <tr><td><strong>Isolation</strong> (격리성)</td><td>동시 트랜잭션이 서로 간섭하지 않는 정도</td><td>Lock / MVCC</td></tr>
+          <tr><td><strong>Durability</strong> (지속성)</td><td>커밋된 결과는 장애에도 보존</td><td>Redo log / WAL</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 Isolation은 "정도(degree)"의 문제</div>
+      A·C·D는 보통 보장 여부가 명확하지만, <strong>Isolation은 격리수준에 따라 단계적으로 약해진다</strong>. 성능과 정합성을 맞바꾸는 다이얼이며, 면접의 핵심도 여기다.
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="isolation">
+    <h2>2. 격리수준과 이상현상(Anomaly)</h2>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>격리수준</th><th>Dirty Read</th><th>Non-repeatable Read</th><th>Phantom Read</th></tr></thead>
+        <tbody>
+          <tr><td>READ UNCOMMITTED</td><td>발생</td><td>발생</td><td>발생</td></tr>
+          <tr><td>READ COMMITTED <em>(PostgreSQL 기본)</em></td><td>방지</td><td>발생</td><td>발생</td></tr>
+          <tr><td>REPEATABLE READ <em>(MySQL InnoDB 기본)</em></td><td>방지</td><td>방지</td><td>발생*</td></tr>
+          <tr><td>SERIALIZABLE</td><td>방지</td><td>방지</td><td>방지</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted);">* MySQL InnoDB는 REPEATABLE READ에서도 Next-Key Lock으로 Phantom을 상당 부분 방지한다(표준과 차이).</p>
+
+    <h4>이상현상 정의</h4>
+    <ul>
+      <li><strong>Dirty Read</strong>: 커밋 안 된 데이터를 읽음 → 롤백되면 유령 데이터</li>
+      <li><strong>Non-repeatable Read</strong>: 같은 행을 두 번 읽었는데 값이 다름(중간에 다른 Tx가 UPDATE·커밋)</li>
+      <li><strong>Phantom Read</strong>: 같은 조건 범위 조회를 두 번 했는데 행 개수가 다름(다른 Tx가 INSERT)</li>
+    </ul>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant T1 as Tx-1 (READ COMMITTED)
+    participant DB as DB
+    participant T2 as Tx-2
+    T1->>DB: SELECT balance (=1000)
+    T2->>DB: UPDATE balance = 2000
+    T2->>DB: COMMIT
+    T1->>DB: SELECT balance (=2000) again
+    Note over T1: 같은 트랜잭션인데 값이 바뀜<br/>→ Non-repeatable Read
+      </div>
+      <div class="cap">Non-repeatable Read — REPEATABLE READ로 올리면 T1은 스냅샷(MVCC)으로 계속 1000을 본다</div>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — DB마다 기본값이 다르다</div>
+      <strong>MySQL InnoDB = REPEATABLE READ, PostgreSQL/Oracle = READ COMMITTED.</strong> 같은 코드도 DB가 다르면 정합성 동작이 달라진다. 테스트를 H2로만 돌리면 이 차이를 못 잡는다 → <a href="05-testing.html" style="color:#ea580c;">Testcontainers로 실제 DB 테스트</a> 필요. <span class="deep">🔥 Deep-dive</span>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 격리수준은 동시성 버그를 다 막지 못한다</div>
+      "재고 차감은 격리수준 올리면 안전한가요?" → <strong>아니다.</strong> SERIALIZABLE도 처리량을 크게 떨어뜨리고, 일반적으로는 <strong>낙관적 락·원자적 UPDATE</strong>(02번 페이지)가 정답이다. 격리수준과 락은 서로 보완하는 다른 도구임을 구분해야 한다.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="propagation">
+    <h2>3. 트랜잭션 전파 (Propagation)</h2>
+    <p>이미 트랜잭션이 진행 중일 때, 새 <code>@Transactional</code> 메서드를 만나면 어떻게 할지 정하는 규칙이다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>전파 속성</th><th>기존 Tx 있을 때</th><th>대표 용도</th></tr></thead>
+        <tbody>
+          <tr><td><strong>REQUIRED</strong> (기본)</td><td>참여 (같은 Tx)</td><td>대부분의 비즈니스 로직</td></tr>
+          <tr><td><strong>REQUIRES_NEW</strong></td><td>기존 Tx 일시정지 후 새 Tx 시작</td><td>로그·이력은 실패해도 본 작업 롤백 안 되게</td></tr>
+          <tr><td><strong>NESTED</strong></td><td>Savepoint로 부분 롤백 가능</td><td>일부만 되돌리고 싶을 때 (JDBC 한정)</td></tr>
+          <tr><td><strong>SUPPORTS</strong></td><td>있으면 참여, 없으면 비트랜잭션</td><td>조회성 메서드</td></tr>
+          <tr><td><strong>MANDATORY</strong></td><td>없으면 예외</td><td>반드시 Tx 안에서만 호출돼야 하는 내부 메서드</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <pre><code><span class="cmt">// REQUIRES_NEW — 주문은 실패해도 "감사 로그"는 남기고 싶을 때</span>
+<span class="kw">@Service</span>
+<span class="kw">class</span> OrderService(<span class="kw">private val</span> auditService: AuditService) {
+
+    <span class="kw">@Transactional</span>   <span class="cmt">// REQUIRED</span>
+    <span class="kw">fun</span> <span class="fn">placeOrder</span>(cmd: PlaceOrder) {
+        auditService.log(<span class="str">"order attempt"</span>)   <span class="cmt">// 별도 Tx로 커밋됨</span>
+        validateAndSave(cmd)                  <span class="cmt">// 여기서 실패해도 위 로그는 살아있음</span>
+    }
+}
+
+<span class="kw">@Service</span>
+<span class="kw">class</span> AuditService {
+    <span class="kw">@Transactional</span>(propagation = Propagation.REQUIRES_NEW)
+    <span class="kw">fun</span> <span class="fn">log</span>(msg: String) { auditRepo.save(AuditLog(msg)) }
+}</code></pre>
+    <div class="code-cap">REQUIRES_NEW는 별도 커넥션을 쓴다 → 남발하면 커넥션풀 고갈. 의도가 명확할 때만 사용</div>
+  </section>
+
+  <!-- 4 -->
+  <section id="boundary">
+    <h2>4. 트랜잭션 경계 안티패턴</h2>
+
+    <h3>안티패턴 1 — @Transactional 자기 호출 (Self-invocation)</h3>
+    <pre><code><span class="kw">@Service</span>
+<span class="kw">class</span> OrderService {
+    <span class="kw">fun</span> <span class="fn">outer</span>() {
+        inner()   <span class="err">// ❌ 프록시를 거치지 않는 직접 호출 → @Transactional 무시됨</span>
+    }
+    <span class="kw">@Transactional</span>
+    <span class="kw">fun</span> <span class="fn">inner</span>() { ... }   <span class="cmt">// 트랜잭션이 안 열린다!</span>
+}</code></pre>
+    <div class="code-cap">Spring AOP는 프록시 기반 — 같은 객체 내부 호출은 프록시를 안 거쳐 어드바이스가 적용 안 됨. 별도 빈으로 분리하거나 self-injection으로 해결</div>
+
+    <h3>안티패턴 2 — 트랜잭션 안에서 외부 호출 (가장 중요)</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant App as 트랜잭션 Tx
+    participant DB as DB (행 잠금 보유)
+    participant Ext as 외부 API (느림/장애)
+    App->>DB: BEGIN + UPDATE (락 획득)
+    App->>Ext: POST /payment (HTTP 호출) 😱
+    Note over App,Ext: 외부 API가 5초 걸리면<br/>그동안 DB 락·커넥션을 점유
+    Ext-->>App: (timeout 가능)
+    App->>DB: COMMIT
+    Note over DB: 락 보유 시간 = 외부 API 지연만큼 증가<br/>→ 커넥션풀·락 고갈 연쇄 장애
+      </div>
+      <div class="cap">트랜잭션 내 HTTP/Kafka 호출 — 외부 지연이 DB 락 보유 시간으로 전이되어 전체 장애로 번짐</div>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 핵심 — 트랜잭션은 짧고, 외부 호출은 밖에서</div>
+      트랜잭션 안에서 <strong>HTTP 호출·메시지 발행</strong>을 하면 (1) DB 락 점유 시간 폭증, (2) 외부 성공·DB 롤백 시 분산 불일치(메시지는 나갔는데 주문은 롤백). 해법은 <strong>Transactional Outbox 패턴</strong> — 같은 Tx로 outbox 테이블에 이벤트를 INSERT하고, 별도 프로세스가 발행. <span class="deep">🔥 Deep-dive</span>
+    </div>
+
+    <h3>안티패턴 3 — 경계가 너무 넓음 + readOnly 누락</h3>
+    <pre><code><span class="cmt">// ✅ 조회 전용엔 readOnly=true — 더티체킹 비활성·DB 최적화·복제본 라우팅 가능</span>
+<span class="kw">@Transactional</span>(readOnly = true)
+<span class="kw">fun</span> <span class="fn">getOrder</span>(id: Long): OrderView = ...
+
+<span class="cmt">// ❌ 컨트롤러 전체를 한 트랜잭션으로 감싸 외부호출·연산까지 포함 → long transaction</span></code></pre>
+
+    <h3>안티패턴 4 — @Async / @Scheduled 에 @Transactional 기대</h3>
+    <p><code>@Async</code> 메서드는 <strong>다른 스레드</strong>에서 실행되므로 호출자 트랜잭션이 전파되지 않는다. 트랜잭션이 필요하면 비동기 메서드 내부에서 새로 열어야 한다. 자기 호출 문제와 마찬가지로 프록시 경계를 이해해야 한다.</p>
+  </section>
+
+  <!-- 5 -->
+  <section id="distributed">
+    <h2>5. 분산 트랜잭션 개요</h2>
+    <div class="sys-card oms">
+      <div class="sys-label">OMS 현실</div>
+      <div class="sys-title">주문·결제·재고가 <em>서로 다른 서비스/DB</em>에 있으면 단일 <code>@Transactional</code>로 묶을 수 없다</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>방식</th><th>일관성</th><th>가용성</th><th>현실 채택</th></tr></thead>
+        <tbody>
+          <tr><td><strong>2PC</strong> (Two-Phase Commit)</td><td>강함 (강한 일관성)</td><td>낮음 (코디네이터 SPOF·블로킹)</td><td>MSA에선 기피</td></tr>
+          <tr><td><strong>Saga</strong> (보상 트랜잭션)</td><td>최종 일관성</td><td>높음</td><td>MSA 표준</td></tr>
+          <tr><td><strong>Outbox + CDC</strong></td><td>최종 일관성 (메시지 유실 방지)</td><td>높음</td><td>이벤트 발행 신뢰성 확보</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant O as Order
+    participant P as Payment
+    participant I as Inventory
+    O->>O: 주문 생성 (PENDING)
+    O->>P: 결제 요청
+    P-->>O: 결제 성공
+    O->>I: 재고 차감
+    I-->>O: 재고 부족 실패 ❌
+    Note over O,P: 보상 트랜잭션 시작
+    O->>P: 결제 취소 (Compensating Tx)
+    P-->>O: 환불 완료
+    O->>O: 주문 CANCELED
+      </div>
+      <div class="cap">Saga — 각 단계는 로컬 트랜잭션. 실패하면 이전 단계를 보상(취소)으로 되돌림. 자세한 설계는 architecture 영역</div>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 2PC를 왜 안 쓰나</div>
+      "분산 트랜잭션이면 2PC 쓰면 되지 않나요?" → <strong>코디네이터 장애 시 참여자들이 락을 잡은 채 블로킹</strong>되고, 가용성·확장성이 무너진다. MSA에선 <strong>Saga + 최종 일관성</strong>으로 가고, 멱등성·보상·타임아웃을 설계하는 게 정석. 상세는 <code>backend-architecture-coach</code> 영역(Saga·Outbox·Idempotency).
+    </div>
+  </section>
+
+  <!-- Quiz -->
+  <section id="quiz">
+    <h2>6. 이해도 확인 질문</h2>
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>같은 코드를 MySQL과 PostgreSQL에서 돌렸더니 동시성 동작이 달랐습니다. 기본 격리수준 차이와, 그로 인해 발생/방지되는 이상현상을 구체적으로 설명해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div><textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>주문 저장 트랜잭션 안에서 결제 API(HTTP)를 호출하는 코드가 운영에서 어떤 장애를 일으키는지 2가지로 설명하고, <strong>Outbox 패턴</strong>이 어떻게 해결하는지 그려보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div><textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>같은 서비스 클래스 안에서 <code>outer()</code>가 <code>@Transactional inner()</code>를 호출했는데 트랜잭션이 안 열렸습니다. 원인을 Spring AOP 동작으로 설명하고 해결책 2가지를 제시해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div><textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>7. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">backend-dev-coach</div><div class="topic">04. 복원력 · 멱등성 (Idempotency-Key)</div></div>
+      <div class="next-card"><div class="coach">backend-architecture-coach</div><div class="topic">Saga · Outbox 패턴 심화</div></div>
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">MVCC · Next-Key Lock 내부동작</div></div>
+      <div class="next-card"><div class="coach">backend-dev-coach</div><div class="topic">05. Testcontainers로 격리수준 테스트</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', themeVariables: { primaryColor: '#dbeafe', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#fef3c7', tertiaryColor: '#ede9fe', fontSize: '13px' }, flowchart: { curve: 'basis', padding: 20 }, sequence: { actorMargin: 50, messageMargin: 35 } });
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => { entries.forEach(e => { if (e.isIntersecting) { navLinks.forEach(a => a.classList.remove('active')); const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`); if (active) active.classList.add('active'); } }); }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+  const NS = 'jobStudy::backend::03-transaction::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id); if (!el) return;
+    const saved = localStorage.getItem(NS + id); if (saved) el.value = saved;
+    let timer;
+    el.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { localStorage.setItem(NS + id, el.value); const badge = document.getElementById('saved' + (i + 1)); if (badge) { badge.classList.add('show'); setTimeout(() => badge.classList.remove('show'), 1800); } }, 400); });
+  });
+  function copyForFeedback() {
+    const questions = [
+      'Q1. 같은 코드를 MySQL과 PostgreSQL에서 돌렸더니 동시성 동작이 달랐습니다. 기본 격리수준 차이와, 발생/방지되는 이상현상을 설명해보세요.',
+      'Q2. 주문 저장 트랜잭션 안에서 결제 API(HTTP)를 호출하면 어떤 장애가 나는지 2가지로 설명하고, Outbox 패턴의 해결 방식을 그려보세요.',
+      'Q3. 같은 서비스 클래스 안에서 outer()가 @Transactional inner()를 호출했는데 트랜잭션이 안 열렸습니다. 원인을 Spring AOP로 설명하고 해결책 2가지를 제시해보세요.'
+    ];
+    const lines = ['[트랜잭션 — 이해도 확인 Q&A 피드백 요청]\n세션: backend/03-transaction.html\n'];
+    ansIds.forEach((id, i) => { const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)'; lines.push(questions[i]); lines.push('A' + (i + 1) + '. ' + ans + '\n'); });
+    const text = lines.join('\n'); const resultEl = document.getElementById('copyResult');
+    if (navigator.clipboard) { navigator.clipboard.writeText(text).then(() => { resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.'; }).catch(() => fallbackCopy(text, resultEl)); } else { fallbackCopy(text, resultEl); }
+  }
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.'; } catch { el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.'; }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TMS 심화 — 운송장 상태머신 · 허브앤스포크 · 배차</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; font-size: 14.5px; line-height: 1.75; }
+    #sidebar { width: 248px; min-height: 100vh; background: var(--card); border-right: 1px solid var(--border); padding: 24px 0; position: fixed; left: 0; top: 0; overflow-y: auto; z-index: 50; }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a { display: block; padding: 7px 20px; font-size: 13px; color: var(--muted); text-decoration: none; border-left: 3px solid transparent; transition: all .15s; }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip { font-size: 12px; font-weight: 500; padding: 3px 11px; border-radius: 20px; background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 { font-size: 20px; font-weight: 700; padding-bottom: 12px; border-bottom: 2px solid var(--border); margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+    .diagram-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px 20px; margin: 18px 0; overflow-x: auto; text-align: center; }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    .sys-card { border-radius: 10px; padding: 18px 22px; margin-bottom: 20px; border-left: 4px solid; }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .sys-card.lm  { background: var(--lm);  border-color: var(--lm-b);  color: var(--lm-t);  }
+    .sys-card.ret { background: var(--ret); border-color: var(--ret-b); color: var(--ret-t); }
+    .callout { border-radius: 8px; padding: 13px 16px; margin: 14px 0; border-left: 4px solid; font-size: 13.5px; }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea { width: 100%; min-height: 110px; border: 1.5px solid var(--border); border-radius: 8px; padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif; font-size: 14px; line-height: 1.7; resize: vertical; background: #fafcff; color: var(--text); transition: border-color .15s, background .15s; }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+    .feedback-box { background: var(--card); border: 1.5px dashed var(--border); border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center; }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; transition: background .15s; }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🚚 logistics-domain-coach</div>
+    <h2>TMS 심화<br/>운송관리 시스템</h2>
+  </div>
+  <div class="group-label">핵심 개념</div>
+  <a href="#role">1. TMS의 역할 경계</a>
+  <a href="#waybill">2. 운송장 상태 머신</a>
+  <a href="#network">3. 허브앤스포크 vs P2P</a>
+  <a href="#linehaul">4. 간선 · 지선 · 말단</a>
+  <a href="#dispatch">5. 배차(Dispatch) 기초</a>
+  <a href="#tracking-event">6. TrackingEvent 멱등성</a>
+  <div class="group-label">사례 & 연결</div>
+  <a href="#cases">7. 사례 비교</a>
+  <a href="#design">8. 시스템 디자인 연결</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">9. 이해도 확인 질문</a>
+  <a href="#next">10. 다음 학습 후보</a>
+</nav>
+
+<main>
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">logistics-domain-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">TMS 심화</span>
+    </div>
+    <h1>TMS 심화<br>운송장 상태머신 · 허브앤스포크 · 배차</h1>
+    <p>화물을 언제·어떻게·얼마에 보낼지 결정하고 집행하는 TMS(Transportation Management System)를, 운송장(Waybill) 상태 머신 · 네트워크 토폴로지(허브앤스포크 vs P2P) · 간선/지선 운영 · 배차(Dispatch) 흐름까지 백엔드 설계 관점에서 연결한다.</p>
+  </header>
+
+  <!-- 1 -->
+  <section id="role">
+    <h2>1. TMS의 역할 경계 — 운송의 두뇌</h2>
+    <div class="sys-card tms">
+      <div class="sys-label">핵심 책임</div>
+      <div class="sys-title">출고된 화물을 <em>언제(When)·어떻게(How·어느 경로)·얼마에(Cost)</em> 운송할지 결정하고, 운송 전 구간의 상태와 추적(Tracking)을 책임진다.</div>
+    </div>
+    <p>TMS(Transportation Management System, 운송관리 시스템)는 "물건이 창고를 떠난 뒤" 세계의 두뇌다. OMS가 "이 주문 상태는?", WMS가 "이 재고 어디 있나?"를 책임진다면, TMS는 <strong>"이 화물이 지금 어느 구간에 있고 언제 도착하나?"</strong>의 단일 진실 원천(Source of Truth)이다.</p>
+    <h3>TMS의 핵심 책임 4가지</h3>
+    <ul>
+      <li><strong>운송 계획(Planning)</strong>: 어느 네트워크 경로(허브 경유 vs 직송)로 보낼지, 어떤 운송수단(택배·간선차량·항공)을 쓸지 결정.</li>
+      <li><strong>배차(Dispatch)</strong>: 화물을 차량·기사에 배정하고 적재율(Load Factor)을 최적화.</li>
+      <li><strong>운임 정산(Freight Audit)</strong>: 구간·중량·부피 기반 운임 계산 및 운송사 정산.</li>
+      <li><strong>추적(Visibility)</strong>: 운송장(Waybill) 단위로 전 구간 위치·상태 이벤트를 수집·노출.</li>
+    </ul>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>구분</th><th>OMS</th><th>WMS</th><th>TMS</th></tr></thead>
+        <tbody>
+          <tr><td>관리 대상</td><td>주문(논리)</td><td>재고(실물)</td><td><strong>운송(이동)</strong></td></tr>
+          <tr><td>핵심 질문</td><td>"이 주문 상태는?"</td><td>"이 SKU 어디 있나?"</td><td><strong>"언제·어떻게 도착하나?"</strong></td></tr>
+          <tr><td>대표 Entity</td><td><code>Order</code>, <code>Allocation</code></td><td><code>Inventory</code>, <code>PickList</code></td><td><code>Shipment</code>, <code>Waybill</code>, <code>Route</code>, <code>Vehicle</code></td></tr>
+          <tr><td>경계 시작점</td><td>주문 접수</td><td>출고 지시</td><td><strong>집화(Pickup)/출고 확정</strong></td></tr>
+          <tr><td>SLA 책임</td><td>Cut-off 판정</td><td>피킹 정확도·출고 리드타임</td><td><strong>OTD(On-Time Delivery, 정시배송률)</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — Shipment의 주인은 누구?</div>
+      <code>Shipment</code> 엔티티는 OMS(주문 단위 출고)와 TMS(운송 단위) 양쪽에서 쓰여 경계가 흐려지기 쉽다. 원칙은 <strong>"출고 확정 시 OMS가 Shipment를 생성하고 TMS에 운송 요청을 넘긴다"</strong>. TMS는 그 위에 <code>Waybill</code>·<code>Route</code>·<code>Leg(구간)</code>를 얹어 운송 책임을 진다.
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="waybill">
+    <h2>2. 운송장(Waybill) 상태 머신 (State Machine)</h2>
+    <p>운송장(Waybill, 운송장/송장)은 한 화물의 운송 단위를 식별하는 핵심 객체다. 택배 송장번호 1건이 곧 1 Waybill이라고 보면 된다. 주문 상태와 마찬가지로 <strong>Boolean 플래그가 아닌 Enum + 명시적 전이</strong>로 강제해야 하며, 특히 <strong>허브 경유로 IN_TRANSIT이 여러 번 반복</strong>되는 점이 OMS 상태머신과 다른 부분이다.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> CREATED : WaybillIssued (송장 발행)
+    CREATED --> PICKED_UP : PickupScanned (집화 스캔)
+    PICKED_UP --> IN_TRANSIT : DepartScan (간선 출발)
+    IN_TRANSIT --> IN_TRANSIT : HubArrival / HubDepart (허브 경유 반복)
+    IN_TRANSIT --> OUT_FOR_DELIVERY : LastHubDepart (배송 출발)
+    OUT_FOR_DELIVERY --> DELIVERED : DeliveryScanned (배송 완료)
+    OUT_FOR_DELIVERY --> DELIVERY_FAILED : DeliveryFailed (부재/거부)
+    DELIVERY_FAILED --> OUT_FOR_DELIVERY : ReAttempt (재방문)
+    DELIVERY_FAILED --> RETURNED : ReturnToSender (반송)
+    DELIVERED --> [*]
+    RETURNED --> [*]
+      </div>
+      <div class="cap">운송장 상태 전이 — 각 화살표가 TrackingEvent. IN_TRANSIT 자가전이는 허브 경유(환적)를 표현</div>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 TrackingEvent 발행 시점</div>
+      상태 전이 하나하나가 <strong>스캔(Scan) 이벤트</strong>로 발생한다. 집화 스캔 → 허브 입고 스캔 → 허브 출고(상차) 스캔 → 배송지 도착 스캔 → 배송완료(인수자 사인/사진) 스캔. 각 스캔이 <code>TrackingEvent</code>로 발행되어 고객 추적 화면을 채운다. 즉 상태 머신의 <strong>전이 = 이벤트 = 고객 노출 노드</strong>가 1:1로 맞물린다.
+    </div>
+    <h3>왜 상태 머신을 코드로 강제하나</h3>
+    <ul>
+      <li><strong>불법 전이 차단</strong>: <code>DELIVERED → IN_TRANSIT</code> 같은 역행을 막는다. 단, 오배송 회수처럼 예외 전이는 별도 보정 플로우로만 허용.</li>
+      <li><strong>허브 경유 반복 표현</strong>: <code>IN_TRANSIT</code> 자가 전이로 N개 허브를 거치는 멀티 홉(Multi-hop)을 자연스럽게 표현.</li>
+      <li><strong>멱등성(Idempotency, 멱등성)</strong>: 같은 스캔 이벤트가 재시도로 두 번 와도 상태가 한 번만 진행되게(6장 참고).</li>
+    </ul>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 순서 뒤바뀐 스캔</div>
+      네트워크 지연으로 "허브 B 출고 스캔"이 "허브 B 입고 스캔"보다 먼저 도착할 수 있다. 상태 머신이 단순히 도착 순서대로 전이하면 꼬인다. 이벤트에 <strong>스캔 발생 시각(occurredAt)과 시퀀스</strong>를 실어, <em>이벤트 시각 기준</em>으로 정렬·판정해야 한다.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="network">
+    <h2>3. 허브앤스포크 vs 포인트투포인트 — 네트워크 토폴로지</h2>
+    <p>운송 네트워크를 어떻게 연결할지가 비용·속도를 가른다. 두 극단이 <strong>허브앤스포크(Hub-and-Spoke, 중심·바큇살)</strong>와 <strong>포인트투포인트(Point-to-Point, P2P, 직송)</strong>다.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    subgraph Spokes_Origin["발송 권역 (Spoke)"]
+        A["대전 터미널"]
+        B["광주 터미널"]
+        C["대구 터미널"]
+    end
+    HUB(["중앙 허브\n(옥천 등 메가허브)\n분류·환적"])
+    subgraph Spokes_Dest["도착 권역 (Spoke)"]
+        D["서울 터미널"]
+        E["부산 터미널"]
+        F["인천 터미널"]
+    end
+    A -->|간선 상차| HUB
+    B -->|간선 상차| HUB
+    C -->|간선 상차| HUB
+    HUB -->|환적·간선| D
+    HUB -->|환적·간선| E
+    HUB -->|환적·간선| F
+
+    style HUB fill:#ede9fe,stroke:#8b5cf6,stroke-width:2px
+    style A fill:#dcfce7,stroke:#22c55e
+    style B fill:#dcfce7,stroke:#22c55e
+    style C fill:#dcfce7,stroke:#22c55e
+    style D fill:#dbeafe,stroke:#3b82f6
+    style E fill:#dbeafe,stroke:#3b82f6
+    style F fill:#dbeafe,stroke:#3b82f6
+      </div>
+      <div class="cap">허브앤스포크 — 모든 화물이 중앙 허브에 모여 재분류(환적)된 뒤 목적지 권역으로 재출발</div>
+    </div>
+    <h3>핵심 Trade-off — 링크 수와 적재효율</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>허브앤스포크 (Hub-and-Spoke)</th><th>포인트투포인트 (P2P, 직송)</th></tr></thead>
+        <tbody>
+          <tr><td>노선(링크) 수</td><td><strong>N개</strong> (각 거점↔허브)</td><td><strong>최대 N(N-1)/2 ≈ N²</strong> (모든 거점 쌍)</td></tr>
+          <tr><td>적재 효율</td><td>높음 — 화물 통합으로 차량 만재(滿載) 쉬움</td><td>낮음 — 쌍별 물량 적어 공차·반적재 빈번</td></tr>
+          <tr><td>리드타임(Lead Time)</td><td>김 — 허브 우회 + 환적 대기로 +α</td><td>짧음 — 직송이라 최단</td></tr>
+          <tr><td>단위 운송비</td><td>낮음 — 규모의 경제, 간선 통합</td><td>높음 — 적재율 낮아 단가↑</td></tr>
+          <tr><td>장애 전파</td><td>허브 장애 시 전체 마비(SPOF)</td><td>한 노선 장애가 국소적</td></tr>
+          <tr><td>대표 적용</td><td>택배(CJ대한통운), 항공 화물(FedEx)</td><td>대량 정기 화물(공장↔물류센터), 새벽배송 권역 직배</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 정량 감각 — 왜 허브로 모으나</div>
+      거점이 50개라면 P2P 완전 연결은 <strong>50×49/2 = 1,225개 노선</strong>이 필요하다. 허브앤스포크는 <strong>거점당 1개씩 50개 노선</strong>이면 모든 쌍을 연결한다. 노선이 줄면 각 노선의 물량이 통합돼 <strong>차량 적재율을 70%→90%대</strong>로 끌어올릴 수 있고, 그만큼 단위 운송비가 내려간다. 대신 모든 화물이 허브를 한 번 우회하므로 리드타임이 늘어난다 — 이것이 핵심 Trade-off다.
+    </div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 — 순수형은 드물다 (하이브리드)</div>
+      현실은 둘의 혼합이다. 같은 권역(예: 서울 내) 단거리는 허브를 거치지 않는 <strong>P2P 직배</strong>로, 장거리는 허브 경유로 보낸다. 물량이 충분한 대도시 쌍은 <strong>다중 허브(Multi-hub)</strong>로 분산해 단일 허브 SPOF를 완화한다.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section id="linehaul">
+    <h2>4. 간선 · 지선 · 말단 — 운송 구간의 계층</h2>
+    <p>한 화물의 전체 운송 경로(Route)는 성격이 다른 여러 구간(Leg)으로 쪼개진다. 거리·차량·운영 방식이 다르므로 용어를 정확히 구분해야 한다.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>구간</th><th>영문</th><th>정의</th><th>운송수단(예)</th></tr></thead>
+        <tbody>
+          <tr><td>집화</td><td><strong>Pickup(집화)</strong></td><td>송하인/판매자 → 발송 터미널까지 화물을 모음</td><td>집화 차량(소형)</td></tr>
+          <tr><td>간선</td><td><strong>Line-haul(간선)</strong></td><td>터미널/허브 간 장거리 대량 운송 (도시↔도시)</td><td>대형 트럭, 트레일러, 항공</td></tr>
+          <tr><td>지선</td><td><strong>Feeder/지선</strong></td><td>허브 ↔ 지역 터미널(서브 터미널) 간 중거리 연결</td><td>중형 트럭</td></tr>
+          <tr><td>말단</td><td><strong>Last-leg/Last-mile(말단·라스트마일)</strong></td><td>도착 터미널 → 최종 수령지까지 배송</td><td>택배 기사, 이륜차, 배송 캠프</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    SH(["송하인\n(판매자)"]) -->|"집화 Pickup"| OT["발송 터미널"]
+    OT -->|"간선 Line-haul\n(장거리·만재)"| HUB(["허브\n환적 Cross-docking"])
+    HUB -->|"지선 Feeder"| DT["도착 터미널\n(배송 캠프)"]
+    DT -->|"말단 Last-leg"| CUS(["수하인\n(고객)"])
+
+    style SH fill:#fef3c7,stroke:#f59e0b
+    style HUB fill:#ede9fe,stroke:#8b5cf6,stroke-width:2px
+    style CUS fill:#dcfce7,stroke:#22c55e
+      </div>
+      <div class="cap">집화 → 간선 → (허브 환적) → 지선 → 말단. 한 Waybill이 여러 Leg를 차례로 통과</div>
+    </div>
+    <h3>환적(Cross-docking, 교차도킹)</h3>
+    <p>허브의 핵심 작업이 <strong>환적(Cross-docking, 교차도킹)</strong>이다. 입고된 화물을 <strong>창고에 보관하지 않고</strong> 곧바로 목적지별로 재분류해 출고 차량에 옮겨 싣는 방식이다. 보관(Storage) 단계를 생략해 리드타임과 재고 비용을 줄인다.</p>
+    <ul>
+      <li><strong>입고(Inbound)</strong>: 각 권역에서 온 간선 차량이 허브에 도착 → 하차 스캔.</li>
+      <li><strong>분류(Sort)</strong>: 송장의 목적지 권역을 읽어 컨베이어/휠소터로 자동 분류.</li>
+      <li><strong>출고(Outbound)</strong>: 목적지별 도크(Dock)에 모인 화물을 출발 차량에 상차 → 상차 스캔(= IN_TRANSIT 자가전이).</li>
+    </ul>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 허브 체류시간(Dwell Time)</div>
+      환적은 "보관 안 함"이 원칙이지만, 출발 간선 차량의 출발 시각(Cut-off)을 놓치면 화물이 다음 차수까지 허브에 머문다 → <strong>Dwell Time 급증 → 리드타임 1일 추가</strong>. 분류 처리량(throughput)이 입고 속도를 못 따라가면 허브가 병목이 된다. 시스템 디자인에서 허브는 흔히 <strong>최우선 병목 후보</strong>다.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="dispatch">
+    <h2>5. 배차(Dispatch) 기초 — 화물을 차량·기사에 배정</h2>
+    <p>배차(Dispatch, 배차)는 "어떤 화물 묶음을 어떤 차량·기사에 태워, 어떤 순서로 돌게 할지" 결정·집행하는 과정이다. 간선 배차(거점 간 정기 차량)와 말단 배차(택배 기사 권역 배정)는 성격이 다르지만, 공통적으로 <strong>적재율·권역·시간창(Time Window)</strong>을 최적화한다.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant TMS as TMS (배차 엔진)
+    participant GEO as 권역/지오코딩
+    participant OPT as 최적화 엔진
+    participant APP as 기사 앱
+    participant DRV as 기사
+
+    TMS->>GEO: 배송 물량 권역(Zone) 매핑
+    GEO-->>TMS: 권역별 화물 그룹
+    TMS->>OPT: 차량 용량·권역·시간창 입력
+    Note over OPT: 적재율 최대화 + 경로 최소화\n(VRP, 차량경로문제)
+    OPT-->>TMS: 차량별 화물 배정 + 방문 순서
+    TMS->>APP: 배차 확정 푸시 (Manifest)
+    APP-->>DRV: 오늘의 배송 리스트
+    DRV->>APP: 배송 스캔/완료 보고
+    APP->>TMS: TrackingEvent 동기화
+      </div>
+      <div class="cap">배차 흐름 — 권역 매핑 → 최적화(VRP) → 기사 앱 배차 확정 → 배송 보고 동기화</div>
+    </div>
+    <h3>배차에서 최적화하는 핵심 변수</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>변수</th><th>설명</th><th>Trade-off</th></tr></thead>
+        <tbody>
+          <tr><td>적재율(Load Factor)</td><td>차량 용량 대비 실제 적재량(%)</td><td>꽉 채우면 비용↓이지만 만재 대기로 출발 지연 위험</td></tr>
+          <tr><td>권역(Zone)</td><td>기사별 담당 배송 구역</td><td>권역 좁히면 동선↓이나 물량 편차로 일부 기사 과부하</td></tr>
+          <tr><td>시간창(Time Window)</td><td>고객 지정/SLA 도착 가능 시간대</td><td>새벽·지정시간 배송은 경로 제약↑ → 적재 통합 어려움</td></tr>
+          <tr><td>경로(Route)</td><td>방문 순서 (VRP/TSP 해)</td><td>최단 경로 계산 비용 vs 동선 단축 이득</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 배차는 NP-hard</div>
+      배차의 경로 최적화는 <strong>VRP(Vehicle Routing Problem, 차량경로문제)</strong>로, 본질적으로 <strong>NP-hard</strong>다. 수천 건을 실시간으로 풀 수 없으므로 실무에선 <strong>휴리스틱(권역 분할 후 권역 내 TSP 근사)</strong>이나 메타휴리스틱으로 "충분히 좋은 해"를 짧은 시간에 구한다. "최적해 vs 응답시간"의 Trade-off를 명확히 말할 수 있어야 한다. <span class="deep">🔥 Deep-dive</span>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 정량 감각</div>
+      적재율을 <strong>75% → 90%</strong>로 끌어올리면 같은 물량을 운반하는 데 필요한 차량 수가 약 <strong>1/6 줄어든다</strong>(부피 기준 단순 환산). 운송비의 큰 축이 차량·인건비이므로, 배차 최적화 1~2%의 적재율 개선이 곧 수익으로 직결된다.
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="tracking-event">
+    <h2>6. TrackingEvent — 멱등성 · 오프라인 동기화 · Fan-out</h2>
+    <p>TMS 백엔드의 심장은 <strong>TrackingEvent 파이프라인</strong>이다. 전국 수만 명의 기사 앱과 허브 스캐너가 초당 대량의 스캔 이벤트를 쏟아낸다. 이 스트림을 <strong>유실 없이, 중복 없이, 순서 보정해</strong> 운송장 상태로 반영하는 것이 핵심 난제다.</p>
+    <h3>1) 중복 / 멱등성 (Idempotency)</h3>
+    <p>네트워크 재시도, 더블 스캔으로 동일 이벤트가 여러 번 들어온다. 각 TrackingEvent에 <strong>고유 이벤트 ID(<code>waybillNo + scanType + occurredAt + deviceId</code> 해시)</strong>를 부여하고, 이미 처리한 ID는 무시(De-duplication)한다. 상태 전이는 멱등하게 — 같은 이벤트를 두 번 적용해도 결과가 같아야 한다.</p>
+    <h3>2) 기사 앱 오프라인 동기화</h3>
+    <p>지하 주차장·산간 지역에서 통신이 끊긴 채 배송이 진행된다. 기사 앱은 스캔을 <strong>로컬 큐에 버퍼링</strong>했다가 통신 복구 시 <strong>일괄 동기화(batch sync)</strong>한다. 그래서 서버는 <strong>"수 시간 지연되어 도착하는 과거 시각 이벤트"</strong>를 정상으로 받아들여야 한다 → 이벤트의 <code>occurredAt</code>(발생 시각)과 <code>receivedAt</code>(수신 시각)을 분리 관리하고, 상태 판정은 <strong>occurredAt 기준</strong>으로 정렬.</p>
+    <h3>3) Fan-out (이벤트 확산)</h3>
+    <p>운송장 상태가 바뀌면 여러 소비자가 동시에 관심을 가진다. 한 이벤트를 다수 소비자에게 뿌리는 <strong>Fan-out(팬아웃, 확산)</strong>이 필요하다.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    SCAN["기사 앱 / 허브 스캐너\n(스캔 이벤트)"] -->|"중복 제거 + occurredAt 정렬"| ING["Ingest API"]
+    ING -->|"검증·멱등 처리"| K[("Kafka\ntracking-events 토픽")]
+    K --> SM["운송장 상태 머신\n(전이 반영)"]
+    K --> NOTI["고객 알림\n(SMS/푸시)"]
+    K --> ETA["ETA 재추정\n(도착예정 갱신)"]
+    K --> OMS["OMS 상태 동기화\n(주문 배송 상태)"]
+    K --> DW[("분석/DW\n(OTD·구간지연 집계)")]
+
+    style K fill:#ede9fe,stroke:#8b5cf6,stroke-width:2px
+    style SCAN fill:#fef3c7,stroke:#f59e0b
+      </div>
+      <div class="cap">TrackingEvent Fan-out — Kafka 토픽 하나를 상태머신·알림·ETA·OMS·DW가 각자 구독</div>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 순서 보장 vs 처리량</div>
+      "같은 운송장의 이벤트는 순서가 보장돼야 하는데, 전체 처리량도 높여야 한다." → Kafka에서 <strong>파티션 키를 <code>waybillNo</code></strong>로 두면 같은 운송장 이벤트는 한 파티션에 모여 순서가 보장되고, 운송장끼리는 병렬 처리된다. 단 파티션 키 편중(핫 운송장)과 리파티셔닝 비용을 함께 설명할 수 있어야 한다. <span class="deep">🔥 Deep-dive</span>
+    </div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — At-least-once는 기본값</div>
+      메시지 큐는 보통 <strong>At-least-once(최소 1회) 전달</strong>이다. 즉 중복은 "예외"가 아니라 "정상"이다. 소비자(상태머신·알림)는 반드시 멱등하게 설계해야 한다. 그렇지 않으면 같은 고객에게 "배송완료" 알림이 두 번 가는 사고가 난다.
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section id="cases">
+    <h2>7. 사례 비교 — 네트워크 전략별 물류사</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>사례</th><th>네트워크 전략</th><th>TMS 특징</th></tr></thead>
+        <tbody>
+          <tr><td><strong>CJ대한통운</strong></td><td>허브앤스포크 표준 (옥천 메가허브)</td><td>전국 화물을 중앙 허브에 집결·환적. 택배 표준 모델, 간선 통합으로 단가 최적화</td></tr>
+          <tr><td><strong>쿠팡 (CLS)</strong></td><td>수직통합 + 권역 집중 (자체 캠프)</td><td>FC(풀필먼트센터)→캠프→직고용 기사까지 자체 운영. 새벽/당일배송 위해 권역 직배 비중↑(허브 우회 최소화)</td></tr>
+          <tr><td><strong>FedEx</strong></td><td>항공 허브앤스포크 (Memphis 슈퍼허브)</td><td>야간 항공 집결·분류·재출발. 글로벌 익일 특송의 원형. 허브 의존도 극대화</td></tr>
+          <tr><td><strong>DHL</strong></td><td>다중 허브(Multi-hub) 글로벌망</td><td>지역별 거점 허브 분산으로 단일 허브 SPOF 완화, 국가 간 환적 최적화</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 사례가 말하는 핵심</div>
+      CJ대한통운/FedEx는 <strong>허브 통합으로 규모의 경제</strong>를 취하고, 쿠팡 CLS는 <strong>수직통합 + 권역 직배로 리드타임</strong>을 취한다. 정답은 없다 — <strong>물량 밀도와 SLA 목표</strong>가 네트워크 형태를 결정한다. 물량이 충분히 두꺼운 권역은 직배(P2P)가, 얇은 권역은 허브 통합이 유리하다.
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section id="design">
+    <h2>8. 백엔드 시스템 디자인 연결</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>TMS 이슈</th><th>설계 패턴</th><th>이유</th></tr></thead>
+        <tbody>
+          <tr><td>TrackingEvent 대량 확산</td><td><strong>Kafka Fan-out</strong></td><td>토픽 1개를 상태머신·알림·ETA·OMS·DW가 독립 구독, 소비자 추가가 무중단</td></tr>
+          <tr><td>중복 스캔 / At-least-once</td><td><strong>Idempotency(멱등성)</strong></td><td>이벤트 ID 기반 De-dup, 상태 전이 멱등화로 중복 알림·이중 전이 방지</td></tr>
+          <tr><td>TMS↔OMS 상태 동기화</td><td><strong>CDC + 최종 일관성(Eventual Consistency)</strong></td><td>운송 상태 변경을 이벤트로 흘려 OMS 주문 상태에 비동기 반영, 강결합 회피</td></tr>
+          <tr><td>운송장 상태 전이 신뢰성</td><td><strong>Transactional Outbox</strong></td><td>DB 상태 변경과 이벤트 발행의 원자성 보장 (전이는 됐는데 이벤트 유실 방지)</td></tr>
+          <tr><td>오프라인 기사 앱 동기화</td><td><strong>occurredAt 기준 정렬 + 배치 sync</strong></td><td>지연 도착 이벤트를 발생 시각 기준으로 재정렬해 상태 꼬임 방지</td></tr>
+          <tr><td>추적 조회 폭주</td><td><strong>CQRS 읽기 모델</strong></td><td>고객 추적 화면용 비정규화 뷰를 쓰기 모델과 분리</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 정리 — 한 문장</div>
+      "TMS는 운송장(Waybill)을 <strong>허브 경유로 IN_TRANSIT이 반복되는 상태 머신</strong>으로 관리하고, 네트워크는 <strong>허브앤스포크(비용·N링크) vs P2P(속도·N²링크)의 Trade-off</strong>이며, 한 화물은 <strong>집화→간선→환적→지선→말단</strong> Leg를 통과하고, 배차는 <strong>NP-hard VRP의 휴리스틱 최적화</strong>이며, TrackingEvent는 <strong>Kafka Fan-out + 멱등성 + occurredAt 정렬</strong>로 처리한다."
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section id="quiz">
+    <h2>9. 이해도 확인 질문</h2>
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>운송장(Waybill) 상태 머신에서 <code>IN_TRANSIT</code>이 자기 자신으로 반복 전이하도록 설계하는 이유를 허브앤스포크 네트워크와 연결해 설명하고, "순서가 뒤바뀐 스캔 이벤트"가 도착했을 때 상태 판정을 어떻게 보정해야 하는지 서술해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div><textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>거점이 50개일 때 허브앤스포크와 포인트투포인트(P2P)의 노선 수를 각각 추정하고, 적재효율·리드타임·단위 운송비·장애 전파 관점에서 두 방식의 Trade-off를 비교한 뒤, 어떤 조건에서 P2P 직배가 더 유리한지 설명해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div><textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>전국 기사 앱이 At-least-once로 보내는 TrackingEvent 스트림을 Kafka로 처리한다고 할 때, (1) 중복 이벤트 멱등 처리, (2) 같은 운송장 이벤트의 순서 보장, (3) 오프라인 동기화로 지연 도착하는 과거 시각 이벤트 처리를 각각 어떻게 설계할지 설명해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div><textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <!-- 10 -->
+  <section id="next">
+    <h2>10. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">logistics-domain-coach</div><div class="topic">라스트마일 심화 — 배송 캠프 · 권역 · 재방문 정책</div></div>
+      <div class="next-card"><div class="coach">system-design-coach</div><div class="topic">실시간 화물 추적 시스템 설계 (Design 모드)</div></div>
+      <div class="next-card"><div class="coach">backend-architecture-coach</div><div class="topic">TrackingEvent Outbox + CDC로 OMS 동기화</div></div>
+      <div class="next-card"><div class="coach">cs-fundamentals-coach</div><div class="topic">VRP/TSP — 그래프 알고리즘과 휴리스틱</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'default',
+    themeVariables: { primaryColor: '#dbeafe', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#fef3c7', tertiaryColor: '#ede9fe', fontSize: '13px' },
+    flowchart: { curve: 'basis', padding: 20 }, sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  const NS = 'jobStudy::logistics::03-tms-transportation::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(NS + id);
+    if (saved) el.value = saved;
+    let timer;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(NS + id, el.value);
+        const badge = document.getElementById('saved' + (i + 1));
+        if (badge) { badge.classList.add('show'); setTimeout(() => badge.classList.remove('show'), 1800); }
+      }, 400);
+    });
+  });
+
+  function copyForFeedback() {
+    const questions = [
+      'Q1. 운송장 상태머신에서 IN_TRANSIT 자가전이를 허브앤스포크와 연결해 설명하고, 순서 뒤바뀐 스캔 이벤트의 상태 판정 보정 방법을 설명해보세요.',
+      'Q2. 거점 50개 기준 허브앤스포크 vs P2P 노선 수를 추정하고, 적재효율·리드타임·운송비·장애전파 Trade-off와 P2P 직배가 유리한 조건을 설명해보세요.',
+      'Q3. At-least-once TrackingEvent 스트림을 Kafka로 처리할 때 (1)멱등 중복 처리 (2)운송장별 순서 보장 (3)오프라인 지연 이벤트 처리를 각각 설계해보세요.'
+    ];
+    const lines = ['[TMS 운송관리 심화 — 이해도 확인 Q&A 피드백 요청]\n세션: logistics/03-tms-transportation.html\n'];
+    ansIds.forEach((id, i) => {
+      const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)';
+      lines.push(questions[i]); lines.push('A' + (i + 1) + '. ' + ans + '\n');
+    });
+    const text = lines.join('\n');
+    const resultEl = document.getElementById('copyResult');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.';
+      }).catch(() => fallbackCopy(text, resultEl));
+    } else { fallbackCopy(text, resultEl); }
+  }
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.'; }
+    catch { el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.'; }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

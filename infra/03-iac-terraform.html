@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IaC / Terraform — 코드형 인프라 · 상태 · GitOps</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; font-size: 14.5px; line-height: 1.75; }
+    #sidebar { width: 248px; min-height: 100vh; background: var(--card); border-right: 1px solid var(--border); padding: 24px 0; position: fixed; left: 0; top: 0; overflow-y: auto; z-index: 50; }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a { display: block; padding: 7px 20px; font-size: 13px; color: var(--muted); text-decoration: none; border-left: 3px solid transparent; transition: all .15s; }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip { font-size: 12px; font-weight: 500; padding: 3px 11px; border-radius: 20px; background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 { font-size: 20px; font-weight: 700; padding-bottom: 12px; border-bottom: 2px solid var(--border); margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+    .diagram-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px 20px; margin: 18px 0; overflow-x: auto; text-align: center; }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    .sys-card { border-radius: 10px; padding: 18px 22px; margin-bottom: 20px; border-left: 4px solid; }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .sys-card.lm  { background: var(--lm);  border-color: var(--lm-b);  color: var(--lm-t);  }
+    .sys-card.ret { background: var(--ret); border-color: var(--ret-b); color: var(--ret-t); }
+    .callout { border-radius: 8px; padding: 13px 16px; margin: 14px 0; border-left: 4px solid; font-size: 13.5px; }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+    pre { background: #1e293b; color: #e2e8f0; border-radius: 8px; padding: 16px 18px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.6; margin: 14px 0; }
+    pre code { background: none; color: inherit; padding: 0; }
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea { width: 100%; min-height: 110px; border: 1.5px solid var(--border); border-radius: 8px; padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif; font-size: 14px; line-height: 1.7; resize: vertical; background: #fafcff; color: var(--text); transition: border-color .15s, background .15s; }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+    .feedback-box { background: var(--card); border: 1.5px dashed var(--border); border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center; }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; transition: background .15s; }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">☁️ infra-coach</div>
+    <h2>IaC / Terraform<br/>상태 · 모듈 · GitOps</h2>
+  </div>
+  <div class="group-label">기초</div>
+  <a href="#why-iac">1. 왜 IaC인가</a>
+  <a href="#workflow">2. plan / apply 워크플로</a>
+  <a href="#state">3. State(상태) 관리</a>
+  <div class="group-label">실무</div>
+  <a href="#module">4. 모듈 / 재사용</a>
+  <a href="#idempotency">5. 멱등성 / 불변 인프라</a>
+  <a href="#drift">6. Drift 관리</a>
+  <div class="group-label">확장</div>
+  <a href="#tools">7. Terraform vs CDK vs Pulumi</a>
+  <a href="#gitops">8. GitOps 개요</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+
+<main>
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">infra-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">IaC / Terraform</span>
+    </div>
+    <h1>IaC / Terraform<br>코드형 인프라 · 상태 · 멱등성 · GitOps</h1>
+    <p>"인프라를 손으로 콘솔에서 만들면 안 되는 이유"부터 시작해, Terraform의 핵심인 <strong>State(상태)</strong>와 <strong>멱등성(Idempotency)</strong>, 그리고 GitOps까지. <span class="deep">🔥 Deep-dive</span>는 면접 심화.</p>
+  </header>
+
+  <!-- 1 -->
+  <section id="why-iac">
+    <h2>1. 왜 IaC(Infrastructure as Code, 코드형 인프라)인가</h2>
+    <div class="sys-card oms">
+      <div class="sys-label">한 줄 정의</div>
+      <div class="sys-title">인프라(VPC·서버·DB·보안그룹)를 <em>코드로 선언</em>해, 버전관리·리뷰·재현·자동화 대상으로 만든다.</div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>콘솔 수동(ClickOps)</th><th>IaC (Terraform)</th></tr></thead>
+        <tbody>
+          <tr><td>재현성</td><td>"누가 뭘 클릭했는지" 모름</td><td>코드로 동일 환경 재생성</td></tr>
+          <tr><td>변경 추적</td><td>없음 (감사 불가)</td><td>Git 히스토리 = 변경 이력</td></tr>
+          <tr><td>리뷰</td><td>불가</td><td>PR 리뷰로 사전 검증</td></tr>
+          <tr><td>장애 복구</td><td>기억에 의존</td><td><code>apply</code>로 재구축</td></tr>
+          <tr><td>휴먼 에러</td><td>잦음</td><td><code>plan</code>으로 사전 차단</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트</div>
+      "왜 콘솔로 안 하고 Terraform을 쓰나?" → 핵심 키워드는 <strong>재현성·버전관리·코드 리뷰·감사 추적</strong>. 한 단계 더: "DR(재해 복구) 리전을 코드 재사용으로 빠르게 구성할 수 있고, 변경을 <code>plan</code>으로 미리 검토해 휴먼 에러를 막는다"까지.
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="workflow">
+    <h2>2. plan / apply 워크플로</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant Dev as 개발자
+    participant TF as Terraform CLI
+    participant State as State 백엔드
+    participant AWS as AWS API
+
+    Dev->>TF: terraform plan
+    TF->>State: 현재 상태 읽기
+    TF->>AWS: 실제 리소스 조회 (refresh)
+    TF-->>Dev: 차이(diff) 출력 (생성/변경/삭제)
+    Note over Dev: 👀 plan 리뷰 — 필수!
+    Dev->>TF: terraform apply
+    TF->>AWS: 변경 적용
+    TF->>State: 새 상태 저장
+      </div>
+      <div class="cap">plan(미리보기) → 리뷰 → apply(적용). plan 없이 apply하면 사고 — 면접에서 강조할 것</div>
+    </div>
+    <pre><code># 표준 워크플로
+terraform init      # 백엔드·프로바이더 초기화
+terraform plan      # 변경 미리보기 (생성 +, 변경 ~, 삭제 -)
+terraform apply     # 실제 적용 (plan 결과 재확인 후 yes)
+terraform destroy   # 리소스 정리</code></pre>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — plan의 함정 신호</div>
+      <code>plan</code> 출력에서 <strong>destroy/recreate(삭제 후 재생성)</strong> 표시(<code>-/+</code>)를 무심코 지나치면, RDS·EBS가 통째로 날아갈 수 있다. 어떤 속성 변경은 in-place가 아니라 <strong>리소스 교체</strong>를 유발한다. plan을 반드시 읽고, 위험 리소스엔 <code>prevent_destroy</code> lifecycle을 건다. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="state">
+    <h2>3. State(상태) — Terraform의 심장</h2>
+    <div class="sys-card tms">
+      <div class="sys-label">왜 중요한가</div>
+      <div class="sys-title">State 파일은 "코드가 선언한 리소스 ↔ 실제 클라우드 리소스 ID"의 <em>매핑 장부</em>. 이게 깨지면 Terraform이 현실을 못 본다.</div>
+    </div>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    Code["main.tf\n(원하는 상태)"] --> TF["Terraform"]
+    AWS["실제 AWS 리소스\n(현재 상태)"] --> TF
+    TF <--> State["State 파일\n(매핑 장부)"]
+    State -.->|"Remote Backend"| S3[("S3 + DynamoDB Lock")]
+
+    style State fill:#ede9fe,stroke:#8b5cf6
+    style S3 fill:#fef3c7,stroke:#f59e0b
+      </div>
+      <div class="cap">State는 코드·실제·장부 3자 간 진실. 팀 작업이면 반드시 Remote Backend + Lock</div>
+    </div>
+    <h3>Local State vs Remote Backend</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>Local (로컬 파일)</th><th>Remote Backend (S3 + DynamoDB)</th></tr></thead>
+        <tbody>
+          <tr><td>협업</td><td>불가 (각자 다른 상태)</td><td>공유 상태</td></tr>
+          <tr><td>동시 실행</td><td>충돌 위험</td><td><strong>State Lock</strong>으로 직렬화</td></tr>
+          <tr><td>민감정보</td><td>로컬 디스크 노출</td><td>암호화 저장 + 접근 제어</td></tr>
+          <tr><td>권장도</td><td>개인 실습만</td><td><strong>팀/프로덕션 필수</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — State 충돌</div>
+      <strong>Remote backend + lock 없이 팀이 동시 작업</strong>하면, 두 사람이 동시에 apply해 State가 깨지고 리소스가 꼬인다. S3에 State를 두고 <strong>DynamoDB로 Lock</strong>을 걸면 동시 apply가 직렬화된다. 또한 State 파일엔 DB 비밀번호 등 평문이 들어갈 수 있으니 절대 Git에 커밋 금지. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section id="module">
+    <h2>4. 모듈(Module) — 재사용</h2>
+    <p><strong>Module(모듈)</strong>은 리소스 묶음을 함수처럼 재사용하는 단위. 같은 VPC 구조를 dev/staging/prod에 반복하지 말고 모듈로 추출한다.</p>
+    <pre><code>module "vpc" {
+  source = "./modules/vpc"
+  cidr   = "10.0.0.0/16"
+  azs    = ["ap-northeast-2a", "ap-northeast-2c"]
+  env    = "prod"
+}</code></pre>
+    <ul>
+      <li><strong>Workspace</strong>: 같은 코드로 여러 환경 상태를 분리 (단, 복잡 환경엔 디렉토리 분리가 더 명확).</li>
+      <li><strong>Terragrunt</strong>: Terraform 위 래퍼. DRY(반복 제거)·backend 설정 자동화·환경별 변수 관리에 유리.</li>
+    </ul>
+    <div class="callout tip">
+      <div class="c-title">💡 실무 권장</div>
+      모듈을 너무 잘게 쪼개면 추상화 비용이 커진다. <strong>"네트워크 / 컴퓨트 / 데이터"</strong> 정도의 굵은 경계로 모듈화하고, 환경별 차이는 변수로 흡수하는 게 유지보수에 좋다.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="idempotency">
+    <h2>5. 멱등성(Idempotency) / 불변 인프라(Immutable Infrastructure)</h2>
+    <div class="sys-card wms">
+      <div class="sys-label">멱등성이란</div>
+      <div class="sys-title"><strong>같은 코드를 몇 번 apply해도 결과가 동일</strong>하다. 이미 원하는 상태면 아무것도 안 바꾼다("No changes").</div>
+    </div>
+    <p>Terraform이 멱등한 이유: 매번 명령을 쌓는 게 아니라 <strong>"원하는 상태"와 "현재 상태"의 차이만 계산</strong>해 적용하기 때문. 이것이 명령형 셸 스크립트(append-only)와의 결정적 차이다.</p>
+    <h3>불변 인프라 원칙</h3>
+    <ul>
+      <li>서버를 <strong>수정(mutate)하지 말고 교체(replace)</strong>한다. 패치는 새 AMI/이미지를 굽고 인스턴스를 갈아끼운다.</li>
+      <li>장점: 환경 드리프트 제거, 롤백이 "이전 이미지로 교체"로 단순, 재현성↑.</li>
+    </ul>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트</div>
+      "멱등성이 왜 중요?" → 재시도 안전성. CI 파이프라인이 같은 apply를 중복 실행해도 인프라가 망가지지 않는다. 불변 인프라와 엮으면: "서버를 고치는 대신 교체하니 '내 서버에선 됐는데' 문제(드리프트)가 사라진다."
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="drift">
+    <h2>6. Drift(드리프트) 관리</h2>
+    <p><strong>Drift</strong> = 코드(State)와 실제 리소스가 어긋난 상태. 보통 누군가 콘솔에서 수동 변경해 발생한다.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> InSync : apply 완료
+    InSync --> Drifted : 누군가 콘솔 수동 변경
+    Drifted --> Detected : plan/drift detection으로 발견
+    Detected --> InSync : apply로 코드 상태 강제 복원
+    Detected --> CodeUpdate : 변경이 정당하면 코드에 반영
+    CodeUpdate --> InSync
+      </div>
+      <div class="cap">Drift 라이프사이클 — 수동 변경 금지 + 주기적 탐지 + 코드로 수렴</div>
+    </div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정</div>
+      "급해서 콘솔에서 SG 규칙 하나만 손댐" → 다음 apply 때 Terraform이 그걸 <strong>되돌려버려</strong> 장애 재발. 원칙은 <strong>"콘솔 수동 변경 금지"</strong>. 부득이하면 즉시 코드에 반영하거나, 주기적 drift detection(예: Atlantis, terraform plan 정기 실행)으로 잡는다.
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section id="tools">
+    <h2>7. Terraform vs CDK vs Pulumi</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>도구</th><th>언어</th><th>강점</th><th>약점/선택 기준</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Terraform</strong></td><td>HCL (선언형 DSL)</td><td>멀티클라우드, 생태계·모듈 풍부, 표준</td><td>복잡 로직엔 표현력 한계</td></tr>
+          <tr><td><strong>AWS CDK</strong></td><td>TS/Python/Java</td><td>AWS 깊은 통합, 친숙한 언어·추상화</td><td>AWS 종속 (CloudFormation 기반)</td></tr>
+          <tr><td><strong>Pulumi</strong></td><td>TS/Python/Go</td><td>범용 언어 + 멀티클라우드</td><td>생태계가 Terraform보다 작음</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 선택 기준</div>
+      멀티클라우드·팀 표준·인프라 전담이면 <strong>Terraform</strong>. AWS 단일 + 개발자가 직접 인프라 코드를 쓰고 친숙한 언어를 원하면 <strong>CDK</strong>. "쿨하다고 Pulumi" 같은 결정은 생태계 성숙도·팀 역량을 먼저 따져라.
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section id="gitops">
+    <h2>8. GitOps 개요</h2>
+    <div class="sys-card lm">
+      <div class="sys-label">한 줄 정의</div>
+      <div class="sys-title"><strong>Git을 단일 진실 원천(Single Source of Truth)</strong>으로 삼아, 선언된 상태를 자동 동기화(주로 Pull 기반)한다.</div>
+    </div>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    Dev["개발자"] -->|"PR + merge"| Git["Git 저장소\n(원하는 상태)"]
+    Git -->|"감지 & Pull"| Agent["ArgoCD / Flux\n(클러스터 내 에이전트)"]
+    Agent -->|"동기화"| K8s["Kubernetes 클러스터\n(실제 상태)"]
+    K8s -.->|"Drift 감지 → 자동 복원"| Agent
+
+    style Git fill:#dcfce7,stroke:#22c55e
+    style Agent fill:#ede9fe,stroke:#8b5cf6
+    style K8s fill:#dbeafe,stroke:#3b82f6
+      </div>
+      <div class="cap">GitOps — Git에 머지하면 ArgoCD가 클러스터를 그 상태로 수렴. 배포가 곧 Git 커밋</div>
+    </div>
+    <h3>Push 배포 vs Pull(GitOps) 배포</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>Push (CI가 클러스터에 kubectl apply)</th><th>Pull (GitOps, ArgoCD)</th></tr></thead>
+        <tbody>
+          <tr><td>자격증명</td><td>CI가 클러스터 접근 권한 보유 (위험)</td><td>에이전트가 클러스터 안에서 Pull (외부 노출↓)</td></tr>
+          <tr><td>Drift 처리</td><td>수동</td><td>자동 감지·복원</td></tr>
+          <tr><td>롤백</td><td>스크립트</td><td><strong>Git revert</strong>로 자동</td></tr>
+          <tr><td>감사</td><td>분산</td><td>Git 히스토리 일원화</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트</div>
+      "GitOps가 일반 CI/CD 배포와 뭐가 다른가?" → <strong>선언적 + Pull 기반 + Git이 진실</strong>. 롤백이 <code>git revert</code>로 단순화되고, 클러스터 자격증명을 CI에 안 줘도 돼 보안이 낫다. 단, IaC(Terraform)와 GitOps(ArgoCD)는 계층이 다름 — 인프라 프로비저닝은 Terraform, 앱/매니페스트 배포는 ArgoCD로 역할 분담하는 게 일반적.
+    </div>
+  </section>
+
+  <!-- Quiz -->
+  <section id="quiz">
+    <h2>9. 이해도 확인 질문</h2>
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>팀원 3명이 같은 Terraform 코드로 인프라를 관리합니다. <strong>State를 어디에 어떻게 두어야</strong> 동시 apply 충돌과 비밀정보 유출을 막을 수 있는지, 구체 구성(백엔드·Lock)으로 답해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div><textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p><code>terraform plan</code> 결과에 운영 RDS가 <code>-/+ (destroy then create)</code>로 표시됐습니다. 무슨 일이 일어나는 것이며, <strong>데이터 손실을 막기 위해</strong> 어떤 조치를 취해야 하는지 설명해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div><textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>운영 중 누군가 콘솔에서 보안그룹을 수동 변경했습니다(Drift). 다음 정기 <code>apply</code>가 이를 되돌려 장애가 났다면, <strong>왜 그랬고 어떻게 예방</strong>할지 멱등성·불변 인프라·drift detection 개념으로 답해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div><textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>10. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">infra-coach</div><div class="topic">CI/CD · 배포 전략 (04)</div></div>
+      <div class="next-card"><div class="coach">infra-coach</div><div class="topic">관측성 스택 (05)</div></div>
+      <div class="next-card"><div class="coach">infra-coach</div><div class="topic">Kubernetes 핵심 (02)</div></div>
+      <div class="next-card"><div class="coach">backend-architecture-coach</div><div class="topic">멱등성(Idempotency) 설계 심화</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'default',
+    themeVariables: { primaryColor: '#dbeafe', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#fef3c7', tertiaryColor: '#ede9fe', fontSize: '13px' },
+    flowchart: { curve: 'basis', padding: 20 }, sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { navLinks.forEach(a => a.classList.remove('active')); const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`); if (active) active.classList.add('active'); } });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  const NS = 'jobStudy::infra::03-iac-terraform::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(NS + id);
+    if (saved) el.value = saved;
+    let timer;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(NS + id, el.value);
+        const badge = document.getElementById('saved' + (i + 1));
+        if (badge) { badge.classList.add('show'); setTimeout(() => badge.classList.remove('show'), 1800); }
+      }, 400);
+    });
+  });
+  function copyForFeedback() {
+    const questions = [
+      'Q1. 팀 3명이 같은 Terraform 코드를 관리할 때 State를 어디에 어떻게 두어야 동시 apply 충돌·비밀정보 유출을 막을지, 백엔드·Lock 구성으로 답해보세요.',
+      'Q2. plan에서 운영 RDS가 -/+ (destroy then create)로 표시됐을 때 무슨 일이 일어나며 데이터 손실을 막을 조치는 무엇인지 설명해보세요.',
+      'Q3. 콘솔 수동 변경(Drift)을 정기 apply가 되돌려 장애가 난 이유와 예방책을 멱등성·불변 인프라·drift detection으로 답해보세요.'
+    ];
+    const lines = ['[IaC / Terraform — 이해도 확인 Q&A 피드백 요청]\n세션: infra/03-iac-terraform.html\n'];
+    ansIds.forEach((id, i) => {
+      const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)';
+      lines.push(questions[i]); lines.push('A' + (i + 1) + '. ' + ans + '\n');
+    });
+    const text = lines.join('\n');
+    const resultEl = document.getElementById('copyResult');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => { resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.'; }).catch(() => fallbackCopy(text, resultEl));
+    } else { fallbackCopy(text, resultEl); }
+  }
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.'; }
+    catch { el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.'; }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

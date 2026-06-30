@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>캐싱(Caching) — 계층·패턴·Eviction·Redis·Stampede</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg); color: var(--text);
+      display: flex; min-height: 100vh;
+      font-size: 14.5px; line-height: 1.75;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 248px; min-height: 100vh;
+      background: var(--card); border-right: 1px solid var(--border);
+      padding: 24px 0; position: fixed; left: 0; top: 0;
+      overflow-y: auto; z-index: 50;
+    }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a {
+      display: block; padding: 7px 20px;
+      font-size: 13px; color: var(--muted);
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+
+    /* ── Main ── */
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+
+    /* ── Page header ── */
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip {
+      font-size: 12px; font-weight: 500;
+      padding: 3px 11px; border-radius: 20px;
+      background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+    }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+
+    /* ── Sections ── */
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 {
+      font-size: 20px; font-weight: 700;
+      padding-bottom: 12px; border-bottom: 2px solid var(--border);
+      margin-bottom: 24px; display: flex; align-items: center; gap: 8px;
+    }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+
+    /* ── Diagrams ── */
+    .diagram-wrap {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 28px 24px 20px;
+      margin: 18px 0; overflow-x: auto; text-align: center;
+    }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+
+    /* ── Tables ── */
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 13.5px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    /* ── System cards ── */
+    .sys-card {
+      border-radius: 10px; padding: 18px 22px;
+      margin-bottom: 20px; border-left: 4px solid;
+    }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .sys-card.lm  { background: var(--lm);  border-color: var(--lm-b);  color: var(--lm-t);  }
+    .sys-card.ret { background: var(--ret); border-color: var(--ret-b); color: var(--ret-t); }
+
+    /* ── Callouts ── */
+    .callout {
+      border-radius: 8px; padding: 13px 16px;
+      margin: 14px 0; border-left: 4px solid; font-size: 13.5px;
+    }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+
+    /* ── Badges ── */
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+
+    /* ── Q&A cards ── */
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+
+    /* ── Next steps ── */
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+
+    /* ── Q&A Input ── */
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea {
+      width: 100%; min-height: 110px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif;
+      font-size: 14px; line-height: 1.7; resize: vertical;
+      background: #fafcff; color: var(--text);
+      transition: border-color .15s, background .15s;
+    }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+
+    /* ── Feedback button section ── */
+    .feedback-box {
+      background: var(--card); border: 1.5px dashed var(--border);
+      border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center;
+    }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 8px; padding: 10px 22px;
+      font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════ SIDEBAR ══════════════════ -->
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🧩 system-design-coach</div>
+    <h2>캐싱(Caching)<br/>계층·패턴·Stampede</h2>
+  </div>
+  <div class="group-label">기초</div>
+  <a href="#why">1. 왜·어디에 캐시</a>
+  <a href="#patterns">2. 캐시 패턴 5종</a>
+  <a href="#eviction">3. Eviction 정책</a>
+  <div class="group-label">인프라</div>
+  <a href="#redis">4. Redis 핵심</a>
+  <a href="#cdn">5. CDN·캐시 무효화</a>
+  <a href="#stampede">6. Thundering Herd</a>
+  <div class="group-label">사례 & 연결</div>
+  <a href="#cases">7. 국내 빅테크·물류 사례</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+
+<!-- ══════════════════ MAIN ══════════════════ -->
+<main>
+
+  <!-- Page Header -->
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">system-design-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">Caching</span>
+    </div>
+    <h1>캐싱(Caching)<br>계층 · 패턴 · Eviction · Redis · Stampede</h1>
+    <p>"캐싱하면 빨라진다"는 누구나 안다. 면접에서 갈리는 건 <strong>일관성(Consistency)·무효화(Invalidation)·장애(Stampede)</strong>를 어떻게 다루느냐다. Deep-dive 지점은 <span class="deep">🔥 Deep-dive</span> 로 표시.</p>
+  </header>
+
+  <!-- ── Section 1 ── -->
+  <section id="why">
+    <h2>1. 캐시를 왜, 그리고 어디에</h2>
+
+    <p><strong>캐시(Cache)</strong>는 비싼 연산·느린 저장소의 결과를 빠른 저장소에 복제해 재사용하는 것이다. 핵심 동기는 두 가지다.</p>
+    <ul>
+      <li><strong>지연(Latency) 단축</strong>: DB 디스크 조회(SSD seek ≈ 0.1ms, 인덱스 미스 시 수~수십 ms) → 메모리 캐시 hit ≈ 0.1~1ms. <code>p99</code> tail latency를 끌어내린다.</li>
+      <li><strong>처리량(Throughput)·비용</strong>: origin(원본 DB)의 QPS(Queries Per Second, 초당 쿼리 수) 부하를 흡수. DB 한 대가 5,000 QPS 한계라면, hit rate 90% 캐시는 origin QPS를 1/10로 줄인다.</li>
+    </ul>
+
+    <h3>캐시는 어디에나 있다 — 다층(Multi-layer) 구조</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    U(["👤 사용자"])
+    BC["① Browser Cache\n로컬 디스크\nCache-Control / ETag"]
+    CDN["② CDN Edge\nCloudFront / Akamai\n정적 + 일부 동적"]
+    APP["③ App-level Cache\nLocal(Caffeine) +\nRemote(Redis)"]
+    DBC["④ DB Cache\nBuffer Pool /\nQuery Cache"]
+    DB[("Origin DB\nMySQL / Postgres")]
+
+    U --> BC --> CDN --> APP --> DBC --> DB
+
+    style BC fill:#dbeafe,stroke:#3b82f6
+    style CDN fill:#dcfce7,stroke:#22c55e
+    style APP fill:#ede9fe,stroke:#8b5cf6
+    style DBC fill:#fef3c7,stroke:#f59e0b
+    style DB fill:#fee2e2,stroke:#ef4444
+      </div>
+      <div class="cap">캐시 계층 — 사용자에 가까울수록 빠르고 싸지만, 무효화(invalidation) 제어가 어려워진다</div>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 팁 — "가장 빠른 캐시는 호출하지 않는 캐시"</div>
+      계층마다 hit rate × 비용 × 무효화 난이도가 다르다. <strong>Browser/CDN은 무효화가 가장 어렵고(이미 사용자 디스크에 박힘) latency 이득은 가장 크다.</strong> 변동이 잦은 데이터일수록 origin에 가까운 App/DB 계층에서, 정적 자산일수록 Edge에서 캐싱하는 게 정석이다.
+    </div>
+  </section>
+
+  <!-- ── Section 2 ── -->
+  <section id="patterns">
+    <h2>2. 캐시 패턴 5종 — 읽기/쓰기 경로 설계</h2>
+
+    <p>패턴 선택의 본질은 두 질문이다. <strong>(1) 캐시 미스(miss) 시 누가 DB를 읽고 채우나?</strong> <strong>(2) 쓰기(write)는 캐시·DB 중 어디를 먼저, 동기/비동기로?</strong></p>
+
+    <h3>Cache-aside (Lazy Loading) — 가장 흔한 기본형</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant App as Application
+    participant C as Cache (Redis)
+    participant DB as Origin DB
+
+    Note over App,DB: 읽기 — Cache Miss
+    App->>C: GET key
+    C-->>App: nil (miss)
+    App->>DB: SELECT ...
+    DB-->>App: row
+    App->>C: SET key, value, TTL
+    App-->>App: 응답 반환
+
+    Note over App,DB: 읽기 — Cache Hit
+    App->>C: GET key
+    C-->>App: value (hit)
+
+    Note over App,DB: 쓰기 — DB 갱신 후 캐시 무효화
+    App->>DB: UPDATE ...
+    App->>C: DEL key
+      </div>
+      <div class="cap">Cache-aside — 애플리케이션이 캐시와 DB를 직접 오케스트레이션. 쓰기는 보통 "DB 먼저, 캐시 DEL" (write-around 변형)</div>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — Cache-aside의 미묘한 경합(Race)</div>
+      "DB UPDATE 후 캐시 DEL" 사이에 다른 스레드가 <strong>옛 값을 읽어 캐시에 SET</strong>하면 stale 값이 다시 박힌다. 해결: 짧은 TTL 병행, <code>DEL</code> 대신 버전드 키, 또는 변경 직후 짧은 지연 후 재삭제(double-delete). 면접에선 "캐시는 갱신이 아니라 삭제(invalidate)한다"가 핵심 답.
+    </div>
+
+    <h3>패턴 비교표</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>패턴</th><th>읽기 동작</th><th>쓰기 동작</th><th>장점</th><th>단점 / 위험</th><th>적합 상황</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Cache-aside</strong><br>(Lazy loading)</td>
+            <td>miss 시 앱이 DB 읽고 캐시 채움</td>
+            <td>DB 쓰고 캐시 DEL</td>
+            <td>구현 단순, 캐시 장애 시 DB로 graceful fallback</td>
+            <td>최초 miss 지연, 위 race, stale 가능</td>
+            <td>읽기 多, 범용 기본값</td>
+          </tr>
+          <tr>
+            <td><strong>Read-through</strong></td>
+            <td>캐시 라이브러리가 miss 시 직접 DB 로드</td>
+            <td>(읽기 전용 관점)</td>
+            <td>앱 코드 단순화, 로딩 로직 일원화</td>
+            <td>캐시 계층에 DB 의존성 결합, 첫 요청 느림</td>
+            <td>읽기 캐시 추상화(예: Spring Cache)</td>
+          </tr>
+          <tr>
+            <td><strong>Write-through</strong></td>
+            <td>read-through와 짝</td>
+            <td>캐시에 쓰면 캐시가 <strong>동기로</strong> DB도 씀</td>
+            <td>캐시·DB 항상 일치(강한 일관성)</td>
+            <td>쓰기 지연↑(2곳 동기), 안 읽힐 데이터도 캐싱</td>
+            <td>읽기·쓰기 모두 잦고 일관성 중요</td>
+          </tr>
+          <tr>
+            <td><strong>Write-back</strong><br>(Write-behind)</td>
+            <td>캐시 우선</td>
+            <td>캐시에만 먼저 쓰고 DB는 <strong>비동기 배치</strong></td>
+            <td>쓰기 지연 최소, 쓰기 폭주 흡수·병합</td>
+            <td><strong>캐시 다운 시 데이터 유실</strong>, 일관성 약함</td>
+            <td>조회수·좋아요 등 유실 허용 카운터</td>
+          </tr>
+          <tr>
+            <td><strong>Write-around</strong></td>
+            <td>miss 시 채움(cache-aside와 동일)</td>
+            <td>DB에만 쓰고 캐시는 건드리지 않음</td>
+            <td>"한 번 쓰고 잘 안 읽는" 데이터 캐시 오염 방지</td>
+            <td>쓴 직후 읽으면 무조건 miss</td>
+            <td>로그·이력 등 write 후 즉시 안 읽는 데이터</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — Write-back 유실 위험</div>
+      "쓰기 성능 위해 Write-back 쓰겠다"고 답하면 면접관은 곧장 <strong>"캐시 노드가 죽으면 아직 DB에 안 내려간 쓰기는?"</strong>을 묻는다. 정답 방향: 유실 허용 데이터(좋아요 수)만 적용 / AOF·복제로 위험 완화 / 결제·재고 같은 정합성 필수 데이터엔 절대 금지. Trade-off를 명시하지 못하면 감점.
+    </div>
+  </section>
+
+  <!-- ── Section 3 ── -->
+  <section id="eviction">
+    <h2>3. Eviction(축출) 정책 — 메모리는 유한하다</h2>
+
+    <p>캐시 메모리가 차면 무엇을 버릴지 결정해야 한다. 정책 선택은 <strong>접근 패턴(temporal vs frequency locality)</strong>에 달렸다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>정책</th><th>버리는 기준</th><th>강점</th><th>약점</th><th>대표 쓰임</th></tr></thead>
+        <tbody>
+          <tr><td><strong>LRU</strong><br>(Least Recently Used)</td><td>가장 오래 안 쓰인 항목</td><td>시간 지역성(temporal locality)에 강함, 직관적</td><td>일회성 대량 스캔이 hot set을 밀어냄(scan 오염)</td><td>범용 1순위, Redis 기본 후보</td></tr>
+          <tr><td><strong>LFU</strong><br>(Least Frequently Used)</td><td>가장 적게 접근된 항목</td><td>꾸준히 인기 있는 항목 보존</td><td>과거 인기 항목이 자리 점유(aging 필요), 카운터 비용</td><td>인기 편중 큰 데이터(Redis <code>allkeys-lfu</code>)</td></tr>
+          <tr><td><strong>FIFO</strong></td><td>먼저 들어온 항목</td><td>구현 가장 단순</td><td>접근 빈도 무시 → hit rate 낮은 편</td><td>단순 큐형 캐시</td></tr>
+          <tr><td><strong>TTL</strong><br>(Time To Live)</td><td>만료 시각 지난 항목</td><td>stale 상한 보장, 시간 기반 자연 무효화</td><td>동시 만료 시 <strong>Stampede</strong> 유발</td><td>거의 모든 패턴과 병행(필수)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 팁 — 실무에선 TTL + LRU/LFU 조합</div>
+      TTL은 "정확성 상한(얼마나 stale을 허용하나)"을, LRU/LFU는 "메모리 압박 시 누구를 버리나"를 담당한다. 둘은 배타가 아니라 <strong>병행</strong>이다. Redis는 <code>maxmemory-policy</code>로 <code>allkeys-lru</code>, <code>allkeys-lfu</code>, <code>volatile-ttl</code>(TTL 가진 키 중 가까운 것부터) 등을 선택한다.
+    </div>
+  </section>
+
+  <!-- ── Section 4 ── -->
+  <section id="redis">
+    <h2>4. Redis 핵심 — 캐시의 사실상 표준</h2>
+
+    <div class="sys-card oms">
+      <div class="sys-label">왜 Redis인가</div>
+      <div class="sys-title">단일 스레드 기반 인메모리 자료구조 서버. 단순 GET/SET을 넘어 <em>자료구조 연산을 원자적으로</em> 제공하는 것이 강점.</div>
+    </div>
+
+    <h4>주요 자료구조와 캐시 활용</h4>
+    <ul>
+      <li><code>String</code> — 직렬화 객체, 카운터(<code>INCR</code> 원자 증가)</li>
+      <li><code>Hash</code> — 객체 필드 부분 갱신(전체 역직렬화 회피)</li>
+      <li><code>Sorted Set(ZSET)</code> — 랭킹/리더보드, 시간순 피드</li>
+      <li><code>Set</code> — 중복 제거, 멱등성 키 집합</li>
+      <li><code>List</code> — 큐, 최근 N개</li>
+      <li><code>Bitmap / HyperLogLog</code> — 대규모 카디널리티(UV) 근사</li>
+    </ul>
+
+    <h3>단일 스레드 모델(Single-thread)</h3>
+    <p>Redis의 명령 실행은 단일 스레드라 <strong>명령 단위 원자성</strong>이 공짜로 보장된다(락 불필요). 대신 <code>O(N)</code> 명령(<code>KEYS *</code>, 큰 <code>SMEMBERS</code>)이 이벤트 루프를 막아 전체 지연을 유발한다.</p>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — O(N) 명령이 루프를 막는다</div>
+      운영에서 <code>KEYS pattern*</code>은 금지. 대신 <code>SCAN</code>(커서 기반). 단일 스레드라 한 큰 명령이 모든 클라이언트를 정체시킨다. Big key(수십 MB 값)도 동일하게 위험.
+    </div>
+
+    <h3>영속성(Persistence) — RDB vs AOF</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>방식</th><th>원리</th><th>장점</th><th>단점</th></tr></thead>
+        <tbody>
+          <tr><td><strong>RDB</strong><br>(스냅샷)</td><td>주기적으로 메모리 전체를 덤프</td><td>파일 작음, 복구 빠름, fork로 메인 영향 적음</td><td>마지막 스냅샷 이후 쓰기 유실 가능</td></tr>
+          <tr><td><strong>AOF</strong><br>(Append Only File)</td><td>쓰기 명령을 로그로 추가</td><td>유실 최소(<code>fsync</code> 정책에 따라 1초~즉시)</td><td>파일 큼, 복구 느림, rewrite 필요</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>실무는 보통 <strong>RDB + AOF 병행</strong>. 다만 "캐시는 휘발성이어도 된다"는 관점에선 영속성을 끄고 origin을 single source of truth로 두기도 한다.</p>
+
+    <h3>분산 — Redis Cluster</h3>
+    <p>데이터를 <strong>16384개 해시 슬롯</strong>으로 나눠 노드에 분배(키의 CRC16 → 슬롯). 수평 확장과 슬롯 단위 리밸런싱이 가능. 단, <strong>멀티키 연산은 같은 슬롯에 있어야</strong> 하므로 <code>{user:123}:cart</code> 같은 hash tag로 같은 키 그룹을 한 슬롯에 모은다.</p>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — "Redis는 왜 빠른가?"</div>
+      단순히 "인메모리라서"는 절반짜리 답. (1) 메모리 + (2) 단일 스레드로 락·컨텍스트 스위치 비용 제거 + (3) I/O 멀티플렉싱(epoll) + (4) 효율적 자료구조 + (5) RESP 경량 프로토콜. 그리고 <strong>그 단일 스레드가 곧 O(N) 명령의 위험</strong>이라는 양면을 함께 말해야 시니어답다.
+    </div>
+  </section>
+
+  <!-- ── Section 5 ── -->
+  <section id="cdn">
+    <h2>5. CDN 캐싱과 캐시 무효화(Cache Invalidation)</h2>
+
+    <p><strong>CDN(Content Delivery Network)</strong>은 origin 콘텐츠를 전 세계 edge POP(Point of Presence)에 캐싱해 사용자와의 물리 거리를 줄인다(대륙 간 RTT ≈ 150ms → edge hit는 수~수십 ms). 정적 자산(JS/CSS/이미지)이 1차 대상이지만, 캐시 가능한 API 응답도 edge에 둘 수 있다.</p>
+
+    <h4>제어 헤더</h4>
+    <ul>
+      <li><code>Cache-Control: max-age, s-maxage, no-cache, private/public</code> — 캐시 수명·범위</li>
+      <li><code>ETag / If-None-Match</code> — 변경 없으면 <code>304 Not Modified</code>(본문 절약)</li>
+      <li><code>Vary</code> — 캐시 키 분기(언어·인코딩 등)</li>
+    </ul>
+
+    <h3>무효화 전략 — "캐시 무효화는 어렵다"</h3>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 단골 — 컴퓨터과학 2대 난제</div>
+      Phil Karlton의 격언: <em>"There are only two hard things in Computer Science: cache invalidation and naming things."</em> 면접관이 이 말을 던지면, 핵심은 <strong>"언제·어떻게 stale을 끊을 것인가"</strong>를 구체 전략으로 답하는 것이다.
+    </div>
+    <ul>
+      <li><strong>TTL 만료(Passive)</strong> — 가장 단순, 그러나 그 시간만큼 stale 허용</li>
+      <li><strong>명시적 Purge(Active)</strong> — 변경 시 CDN API로 특정 URL/경로 무효화(전파에 수초~수십초)</li>
+      <li><strong>Versioned URL / Cache busting</strong> — <code>app.v37.js</code>, <code>?v=hash</code>로 키 자체를 바꿔 새 객체로 취급(가장 안전, 영구 캐시 가능)</li>
+      <li><strong>Key invalidation by tag</strong> — surrogate key/tag로 연관 객체를 묶어 일괄 무효화</li>
+    </ul>
+
+    <div class="callout tip">
+      <div class="c-title">💡 팁 — 무효화하지 말고 "키를 바꿔라"</div>
+      정적 자산은 무효화(purge)보다 <strong>해시 기반 파일명(content hash)</strong>이 정석이다. <code>main.a1b2c3.js</code>처럼 내용이 바뀌면 파일명이 바뀌므로 무효화 자체가 불필요해지고, 옛 버전은 TTL로 자연 소멸한다. 네이버·토스 프론트 빌드가 모두 이 방식.
+    </div>
+  </section>
+
+  <!-- ── Section 6 ── -->
+  <section id="stampede">
+    <h2>6. Thundering Herd / Cache Stampede <span class="deep">🔥 Deep-dive</span></h2>
+
+    <p><strong>Cache Stampede(쇄도)</strong> = 인기 키 하나가 만료되는 순간, 수많은 요청이 동시에 miss → 전부 origin으로 몰려 DB가 폭주하는 현상. <strong>Thundering Herd(천둥 같은 무리)</strong>라고도 한다. hit rate 99%여도 1%의 동시 만료가 DB를 무너뜨릴 수 있다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    EXP["🔑 인기 키 TTL 동시 만료\n예: 메인 배너 캐시 60초 TTL"]
+    EXP --> MISS["수천 요청 동시 MISS"]
+    MISS --> HERD["전부 origin DB로 쇄도\nThundering Herd"]
+    HERD --> OVER["💥 DB 커넥션 고갈\nCPU 폭주 → 연쇄 장애"]
+
+    subgraph FIX["완화책"]
+      direction LR
+      F1["① TTL Jitter\n만료 시각 ±랜덤 분산"]
+      F2["② Single-flight\n분산 락 — 1개만 origin 호출\n나머지는 대기/이전값"]
+      F3["③ Early Recompute\nTTL 임박 시 백그라운드 갱신\n(probabilistic)"]
+      F4["④ stale-while-revalidate\nstale 즉시 응답 +\n뒤에서 비동기 갱신"]
+    end
+
+    OVER -.해결.-> FIX
+
+    style EXP fill:#fef3c7,stroke:#f59e0b
+    style HERD fill:#fee2e2,stroke:#ef4444
+    style OVER fill:#fee2e2,stroke:#dc2626
+    style FIX fill:#f0fdf4,stroke:#16a34a
+      </div>
+      <div class="cap">Cache Stampede 발생 경로와 4가지 완화책 — 면접에선 최소 2개를 Trade-off와 함께 제시</div>
+    </div>
+
+    <h3>완화책 상세</h3>
+    <ul>
+      <li><strong>① TTL Jitter</strong> — TTL을 고정값이 아니라 <code>base ± random</code>으로. 같은 시각에 만든 캐시들이 한꺼번에 만료되는 걸 분산. 가장 싸고 즉효.</li>
+      <li><strong>② 분산 락 / Single-flight</strong> — miss 시 Redis <code>SET NX</code>로 락을 잡은 <strong>한 요청만</strong> origin을 호출하고 채운다. 나머지는 짧게 대기 후 캐시 재조회(또는 직전 stale 반환). Go의 <code>singleflight</code>, 자바 진영의 분산 락 패턴.</li>
+      <li><strong>③ Early Recompute(Probabilistic)</strong> — TTL이 다 되기 전에 확률적으로 미리 갱신(XFetch 알고리즘). 만료-순간 동시 miss 자체를 회피.</li>
+      <li><strong>④ stale-while-revalidate</strong> — 만료돼도 <strong>stale 값을 즉시 응답</strong>하고 백그라운드에서 갱신. HTTP <code>Cache-Control: stale-while-revalidate=N</code> 표준으로도 존재. 사용자 latency를 origin 갱신과 분리.</li>
+    </ul>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — Stampede를 아예 언급 안 하면 감점</div>
+      "Redis로 캐싱하겠습니다"에서 멈추면, 면접관은 "그 인기 키가 만료되는 순간 DB는?"으로 압박한다. <strong>Hot key + 동시 만료</strong>는 캐싱 설계의 필수 점검 항목. 또한 단순 락만 답하면 "락 잡은 요청이 느리거나 죽으면?"(락 타임아웃·stale 폴백)까지 이어진다.
+    </div>
+  </section>
+
+  <!-- ── Section 7 ── -->
+  <section id="cases">
+    <h2>7. 국내 빅테크 · 물류 사례</h2>
+
+    <div class="sys-card oms">
+      <div class="sys-label">배민 — 메뉴/가게 캐시</div>
+      <div class="sys-title">메뉴·가게 정보는 <strong>읽기:쓰기 비율이 압도적</strong>. 피크(점심·저녁) 트래픽을 Redis 캐시로 흡수하고, 사장님이 메뉴를 바꾸면 해당 가게 키만 무효화(event 기반 invalidation). 잘못된 가격 캐싱은 곧 사고이므로 TTL을 짧게+이벤트 무효화 병행.</div>
+    </div>
+
+    <div class="sys-card lm">
+      <div class="sys-label">네이버 — 검색 결과·정적 자산 CDN</div>
+      <div class="sys-title">검색 자동완성·인기 검색어처럼 변동은 있지만 짧은 stale을 허용하는 데이터는 edge/근접 캐시로. JS/CSS는 content-hash 파일명으로 사실상 영구 캐시 + 배포 시 키 교체.</div>
+    </div>
+
+    <div class="sys-card ret">
+      <div class="sys-label">토스 — 잔액 캐시와 일관성</div>
+      <div class="sys-title">잔액·계좌 같은 <strong>금융 정합성 필수</strong> 데이터는 Write-back·긴 TTL 금지가 정석. 캐시하더라도 매우 짧은 TTL + 쓰기 시 즉시 무효화, 혹은 "Read-your-writes(자기 쓰기 즉시 반영)"를 위해 갱신 직후엔 캐시 우회(원본 조회). 일관성 > 약간의 latency.</div>
+    </div>
+
+    <h3>물류 연결 — 라스트마일 추적 상태 캐싱</h3>
+    <p>운송장 추적(<code>TrackingStatus</code>) 조회는 고객이 하루에도 수십 번 새로고침하는 <strong>읽기 폭주</strong> 패턴이다. 매번 origin(이벤트 저장소)을 때리면 비효율.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant U as 고객 앱
+    participant API as Tracking API
+    participant C as Redis (status cache)
+    participant K as Kafka (TrackingEvent)
+    participant DB as Event Store
+
+    U->>API: GET /tracking/{waybillNo}
+    API->>C: GET status:{waybillNo}
+    C-->>API: 캐시된 최신 상태 (hit)
+    API-->>U: OUT_FOR_DELIVERY
+
+    Note over K,C: 새 이벤트 발생 시 캐시 갱신(이벤트 기반 무효화)
+    K->>API: TrackingEvent(Delivered)
+    API->>C: SET status:{waybillNo} = DELIVERED
+    Note over C: write-through 식 갱신 → 읽기는 항상 hit
+      </div>
+      <div class="cap">라스트마일 추적 — 읽기는 캐시 hit, 상태 변경 이벤트가 올 때만 캐시 갱신(이벤트 기반 무효화). 조회 폭주를 origin과 분리</div>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 팁 — 추적 캐시는 "이벤트가 쓰고, 조회가 읽는다"</div>
+      추적 상태는 변경 빈도가 조회 빈도보다 훨씬 낮다. 그래서 <strong>상태 변경 이벤트(Kafka)가 발생할 때만 캐시를 갱신(write-through 변형)</strong>하고, 폭주하는 조회는 전부 캐시 hit로 처리하는 게 정석. 동시 만료 stampede 방지를 위해 키별 TTL에 jitter를 준다.
+    </div>
+  </section>
+
+  <!-- ── Section 8: 이해도 확인 ── -->
+  <section id="quiz">
+    <h2>8. 이해도 확인 질문</h2>
+
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>Cache-aside에서 "DB를 갱신한 뒤 캐시를 <strong>삭제(DEL)</strong>"하는 이유는? 만약 "삭제 대신 새 값으로 <strong>갱신(SET)</strong>"하면 어떤 race condition이 생기는지, 그리고 그래도 남는 stale 위험을 어떻게 줄일지 설명해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>내 답변</span>
+          <span class="saved-badge" id="saved1">저장됨 ✓</span>
+        </div>
+        <textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>좋아요 카운터(유실 일부 허용)와 계좌 잔액(정합성 필수)에 각각 어떤 캐시 쓰기 패턴(Write-through / Write-back / Write-around)을 적용할지 고르고, 그 선택의 Trade-off를 정량·정성 근거로 설명해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>내 답변</span>
+          <span class="saved-badge" id="saved2">저장됨 ✓</span>
+        </div>
+        <textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>QPS 50,000을 받는 메인 배너 캐시(인기 hot key)가 60초 TTL로 동시 만료됩니다. Cache Stampede가 어떻게 발생하는지 설명하고, 완화책 2가지 이상을 각각의 Trade-off(지연·복잡도·stale 허용)와 함께 제시해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>내 답변</span>
+          <span class="saved-badge" id="saved3">저장됨 ✓</span>
+        </div>
+        <textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <!-- ── Section 9: 다음 학습 ── -->
+  <section id="next">
+    <h2>9. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card">
+        <div class="coach">system-design-coach</div>
+        <div class="topic">메시징·비동기 (06-messaging-async)</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">database-coach</div>
+        <div class="topic">읽기 부하 분산 — Replica·Read/Write 분리</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">system-design-coach</div>
+        <div class="topic">Rate Limiter 설계 (Redis 토큰 버킷)</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">backend-dev-coach</div>
+        <div class="topic">분산 락(Distributed Lock) 안전성 — Redlock 논쟁</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // ── Mermaid ──
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    themeVariables: {
+      primaryColor: '#dbeafe',
+      primaryTextColor: '#1e293b',
+      primaryBorderColor: '#3b82f6',
+      lineColor: '#64748b',
+      secondaryColor: '#fef3c7',
+      tertiaryColor: '#ede9fe',
+      fontSize: '13px'
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+
+  // ── Active sidebar link on scroll ──
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  // ── Q&A localStorage (key namespace per file) ──
+  const NS = 'jobStudy::system-design::05-caching::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+
+  // Load saved answers on page load
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(NS + id);
+    if (saved) el.value = saved;
+
+    // Auto-save with debounce
+    let timer;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(NS + id, el.value);
+        const badge = document.getElementById('saved' + (i + 1));
+        if (badge) {
+          badge.classList.add('show');
+          setTimeout(() => badge.classList.remove('show'), 1800);
+        }
+      }, 400);
+    });
+  });
+
+  // ── Copy Q&A for feedback ──
+  function copyForFeedback() {
+    const questions = [
+      'Q1. Cache-aside에서 DB 갱신 후 캐시를 삭제(DEL)하는 이유는? 삭제 대신 새 값으로 갱신(SET)하면 생기는 race condition과, 그래도 남는 stale 위험을 줄이는 방법을 설명해보세요.',
+      'Q2. 좋아요 카운터(유실 일부 허용)와 계좌 잔액(정합성 필수)에 각각 Write-through/Write-back/Write-around 중 무엇을 적용할지 고르고 Trade-off를 설명해보세요.',
+      'Q3. QPS 50,000 메인 배너 캐시(hot key)가 60초 TTL로 동시 만료될 때 Cache Stampede가 어떻게 발생하는지 설명하고, 완화책 2가지 이상을 각 Trade-off와 함께 제시해보세요.'
+    ];
+
+    const lines = ['[캐싱(Caching) — 이해도 확인 Q&A 피드백 요청]\n세션: system-design/05-caching.html\n'];
+    ansIds.forEach((id, i) => {
+      const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)';
+      lines.push(questions[i]);
+      lines.push('A' + (i + 1) + '. ' + ans + '\n');
+    });
+
+    const text = lines.join('\n');
+    const resultEl = document.getElementById('copyResult');
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.';
+      }).catch(() => fallbackCopy(text, resultEl));
+    } else {
+      fallbackCopy(text, resultEl);
+    }
+  }
+
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try {
+      document.execCommand('copy');
+      el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.';
+    } catch {
+      el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.';
+    }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

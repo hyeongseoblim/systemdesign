@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>풀필먼트 모델 · 재고 정합성 — 자체 FC vs 3PL vs 드랍쉬핑 · 멀티 창고 할당 · 안전재고</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; font-size: 14.5px; line-height: 1.75; }
+    #sidebar { width: 248px; min-height: 100vh; background: var(--card); border-right: 1px solid var(--border); padding: 24px 0; position: fixed; left: 0; top: 0; overflow-y: auto; z-index: 50; }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a { display: block; padding: 7px 20px; font-size: 13px; color: var(--muted); text-decoration: none; border-left: 3px solid transparent; transition: all .15s; }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip { font-size: 12px; font-weight: 500; padding: 3px 11px; border-radius: 20px; background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 { font-size: 20px; font-weight: 700; padding-bottom: 12px; border-bottom: 2px solid var(--border); margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+    .diagram-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px 20px; margin: 18px 0; overflow-x: auto; text-align: center; }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    .sys-card { border-radius: 10px; padding: 18px 22px; margin-bottom: 20px; border-left: 4px solid; }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .sys-card.lm  { background: var(--lm);  border-color: var(--lm-b);  color: var(--lm-t);  }
+    .sys-card.ret { background: var(--ret); border-color: var(--ret-b); color: var(--ret-t); }
+    .callout { border-radius: 8px; padding: 13px 16px; margin: 14px 0; border-left: 4px solid; font-size: 13.5px; }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea { width: 100%; min-height: 110px; border: 1.5px solid var(--border); border-radius: 8px; padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif; font-size: 14px; line-height: 1.7; resize: vertical; background: #fafcff; color: var(--text); transition: border-color .15s, background .15s; }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+    .feedback-box { background: var(--card); border: 1.5px dashed var(--border); border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center; }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; transition: background .15s; }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🚚 logistics-domain-coach</div>
+    <h2>풀필먼트 모델<br/>재고 정합성</h2>
+  </div>
+  <div class="group-label">핵심 개념</div>
+  <a href="#concept">1. 풀필먼트 개념</a>
+  <a href="#models">2. 풀필먼트 모델 비교</a>
+  <a href="#consistency">3. 재고 정합성</a>
+  <a href="#multi-wh">4. 멀티 창고 할당</a>
+  <a href="#safety-stock">5. 안전재고 · 재주문점</a>
+  <div class="group-label">사례 & 연결</div>
+  <a href="#cases">6. 사례 비교</a>
+  <a href="#design">7. 백엔드 시스템 디자인 연결</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">8. 이해도 확인 질문</a>
+  <a href="#next">9. 다음 학습 후보</a>
+</nav>
+
+<main>
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">logistics-domain-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">풀필먼트 심화</span>
+    </div>
+    <h1>풀필먼트 모델 · 재고 정합성<br>자체 FC · 3PL · 드랍쉬핑 · 멀티 창고 할당 · 안전재고</h1>
+    <p>판매자 물건을 입고→피킹→패킹→출고까지 대행하는 풀필먼트(Fulfillment)의 세 가지 운영 모델을 비교하고, 전산재고와 실물재고를 일치시키는 재고 정합성, 멀티 창고 할당의 동시성, 안전재고 산정을 백엔드 설계 관점에서 연결한다.</p>
+  </header>
+
+  <!-- 1 -->
+  <section id="concept">
+    <h2>1. 풀필먼트(Fulfillment) 개념 — 주문 이후 실물의 전 과정</h2>
+    <div class="sys-card wms">
+      <div class="sys-label">핵심 정의</div>
+      <div class="sys-title">Fulfillment(풀필먼트)는 판매자의 상품을 <em>창고 입고(Inbound)→보관(Storage)→피킹(Picking)→패킹(Packing)→출고(Outbound)</em>까지 대행하는, 주문 확정 이후 실물을 고객 손에 전달하기 위한 모든 물류 작업의 묶음이다.</div>
+    </div>
+    <p>OMS(Order Management System, 주문관리 시스템)가 "이 주문이 지금 어디까지 왔는가"라는 논리 상태를 책임진다면, 풀필먼트는 그 주문을 <strong>실물 작업으로 실현</strong>하는 영역이다. 흔히 FBA(Fulfillment by Amazon)처럼 "주문만 받으면 나머지는 우리가 다 한다"는 형태의 위탁 서비스로 상품화된다.</p>
+    <h3>풀필먼트의 범위 — 입고에서 출고까지</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    Vendor(["판매자/제조사"]) -->|입고| Inbound["Inbound\n검수·적치(Putaway)"]
+    Inbound --> Storage["Storage\n보관·재고 관리"]
+    Storage -->|주문 발생| Pick["Picking\n피킹"]
+    Pick --> Pack["Packing\n패킹·검수"]
+    Pack --> Out["Outbound\n출고·송장 부착"]
+    Out --> LM(["Last-mile\n라스트마일 배송"])
+
+    style Inbound fill:#fef3c7,stroke:#f59e0b
+    style Storage fill:#fef3c7,stroke:#f59e0b
+    style Pick fill:#fef3c7,stroke:#f59e0b
+    style Pack fill:#fef3c7,stroke:#f59e0b
+    style Out fill:#fef3c7,stroke:#f59e0b
+    style LM fill:#dcfce7,stroke:#22c55e
+      </div>
+      <div class="cap">풀필먼트 흐름 — 입고~출고는 WMS(주황) 영역, 라스트마일(초록)로 연결</div>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 용어 정리</div>
+      <strong>FC(Fulfillment Center, 풀필먼트 센터)</strong>는 단순 보관 창고가 아니라 <em>주문 단위 출고(B2C)</em>에 최적화된 창고다. 대량 입출고 위주의 일반 물류센터(DC, Distribution Center)와 달리, 낱개 피킹·당일/익일 출고 SLA(Service Level Agreement, 서비스 수준 협약)에 맞춰 설계된다.
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="models">
+    <h2>2. 풀필먼트 모델 비교 — 자체 FC vs 3PL vs 드랍쉬핑</h2>
+    <p>같은 "주문을 실물로 전달한다"는 목표라도, 누가 재고를 보유하고 누가 출고 작업을 하느냐에 따라 세 가지 모델로 갈린다.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    Order(["고객 주문"]) --> Branch{"풀필먼트 모델"}
+
+    Branch -->|"자체 FC"| Own["자사 보유·자사 운영\n재고: 자사 / 출고: 자사"]
+    Branch -->|"3PL"| TPL["재고: 자사 소유\n보관·출고: 외주 위탁"]
+    Branch -->|"드랍쉬핑"| Drop["재고 미보유\n판매자/제조사 직배송"]
+
+    Own --> OwnFC["쿠팡 로켓배송 FC"]
+    TPL --> TPLW["CJ대한통운 풀필먼트"]
+    Drop --> DropV["네이버 스마트스토어 위탁"]
+
+    style Own fill:#fef3c7,stroke:#f59e0b
+    style OwnFC fill:#fef3c7,stroke:#f59e0b
+    style TPL fill:#ede9fe,stroke:#8b5cf6
+    style TPLW fill:#ede9fe,stroke:#8b5cf6
+    style Drop fill:#dcfce7,stroke:#22c55e
+    style DropV fill:#dcfce7,stroke:#22c55e
+      </div>
+      <div class="cap">세 모델 비교 — 재고 보유 주체와 출고 운영 주체의 조합으로 구분</div>
+    </div>
+    <h3>상세 비교표</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>자체 FC(Fulfillment Center)</th><th>3PL(3자 물류, Third-Party Logistics)</th><th>드랍쉬핑(Dropshipping)</th></tr></thead>
+        <tbody>
+          <tr><td>초기 투자(CapEx)</td><td>매우 높음 (FC 부지·설비 수천억~조 단위)</td><td>중간 (입점비·보관료, 자산 미보유)</td><td>거의 0 (재고·창고 불필요)</td></tr>
+          <tr><td>단위당 마진</td><td>규모 달성 시 가장 높음 (변동비↓)</td><td>중간 (수수료 차감)</td><td>가장 낮음 (판매자 마진 종속, 5~15%)</td></tr>
+          <tr><td>통제력(품질·SLA)</td><td>최강 (피킹·패킹·배송 전 과정 직접 통제)</td><td>중간 (계약 SLA 범위 내)</td><td>약함 (출고·품질을 판매자에 의존)</td></tr>
+          <tr><td>확장성(Scalability)</td><td>느림 (FC 신설은 수년 리드타임)</td><td>빠름 (창고 빌려 즉시 확장)</td><td>가장 빠름 (SKU만 등록하면 됨)</td></tr>
+          <tr><td>리드타임(Lead time)</td><td>가장 짧음 (당일·익일, 권역 FC)</td><td>중간 (위탁사 출고 정책 의존)</td><td>가장 김 (판매자 출고 + 가변)</td></tr>
+          <tr><td>재고 정합성 책임</td><td>자사 (전 구간 직접 관리)</td><td>공유 (위탁사와 데이터 연동 필요)</td><td>판매자 (실재고 가시성 낮음)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 모델 선택 Trade-off</div>
+      "스타트업 커머스가 어떤 풀필먼트 모델로 시작해야 하나?" 정답은 없고 <strong>물동량·마진·통제 요구</strong>의 함수다. 초기엔 CapEx 0인 <strong>드랍쉬핑/3PL</strong>로 검증하고, 물동량이 임계점(예: 일 출고 수천 건)을 넘어 <em>단위 풀필먼트 비용이 3PL 수수료를 역전</em>하는 순간 <strong>자체 FC</strong>로 내재화하는 것이 일반적 경로다. "처음부터 자체 FC"는 대부분 과잉 투자다. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="consistency">
+    <h2>3. 재고 정합성 — 전산재고 vs 실물재고</h2>
+    <p>재고 정합성(Inventory Accuracy)이란 시스템에 기록된 <strong>전산재고(Book/System inventory)</strong>와 창고에 실제로 존재하는 <strong>실물재고(Physical inventory)</strong>가 일치하는 정도다. 이 둘이 어긋나면 "팔 수 있다고 약속했는데 물건이 없는" 오버셀(Oversell)이 발생한다.</p>
+    <h3>불일치는 왜 생기는가</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    Book["전산재고\n(System Inventory)"] -. 불일치 .-> Phys["실물재고\n(Physical Inventory)"]
+    Loss["손·망실(Shrinkage)\n파손·도난·분실"] --> Phys
+    MisPick["오피킹(Mis-pick)\n다른 SKU 출고"] --> Phys
+    SysErr["시스템 오류\n이중 차감·차감 누락"] --> Book
+    Unscanned["미스캔 입출고\n수기 처리"] --> Book
+
+    Phys --> Cycle["Cycle Count\n(주기 실사)"]
+    Cycle --> Adjust["재고 조정\n(Adjustment 이벤트)"]
+    Adjust --> Book
+
+    style Book fill:#fef3c7,stroke:#f59e0b
+    style Phys fill:#dcfce7,stroke:#22c55e
+    style Cycle fill:#dcfce7,stroke:#22c55e
+    style Adjust fill:#dcfce7,stroke:#22c55e
+      </div>
+      <div class="cap">정합성 깨짐의 원인과 보정 루프 — Cycle count로 실물을 측정해 전산을 조정</div>
+    </div>
+    <h3>주요 원인</h3>
+    <ul>
+      <li><strong>손·망실(Shrinkage)</strong>: 파손, 도난, 유통기한 폐기 등 실물이 사라지는 경우.</li>
+      <li><strong>오피킹(Mis-pick)</strong>: 비슷한 SKU(Stock Keeping Unit, 재고 관리 단위)를 잘못 집어 다른 상품 출고 → 두 SKU 모두 정합성 깨짐.</li>
+      <li><strong>시스템 오류</strong>: 동시성 버그로 인한 이중 차감, 이벤트 유실로 인한 차감 누락.</li>
+      <li><strong>미스캔(Unscanned)</strong>: 입·출고 시 바코드 미스캔, 수기 처리 누락.</li>
+    </ul>
+    <h3>Cycle Count(주기 실사)와 KPI</h3>
+    <p>연 1회 전수 실사(Annual physical count)는 창고를 멈춰야 하므로, 실무에서는 <strong>Cycle count(주기 순환 실사)</strong>로 매일 일부 로케이션을 돌아가며 센다. 특히 회전율 높은 SKU(ABC 분석의 A급)는 더 자주 센다.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>KPI</th><th>정의</th><th>현업 기준 감각</th></tr></thead>
+        <tbody>
+          <tr><td>재고 정확도(Inventory Accuracy)</td><td>실사 일치 로케이션 / 전체 로케이션</td><td>우수 운영 <strong>99.5% 이상</strong>, 글로벌 톱티어 <strong>99.9%+</strong></td></tr>
+          <tr><td>오피킹률(Mis-pick rate)</td><td>오피킹 건수 / 총 피킹 건수</td><td>목표 <strong>0.1% 이하</strong> (1만 건당 10건 미만)</td></tr>
+          <tr><td>Shrinkage율</td><td>손·망실 금액 / 매출 또는 재고가</td><td>이커머스 통상 <strong>1~2%</strong>, 관리 우수 시 1% 미만</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 가용재고 ≠ 보유재고</div>
+      판매 가능한 재고는 <code>가용재고(ATP, Available To Promise) = 보유재고(On-hand) − 예약재고(Reserved) − 안전재고(Safety stock)</code>다. "물리적으로 있다"고 다 팔면 안 된다. 다른 주문에 이미 Reserve된 수량과 완충용 안전재고를 빼고 판매해야 오버셀을 막는다.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section id="multi-wh">
+    <h2>4. 멀티 창고 할당 — 최적 창고 선택과 동시성</h2>
+    <p>여러 FC에 같은 SKU가 분산 보관될 때, 하나의 주문을 "어느 창고에서 출고할지" 정하는 것이 멀티 창고 할당(Multi-warehouse allocation)이다. 배송비·재고·SLA를 종합하는 최적화 문제이며, 동시에 들어온 주문들 사이에서 <strong>Race condition(경쟁 상태)</strong>을 막아야 한다.</p>
+    <h3>최적 창고 선택의 변수</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>변수</th><th>설명</th><th>Trade-off</th></tr></thead>
+        <tbody>
+          <tr><td>배송 거리/비용</td><td>창고 → 수령지 거리, 권역 운임</td><td>가까운 창고 = 비용↓·리드타임↓</td></tr>
+          <tr><td>가용 재고</td><td>각 창고의 ATP(가용재고)</td><td>가장 가까운 창고에 재고 없으면 차선 창고</td></tr>
+          <tr><td>SLA 마감(Cut-off)</td><td>당일/익일 출고 가능 창고만 후보</td><td>새벽배송은 권역 FC로 후보 제한</td></tr>
+          <tr><td>분할 페널티</td><td>Split shipment(분할출고) 시 박스·운임 증가</td><td>속도(분할) vs 비용(묶음)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>Split shipment(분할출고) 허용 여부</h3>
+    <p>한 창고에 전량 재고가 없으면, <strong>분할출고</strong>로 여러 창고에서 나눠 보낼지(빠르지만 비쌈) 아니면 한 창고로 모일 때까지 기다릴지(느리지만 저렴) 정책으로 결정한다. 쿠팡 로켓처럼 속도 우선이면 분할을 적극 허용한다.</p>
+    <h3>동시 예약 Race condition</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant O1 as 주문 A
+    participant O2 as 주문 B
+    participant ALLOC as 할당 서비스
+    participant INV as 재고(WMS) FC-1
+
+    Note over INV: SKU-X 가용재고 = 1
+    O1->>ALLOC: 할당 요청 (SKU-X 1개)
+    O2->>ALLOC: 할당 요청 (SKU-X 1개)
+    ALLOC->>INV: Reserve(SKU-X, 1) [주문 A]
+    ALLOC->>INV: Reserve(SKU-X, 1) [주문 B]
+    Note over INV: 원자적 차감 없으면\n둘 다 성공 → 오버셀!
+    INV-->>ALLOC: A: Reserved (재고 0)
+    INV-->>ALLOC: B: 실패 (재고 부족)
+    ALLOC->>ALLOC: 주문 B 재할당(re-allocation)\n→ FC-2 후보 탐색
+      </div>
+      <div class="cap">동시 예약 경쟁 — Reserve가 원자적이어야 오버셀 방지, 실패 주문은 다른 창고로 재할당</div>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 멀티 창고 재고 차감</div>
+      "여러 창고·여러 서버에서 같은 SKU에 동시에 할당 요청이 오면?" → 단일 창고 내 차감은 <strong>DB 원자적 UPDATE(<code>WHERE qty >= n</code>)</strong> 또는 <strong>낙관적 락(Optimistic Lock, 버전 컬럼)</strong>으로 보장한다. 창고 간 분산 재고는 단일 트랜잭션이 불가하므로, <strong>Saga + 보상(Release)</strong>으로 일부 Reserve 실패 시 이미 잡은 다른 창고 예약을 풀어준다. 핫 SKU는 Redis <code>DECR</code> 같은 인메모리 카운터로 DB 경합을 흡수하기도 한다. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="safety-stock">
+    <h2>5. 안전재고(Safety stock) · 재주문점(ROP)</h2>
+    <p>수요와 리드타임은 항상 변동한다. 평균만 보고 재고를 채우면 변동이 큰 날 결품(Stockout)이 난다. 안전재고(Safety stock)는 이 <strong>변동성에 대비한 완충 재고</strong>다.</p>
+    <div class="sys-card lm">
+      <div class="sys-label">핵심 공식</div>
+      <div class="sys-title"><code>재주문점(ROP, Reorder Point) = (평균 일수요 × 평균 리드타임) + 안전재고</code><br>주문 가능 재고가 ROP 아래로 내려가면 보충 발주를 건다.</div>
+    </div>
+    <h3>안전재고 산정 — 변동성 기반</h3>
+    <p>통계적 안전재고는 <code>SS = Z × σ_LT</code> 로 산정한다. 여기서 <code>Z</code>는 목표 서비스 수준(Service level)에 해당하는 정규분포 계수, <code>σ_LT</code>는 리드타임 동안 수요의 표준편차다.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>목표 서비스 수준</th><th>Z 계수</th><th>의미</th></tr></thead>
+        <tbody>
+          <tr><td>90%</td><td>1.28</td><td>10번 중 1번 결품 허용</td></tr>
+          <tr><td>95%</td><td>1.65</td><td>일반 소비재 표준</td></tr>
+          <tr><td>99%</td><td>2.33</td><td>핵심 SKU·고마진 상품</td></tr>
+          <tr><td>99.9%</td><td>3.09</td><td>결품 비용이 매우 큰 경우</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 정량 예시</div>
+      평균 일수요 100개, 리드타임 4일, 일수요 표준편차 30개라 하자. 서비스 수준 95%(Z=1.65)를 목표하면 리드타임 동안 표준편차 <code>σ_LT = 30 × √4 = 60</code>, 안전재고 <code>SS = 1.65 × 60 ≈ 99개</code>. 재주문점 <code>ROP = 100×4 + 99 = 499개</code>. 즉 재고가 약 500개로 떨어지면 발주를 걸어야 4일 리드타임 동안 95% 확률로 결품을 피한다.
+    </div>
+    <h3>결품 vs 과잉재고 Trade-off</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>안전재고를 적게(결품 위험)</th><th>안전재고를 많이(과잉재고)</th></tr></thead>
+        <tbody>
+          <tr><td>비용</td><td>보관비↓, 자본 회전↑</td><td>보관비↑, 자본 묶임(재고 보유 비용 연 15~30%)</td></tr>
+          <tr><td>리스크</td><td>결품(Stockout) → 매출 손실·고객 이탈</td><td>진부화(Obsolescence)·폐기, 특히 신선/패션</td></tr>
+          <tr><td>적합 SKU</td><td>수요 안정·대체 가능 상품</td><td>고마진·결품 비용 큰 핵심 SKU</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 결품 비용은 보이지 않는다</div>
+      과잉재고 비용(보관료·폐기)은 장부에 바로 찍히지만, 결품 비용(놓친 매출 + 고객이 경쟁사로 이탈하는 <strong>장기 LTV 손실</strong>)은 측정이 어려워 과소평가되기 쉽다. 그래서 핵심 SKU는 서비스 수준을 보수적으로(99%+) 잡는 것이 합리적이다.
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="cases">
+    <h2>6. 사례 비교 — 국내외 풀필먼트 서비스</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>사례</th><th>모델</th><th>특징</th><th>핵심 정책</th></tr></thead>
+        <tbody>
+          <tr><td><strong>쿠팡 로켓그로스</strong></td><td>자체 FC + 판매자 위탁</td><td>판매자 재고를 쿠팡 FC에 입고, 로켓배송 SLA 적용</td><td>전국 FC 분산 할당, 분할출고 적극, 익일/당일</td></tr>
+          <tr><td><strong>컬리(B2B 풀필먼트)</strong></td><td>자체 FC(콜드체인)</td><td>냉장/냉동/상온 온도대 분리, 샛별배송 인프라 활용</td><td>23시 Cut-off, 권역 창고 제한, 온도대 분할 패킹</td></tr>
+          <tr><td><strong>Amazon FBA</strong></td><td>자체 FC(글로벌)</td><td>판매자 위탁의 원조, 멀티 FC 글로벌 재고 분산</td><td>비용 최소화 라우팅, Backorder/입고 ETA 정교</td></tr>
+          <tr><td><strong>네이버 도착보장</strong></td><td>제휴 3PL 연계</td><td>CJ대한통운 등 제휴 물류사 풀필먼트 연동, 도착일 보장</td><td>판매자 재고 데이터 연동, SLA 미달 시 보상</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 정량 감각</div>
+      쿠팡은 전국 수십 개 FC와 100여 개 이상 물류 거점으로 인구 대다수를 <strong>로켓배송 권역(약 10분 거리)</strong> 안에 두는 분산 배치를 추구한다. 이렇게 재고를 수요지 가까이 분산할수록 리드타임은 짧아지지만, 같은 SKU를 여러 FC에 중복 보유해야 하므로 <strong>총 안전재고와 보관비가 증가</strong>한다 — 분산 vs 집중의 전형적 Trade-off다.
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section id="design">
+    <h2>7. 백엔드 시스템 디자인 연결</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>풀필먼트/재고 이슈</th><th>설계 패턴</th><th>이유</th></tr></thead>
+        <tbody>
+          <tr><td>단일 창고 재고 차감 동시성</td><td><strong>낙관적 락(Optimistic Lock) / 원자적 UPDATE</strong></td><td><code>WHERE qty >= n</code> 또는 버전 컬럼으로 오버셀 방지, 락 경합 최소화</td></tr>
+          <tr><td>멀티 창고 분산 재고 일관성</td><td><strong>Saga + 보상 트랜잭션(Release)</strong></td><td>2PC 회피, 일부 Reserve 실패 시 잡은 예약 해제·재할당</td></tr>
+          <tr><td>재고 조정·실사 이력 추적</td><td><strong>Event Sourcing(이벤트 소싱)</strong></td><td>입고·차감·조정 이벤트의 누적으로 현재 재고 재구성, 감사 추적</td></tr>
+          <tr><td>재고 변경 이벤트 신뢰 발행</td><td><strong>Transactional Outbox</strong></td><td>DB 커밋과 재고 이벤트 발행의 원자성 보장(차감 누락 방지)</td></tr>
+          <tr><td>재고 조회 폭주(상세/검색)</td><td><strong>CQRS 읽기 모델</strong></td><td>쓰기(정합성 우선)와 분리된 조회 최적화 뷰, ATP 캐싱</td></tr>
+          <tr><td>핫 SKU 차감 경합</td><td><strong>인메모리 카운터(Redis) + 비동기 정산</strong></td><td>DB 락 경합을 인메모리로 흡수, 사후 DB 동기화</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 정리 — 한 문장</div>
+      "풀필먼트는 <strong>자체 FC·3PL·드랍쉬핑</strong>의 CapEx/마진/통제 Trade-off로 선택되고, 재고 정합성은 <strong>전산-실물 차이를 Cycle count로 보정</strong>하며, 멀티 창고 할당은 <strong>원자적 Reserve + Saga 보상</strong>으로 오버셀을 막고, 안전재고는 <strong>변동성 기반 ROP(재주문점)</strong>로 결품과 과잉재고를 균형 잡는다."
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section id="quiz">
+    <h2>8. 이해도 확인 질문</h2>
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>자체 FC, 3PL, 드랍쉬핑 세 모델을 초기 투자(CapEx)·단위 마진·통제력·확장성·리드타임 관점에서 비교하고, 일 출고량이 빠르게 성장하는 커머스라면 어떤 순서로 모델을 전환하는 것이 합리적인지 그 임계점 판단 근거와 함께 설명해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div><textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>전산재고와 실물재고의 불일치가 생기는 원인들을 분류하고, 가용재고(ATP) = 보유재고 − 예약재고 − 안전재고 공식을 근거로 "물리적으로 있는데 팔면 안 되는" 상황을 설명해보세요. Cycle count가 연 1회 전수 실사보다 나은 이유도 함께 서술하세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div><textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>멀티 창고 환경에서 같은 SKU에 동시 할당 요청이 들어올 때 발생하는 Race condition을 설명하고, 단일 창고 내 차감(낙관적 락/원자적 UPDATE)과 창고 간 분산 예약(Saga + 보상)의 처리 방식 차이를 서술하세요. 또한 안전재고를 변동성(Z × σ_LT) 기반으로 산정하는 이유와 결품 비용이 과소평가되기 쉬운 이유를 설명해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div><textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section id="next">
+    <h2>9. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">logistics-domain-coach</div><div class="topic">WMS 심화 — 재고 상태와 Reserve→Commit→Ship</div></div>
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">재고 차감 동시성 — 낙관적 락 vs 비관적 락 vs Redis</div></div>
+      <div class="next-card"><div class="coach">backend-architecture-coach</div><div class="topic">분산 재고 일관성 Saga 설계 (Design 모드)</div></div>
+      <div class="next-card"><div class="coach">system-design-coach</div><div class="topic">멀티 FC 재고 할당 시스템 설계</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'default',
+    themeVariables: { primaryColor: '#dbeafe', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#fef3c7', tertiaryColor: '#ede9fe', fontSize: '13px' },
+    flowchart: { curve: 'basis', padding: 20 }, sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  const NS = 'jobStudy::logistics::04-fulfillment-inventory::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(NS + id);
+    if (saved) el.value = saved;
+    let timer;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(NS + id, el.value);
+        const badge = document.getElementById('saved' + (i + 1));
+        if (badge) { badge.classList.add('show'); setTimeout(() => badge.classList.remove('show'), 1800); }
+      }, 400);
+    });
+  });
+
+  function copyForFeedback() {
+    const questions = [
+      'Q1. 자체 FC·3PL·드랍쉬핑을 CapEx·마진·통제력·확장성·리드타임 관점에서 비교하고, 출고량 성장 시 합리적 모델 전환 순서와 임계점 판단 근거를 설명해보세요.',
+      'Q2. 전산-실물 재고 불일치의 원인 분류와, ATP=보유−예약−안전재고 공식 기반으로 "있어도 팔면 안 되는" 상황, 그리고 Cycle count가 전수 실사보다 나은 이유를 설명해보세요.',
+      'Q3. 멀티 창고 동시 할당의 Race condition, 단일 창고 차감(낙관적 락) vs 분산 예약(Saga 보상)의 차이, 안전재고를 변동성(Z×σ_LT) 기반으로 산정하는 이유와 결품 비용이 과소평가되는 이유를 설명해보세요.'
+    ];
+    const lines = ['[풀필먼트 모델·재고 정합성 심화 — 이해도 확인 Q&A 피드백 요청]\n세션: logistics/04-fulfillment-inventory.html\n'];
+    ansIds.forEach((id, i) => {
+      const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)';
+      lines.push(questions[i]); lines.push('A' + (i + 1) + '. ' + ans + '\n');
+    });
+    const text = lines.join('\n');
+    const resultEl = document.getElementById('copyResult');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.';
+      }).catch(() => fallbackCopy(text, resultEl));
+    } else { fallbackCopy(text, resultEl); }
+  }
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.'; }
+    catch { el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.'; }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

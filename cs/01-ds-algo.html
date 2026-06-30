@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>자료구조 & 알고리즘 — 복잡도·정렬·면접 패턴</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root{--bg:#f8fafc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--accent:#059669}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14.5px;line-height:1.75}
+#sidebar{width:248px;min-height:100vh;background:var(--card);border-right:1px solid var(--border);padding:24px 0;position:fixed;left:0;top:0;overflow-y:auto;z-index:50}
+#sidebar .brand{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:16px}
+#sidebar .brand .tag{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+#sidebar .brand h2{font-size:14px;font-weight:700;line-height:1.4}
+#sidebar .group-label{padding:12px 20px 4px;font-size:10.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em}
+#sidebar a{display:block;padding:7px 20px;font-size:13px;color:var(--muted);text-decoration:none;border-left:3px solid transparent;transition:all .15s}
+#sidebar a:hover,#sidebar a.active{color:var(--accent);background:var(--bg);border-left-color:var(--accent)}
+main{margin-left:248px;flex:1;max-width:1080px;padding:48px 56px}
+.page-hdr{margin-bottom:48px;padding-bottom:32px;border-bottom:2px solid var(--border)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{font-size:12px;font-weight:500;padding:3px 11px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.accent{background:#d1fae5;border-color:var(--accent);color:#064e3b}
+.page-hdr h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:10px}
+.page-hdr p{color:var(--muted)}
+section{margin-bottom:64px;scroll-margin-top:24px}
+section>h2{font-size:20px;font-weight:700;padding-bottom:12px;border-bottom:2px solid var(--border);margin-bottom:24px}
+h3{font-size:16px;font-weight:600;margin:28px 0 12px}
+h4{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:20px 0 8px}
+p{margin-bottom:10px}ul,ol{padding-left:22px;margin:8px 0 10px}li{margin-bottom:4px}
+.diagram-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px 24px 20px;margin:18px 0;overflow-x:auto;text-align:center}
+.diagram-wrap .cap{font-size:12px;color:var(--muted);margin-top:14px}
+.mermaid{display:inline-block}
+.tbl-wrap{overflow-x:auto;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+th{background:#f1f5f9;font-weight:600;font-size:12.5px;padding:9px 14px;border-bottom:1px solid var(--border);text-align:left}
+td{padding:9px 14px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+tr:last-child td{border-bottom:none}tr:hover td{background:#fafafa}
+.callout{border-radius:8px;padding:13px 16px;margin:14px 0;border-left:4px solid;font-size:13.5px}
+.callout .c-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.callout.interview{background:#fef2f2;border-color:#dc2626}.callout.interview .c-title{color:#dc2626}
+.callout.warn{background:#fff7ed;border-color:#ea580c}.callout.warn .c-title{color:#ea580c}
+.callout.tip{background:#f0fdf4;border-color:#16a34a}.callout.tip .c-title{color:#16a34a}
+.deep{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:4px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;margin-left:6px}
+code{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#be185d}
+pre{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#1e293b;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:14px 0;line-height:1.6}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:14px}
+.q-card .q-num{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px}
+.ans-area{margin-top:12px}
+.ans-label{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.saved-badge{font-size:11px;color:#16a34a;opacity:0;transition:opacity .4s}.saved-badge.show{opacity:1}
+.ans-area textarea{width:100%;min-height:110px;border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-family:'Noto Sans KR',sans-serif;font-size:14px;line-height:1.7;resize:vertical;background:#fafcff;color:var(--text);transition:border-color .15s}
+.ans-area textarea:focus{outline:none;border-color:var(--accent);background:#fff}
+.ans-area textarea::placeholder{color:#cbd5e1}
+.feedback-box{background:var(--card);border:1.5px dashed var(--border);border-radius:12px;padding:22px 24px;margin-top:28px;text-align:center}
+.feedback-box p{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+.btn-feedback{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:background .15s}
+.btn-feedback:hover{background:#047857}
+.copy-result{margin-top:12px;font-size:13px;color:#16a34a;min-height:20px}
+.next-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:14px}
+.next-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;transition:box-shadow .15s}
+.next-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.next-card .coach{font-size:11px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:5px}
+.next-card .topic{font-size:13px;font-weight:500}
+@media(max-width:860px){#sidebar{display:none}main{margin-left:0;padding:24px 20px}}
+</style>
+</head>
+<body>
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🧮 cs-fundamentals-coach</div>
+    <h2>자료구조 &amp;<br>알고리즘</h2>
+  </div>
+  <div class="group-label">자료구조</div>
+  <a href="#ds-overview">1. 자료구조 선택 원칙</a>
+  <a href="#hash">2. 해시 테이블</a>
+  <a href="#tree">3. 트리 &amp; 힙</a>
+  <a href="#graph">4. 그래프</a>
+  <div class="group-label">알고리즘</div>
+  <a href="#sort">5. 정렬 알고리즘</a>
+  <a href="#patterns">6. 면접 빈출 패턴</a>
+  <a href="#traversal">7. BFS / DFS</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#qa">Q&amp;A 연습</a>
+  <a href="#next">다음 학습</a>
+</nav>
+<main>
+  <div class="page-hdr">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">cs-fundamentals-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip">자료구조 &amp; 알고리즘</span>
+    </div>
+    <h1>자료구조 &amp; 알고리즘<br>복잡도 · 정렬 · 면접 빈출 패턴</h1>
+    <p>자료구조는 <strong>접근 패턴</strong>으로 고르고, 알고리즘은 <strong>복잡도</strong>로 평가한다. 6년차 백엔드라면 "왜 이 자료구조인가"를 읽기/쓰기 비율·분포·메모리 제약으로 답할 수 있어야 한다. <span class="deep">🔥 면접 최다 출제 영역</span></p>
+  </div>
+
+  <!-- 1 -->
+  <section id="ds-overview">
+    <h2>1. 자료구조 선택 원칙</h2>
+    <p>"어떤 자료구조를 쓸까?"의 답은 항상 <strong>접근 패턴</strong>에서 나온다. 면접에서 자료구조를 고를 때는 다음을 먼저 물어라: <strong>읽기/쓰기 비율, 순서 보장 필요 여부, Range 조회 여부, 메모리 제약, 데이터 분포</strong>.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    A([데이터 접근 패턴은?]) --> B{Key로 빠른 조회?}
+    B -- YES --> C{정렬 순서/Range<br/>필요?}
+    C -- YES --> D["TreeMap (Red-Black Tree)<br/>O(log n), Range·정렬 보장"]
+    C -- NO --> E["HashMap<br/>평균 O(1), 최악 O(n)"]
+    B -- NO --> F{순서가 중요?}
+    F -- YES --> G{양끝 삽입/삭제?}
+    G -- YES --> H["Deque / LinkedList<br/>양끝 O(1)"]
+    G -- NO --> I{LIFO or FIFO?}
+    I -- LIFO --> J["Stack<br/>재귀·괄호검사·DFS"]
+    I -- FIFO --> K["Queue<br/>BFS·작업 스케줄러"]
+    F -- "Top-K / 우선순위" --> L["Heap (PriorityQueue)<br/>peek O(1), poll O(log n)"]
+
+    style D fill:#fef3c7,stroke:#d97706
+    style E fill:#dbeafe,stroke:#3b82f6
+    style L fill:#ede9fe,stroke:#8b5cf6
+    style H fill:#dcfce7,stroke:#059669
+      </div>
+      <div class="cap">자료구조 선택 의사결정 트리 — 접근 패턴 → 자료구조</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>자료구조</th><th>조회</th><th>탐색</th><th>삽입</th><th>삭제</th><th>특징 / 실무 함정</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Array</strong></td><td>O(1)</td><td>O(n)</td><td>O(n)</td><td>O(n)</td><td>인덱스 접근 최적, 메모리 연속 → 캐시 지역성 우수</td></tr>
+          <tr><td><strong>Dynamic Array</strong></td><td>O(1)</td><td>O(n)</td><td>O(1) 분할상환</td><td>O(n)</td><td>append 시 2배 확장 → <code>amortized</code> O(1), 일시적 O(n) 복사</td></tr>
+          <tr><td><strong>LinkedList</strong></td><td>O(n)</td><td>O(n)</td><td>O(1)*</td><td>O(1)*</td><td>*노드 위치 알 때. 캐시 지역성 낮아 실측은 느림</td></tr>
+          <tr><td><strong>HashMap</strong></td><td>O(1) avg</td><td>O(1) avg</td><td>O(1) avg</td><td>O(1) avg</td><td>충돌 집중 시 O(n), Resizing 시 O(n) 일시 정지</td></tr>
+          <tr><td><strong>TreeMap</strong></td><td>O(log n)</td><td>O(log n)</td><td>O(log n)</td><td>O(log n)</td><td>Red-Black Tree, 정렬·Range 보장</td></tr>
+          <tr><td><strong>Heap</strong></td><td>O(1) peek</td><td>O(n)</td><td>O(log n)</td><td>O(log n)</td><td>최솟/최댓값 특화. 임의 탐색 비효율</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 함정 — "HashMap이 항상 빠르다"</div>
+      평균 O(1)이지만 해시 충돌이 집중되면 최악 O(n). 악의적 입력으로 충돌을 유도하는 <strong>Hash Collision DoS</strong>가 가능하다. Java 8+는 버킷 크기 8 초과 시 LinkedList → Red-Black Tree로 전환해 최악을 O(log n)으로 완화. <code>load factor</code> 0.75, 초기 capacity 지정으로 리사이징을 줄여라.
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="hash">
+    <h2>2. 해시 테이블 (Hash Table)</h2>
+    <p>해시 테이블은 <strong>해시 함수</strong>로 Key를 버킷 인덱스로 매핑한다. 충돌(Collision) 해결 방식이 성능을 좌우한다.</p>
+
+    <h3>충돌 해결: Chaining vs Open Addressing</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>방식</th><th>원리</th><th>장점</th><th>단점</th><th>대표 구현</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Chaining (체이닝)</strong></td><td>버킷마다 LinkedList/Tree로 충돌 항목 연결</td><td>Load factor &gt; 1 허용, 삭제 단순</td><td>포인터 오버헤드, 캐시 지역성 낮음</td><td>Java <code>HashMap</code></td></tr>
+          <tr><td><strong>Open Addressing</strong></td><td>충돌 시 다른 빈 슬롯 탐사(Linear/Quadratic/Double)</td><td>캐시 친화적, 메모리 밀집</td><td>Load factor 한계(~0.7), Clustering, 삭제 복잡(tombstone)</td><td>Python <code>dict</code>, Go <code>map</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Load Factor &amp; Rehashing</h3>
+    <p><strong>Load Factor(적재율)</strong> = 저장된 항목 수 / 버킷 수. 임계치(보통 0.75)를 넘으면 <strong>Rehashing(재해싱)</strong>으로 버킷을 2배 늘리고 모든 항목을 재배치한다 — 이 순간 O(n) 비용이 발생하며, 대규모 맵에서는 <strong>지연 스파이크</strong>의 원인이 된다.</p>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 대규모 트래픽</div>
+      라스트마일 추적 시스템에서 수천만 운송장을 단일 <code>ConcurrentHashMap</code>에 적재하면 리사이징 순간 지연 스파이크 + GC 압박이 온다. 예상 크기를 알면 <code>new HashMap&lt;&gt;(expectedSize / 0.75 + 1)</code>로 초기화해 재해싱을 회피하라.
+    </div>
+
+    <h3>확률적 자료구조</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>자료구조</th><th>용도</th><th>특성</th><th>실무 예</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Bloom Filter</strong></td><td>"존재하지 않음"을 빠르게 판정</td><td>False Positive 가능, False Negative 없음, 공간 효율</td><td>캐시 미스 방지, Cassandra SSTable 조회</td></tr>
+          <tr><td><strong>HyperLogLog</strong></td><td>Cardinality(고유값 개수) 추정</td><td>오차 ~2%, 수십억 항목을 12KB로</td><td>Redis <code>PFCOUNT</code> — 일일 UV 집계</td></tr>
+          <tr><td><strong>Count-Min Sketch</strong></td><td>빈도(frequency) 추정</td><td>과대추정만 발생, 공간 고정</td><td>Heavy Hitter 탐지, 트래픽 모니터링</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="tree">
+    <h2>3. 트리 &amp; 힙 (Tree &amp; Heap)</h2>
+
+    <h3>균형 트리가 필요한 이유</h3>
+    <p>일반 BST(Binary Search Tree, 이진 탐색 트리)는 정렬된 입력이 들어오면 한쪽으로 치우쳐 <strong>O(n)</strong> 연결 리스트가 된다. AVL·Red-Black Tree는 회전(Rotation)으로 높이를 <strong>O(log n)</strong>으로 강제한다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    subgraph BAD["편향 BST — O(n)"]
+      direction TB
+      n1((1)) --> n2((2))
+      n2 --> n3((3))
+      n3 --> n4((4))
+    end
+    subgraph GOOD["균형 BST — O(log n)"]
+      direction TB
+      m2((2)) --> m1((1))
+      m2 --> m3((3))
+      m3 --> m4((4))
+    end
+
+    style BAD fill:#fef2f2,stroke:#dc2626
+    style GOOD fill:#f0fdf4,stroke:#16a34a
+      </div>
+      <div class="cap">정렬 입력을 넣으면 일반 BST는 편향되어 O(n) — 균형 트리는 높이를 보장</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>트리</th><th>균형 방식</th><th>특징</th><th>사용처</th></tr></thead>
+        <tbody>
+          <tr><td><strong>AVL Tree</strong></td><td>엄격한 높이 균형(차 ≤ 1)</td><td>조회 빠름, 삽입/삭제 시 회전 많음</td><td>읽기 집중 워크로드</td></tr>
+          <tr><td><strong>Red-Black Tree</strong></td><td>느슨한 균형(색 규칙)</td><td>삽입/삭제 회전 적음, 균형 살짝 약함</td><td>Java <code>TreeMap</code>, Linux CFS 스케줄러</td></tr>
+          <tr><td><strong>B+Tree</strong></td><td>다진 트리, 리프에 데이터</td><td>디스크 블록 친화, 낮은 높이, Range 스캔 빠름</td><td>MySQL InnoDB 인덱스</td></tr>
+          <tr><td><strong>Trie</strong></td><td>문자 단위 분기</td><td>접두사 검색 O(L)</td><td>자동완성, IP 라우팅</td></tr>
+          <tr><td><strong>Segment / Fenwick</strong></td><td>구간 합·최솟값</td><td>구간 질의 + 갱신 O(log n)</td><td>구간 통계, 누적 집계</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 백엔드 연결 — 왜 DB 인덱스는 B+Tree인가</div>
+      디스크 I/O는 메모리보다 ~10만 배 느리다. B+Tree는 한 노드에 수백 개 키를 담아(높은 fan-out) 트리 높이를 3~4단으로 낮춘다 → 수십억 행도 <strong>3~4번의 디스크 읽기</strong>로 도달. 리프 노드가 연결 리스트로 이어져 <code>WHERE created_at BETWEEN ...</code> 같은 Range 스캔이 순차 I/O가 된다.
+    </div>
+
+    <h3>힙 (Heap) — Top-K의 표준 도구</h3>
+    <p>힙은 완전 이진 트리로, 부모가 자식보다 항상 작거나(min-heap) 큰(max-heap) <strong>힙 속성</strong>을 유지한다. peek O(1), insert/poll O(log n). "스트림에서 상위 K개"는 크기 K짜리 힙으로 <strong>O(n log K)</strong>에 해결 — 전체 정렬 O(n log n)보다 빠르고 메모리도 K로 고정된다.</p>
+  </section>
+
+  <!-- 4 -->
+  <section id="graph">
+    <h2>4. 그래프 (Graph)</h2>
+
+    <h3>인접 리스트 vs 인접 행렬</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>표현</th><th>공간</th><th>간선 존재 확인</th><th>인접 순회</th><th>적합 상황</th></tr></thead>
+        <tbody>
+          <tr><td><strong>인접 리스트</strong></td><td>O(V+E)</td><td>O(degree)</td><td>O(degree)</td><td>희소 그래프(Sparse). 대부분의 실무 그래프</td></tr>
+          <tr><td><strong>인접 행렬</strong></td><td>O(V²)</td><td>O(1)</td><td>O(V)</td><td>밀집 그래프(Dense), 간선 존재 빈번 조회</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 물류 도메인 연결 — 그래프는 어디에나</div>
+      배송망의 허브·캠프·기사 노드와 운송 구간 간선이 곧 그래프다. <strong>최단 경로(Dijkstra)</strong>는 라우팅, <strong>위상 정렬</strong>은 작업 의존성(피킹→패킹→출고), <strong>Union-Find</strong>는 동일 권역 클러스터링에 쓰인다. 실무 배송망은 대개 희소 → 인접 리스트가 정답.
+    </div>
+
+    <h3>핵심 그래프 알고리즘 복잡도</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>알고리즘</th><th>용도</th><th>복잡도</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td><strong>BFS</strong></td><td>최단 경로(무가중치)</td><td>O(V+E)</td><td>큐 기반, 레벨 순회</td></tr>
+          <tr><td><strong>DFS</strong></td><td>연결성·사이클·위상정렬</td><td>O(V+E)</td><td>스택/재귀</td></tr>
+          <tr><td><strong>Dijkstra</strong></td><td>최단 경로(음수 없는 가중치)</td><td>O(E log V)</td><td>우선순위 큐</td></tr>
+          <tr><td><strong>Bellman-Ford</strong></td><td>음수 간선 허용 최단 경로</td><td>O(VE)</td><td>음수 사이클 탐지</td></tr>
+          <tr><td><strong>Topological Sort</strong></td><td>의존성 정렬(DAG)</td><td>O(V+E)</td><td>Kahn / DFS</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="sort">
+    <h2>5. 정렬 알고리즘 (Sorting)</h2>
+
+    <pre>
+복잡도 위계
+O(1)  <  O(log n)  <  O(n)  <  O(n log n)  <  O(n²)  <  O(2ⁿ)
+상수      로그          선형       선형로그        이차       지수
+
+정렬의 이론적 하한: 비교 기반 정렬은 O(n log n)보다 빠를 수 없다
+  (결정 트리 높이 = log(n!) = Θ(n log n))
+Radix/Counting Sort가 O(n)인 이유: 비교를 안 하기 때문 (키 범위 제한 필요)
+    </pre>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>알고리즘</th><th>평균</th><th>최악</th><th>공간</th><th>Stable</th><th>언제 쓰나</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Quick Sort</strong></td><td>O(n log n)</td><td>O(n²)</td><td>O(log n)</td><td>No</td><td>일반 목적, in-place. Java <code>Arrays.sort</code>(primitive)</td></tr>
+          <tr><td><strong>Merge Sort</strong></td><td>O(n log n)</td><td>O(n log n)</td><td>O(n)</td><td>Yes</td><td>안정 정렬·최악 보장 필요. 외부 정렬(디스크)</td></tr>
+          <tr><td><strong>Heap Sort</strong></td><td>O(n log n)</td><td>O(n log n)</td><td>O(1)</td><td>No</td><td>메모리 제약 + 최악 보장 동시 필요</td></tr>
+          <tr><td><strong>Tim Sort</strong></td><td>O(n log n)</td><td>O(n log n)</td><td>O(n)</td><td>Yes</td><td>실데이터(부분 정렬 활용). Java <code>Collections.sort</code>, Python</td></tr>
+          <tr><td><strong>Radix Sort</strong></td><td>O(nk)</td><td>O(nk)</td><td>O(n+k)</td><td>Yes</td><td>정수·고정길이 키. 비교 없음</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — "왜 각각인가"</div>
+      Quick Sort는 평균 빠르지만 정렬된 입력 + 나쁜 피벗 → O(n²)이라 외부 노출 API엔 위험(피벗 랜덤화 필수). Merge Sort는 <strong>Stable</strong>하고 최악도 O(n log n)이라 다중 키 정렬·외부 정렬에 적합. 그래서 Java는 객체 정렬에 Tim Sort(안정), primitive엔 Dual-Pivot Quick Sort를 쓴다 — 객체는 안정성 중요, primitive는 동치 구분 불필요라서.
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="patterns">
+    <h2>6. 면접 빈출 패턴 (Coding Patterns)</h2>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>패턴</th><th>적용 신호</th><th>복잡도</th><th>대표 문제</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Two Pointers(투포인터)</strong></td><td>정렬 배열, 쌍 탐색</td><td>O(n)</td><td>Two Sum(정렬), 회문 검사</td></tr>
+          <tr><td><strong>Sliding Window(슬라이딩 윈도우)</strong></td><td>연속 부분 배열/문자열</td><td>O(n)</td><td>최대 합 부분배열, 최장 무중복 부분문자열</td></tr>
+          <tr><td><strong>Prefix Sum(누적 합)</strong></td><td>구간 합 반복 질의</td><td>전처리 O(n), 질의 O(1)</td><td>구간 합, 부분배열 합 = K</td></tr>
+          <tr><td><strong>Binary Search on Answer</strong></td><td>단조성 있는 최적값</td><td>O(n log range)</td><td>최소 용량 배분, Koko 바나나</td></tr>
+          <tr><td><strong>Union-Find</strong></td><td>동적 연결성</td><td>α(n) ≈ O(1)</td><td>연결 요소, 사이클 탐지</td></tr>
+          <tr><td><strong>Monotonic Stack</strong></td><td>다음 큰/작은 원소</td><td>O(n)</td><td>Next Greater Element, 빗물 가두기</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Sliding Window 직관</h3>
+    <p>"연속 구간"이라는 신호가 보이면 슬라이딩 윈도우를 의심하라. 이중 루프 O(n²)을 윈도우 양끝 포인터로 <strong>O(n)</strong>으로 줄인다. 윈도우 확장(right++) → 조건 위반 시 축소(left++).</p>
+    <pre>
+// 최장 무중복 부분문자열 — O(n)
+int left = 0, best = 0;
+Set&lt;Character&gt; window = new HashSet&lt;&gt;();
+for (int right = 0; right &lt; s.length(); right++) {
+    while (window.contains(s.charAt(right))) {   // 조건 위반 → 축소
+        window.remove(s.charAt(left++));
+    }
+    window.add(s.charAt(right));                 // 확장
+    best = Math.max(best, right - left + 1);
+}
+    </pre>
+
+    <div class="callout tip">
+      <div class="c-title">💡 백엔드 연결</div>
+      Sliding Window는 면접 문제만이 아니다. <strong>Rate Limiter(처리율 제한)</strong>의 Sliding Window Log/Counter, 모니터링의 이동 평균(rolling average)이 모두 같은 원리다. Union-Find의 α(n)(역 아커만 함수)는 실질적으로 상수 — "사실상 O(1)"이라 말하되 이론적으론 거의 상수임을 정확히 표현하라.
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section id="traversal">
+    <h2>7. BFS / DFS 순회</h2>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    R((A)) --> B((B))
+    R --> C((C))
+    B --> D((D))
+    B --> E((E))
+    C --> F((F))
+
+    style R fill:#dbeafe,stroke:#3b82f6
+      </div>
+      <div class="cap">동일 트리, 순회 순서 비교 — BFS: A B C D E F (큐) / DFS(전위): A B D E C F (스택)</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>구분</th><th>BFS</th><th>DFS</th></tr></thead>
+        <tbody>
+          <tr><td><strong>자료구조</strong></td><td>Queue(FIFO)</td><td>Stack / 재귀</td></tr>
+          <tr><td><strong>메모리</strong></td><td>O(너비) — 최악 O(V)</td><td>O(깊이) — 최악 O(V)</td></tr>
+          <tr><td><strong>최단 경로</strong></td><td>무가중치에서 보장</td><td>보장 안 됨</td></tr>
+          <tr><td><strong>적합 상황</strong></td><td>최단 거리, 레벨 단위 처리</td><td>경로 탐색, 사이클·위상정렬, 백트래킹</td></tr>
+          <tr><td><strong>주의</strong></td><td>너비 넓으면 큐 폭발</td><td>깊으면 Stack Overflow(재귀) → 명시 스택</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 재귀 DFS의 Stack Overflow</div>
+      깊이 수만의 그래프를 재귀 DFS로 돌리면 JVM 기본 스택(~512KB~1MB)이 터진다. 프로덕션에서는 명시적 <code>Deque</code> 스택으로 변환하거나, 꼬리 재귀가 아닌 이상 반복문으로 풀어라. 방문 체크(visited)를 큐/스택에 <strong>넣을 때</strong> 표시해야 중복 enqueue를 막는다.
+    </div>
+  </section>
+
+  <!-- Q&A -->
+  <section id="qa">
+    <h2>Q&amp;A 연습</h2>
+    <p>아래 질문에 직접 답변을 작성하세요. 자동 저장되며 피드백 요청 시 복사할 수 있습니다.</p>
+
+    <div class="q-card">
+      <div class="q-num">Q1 — 자료구조 선택</div>
+      <p>실시간 배달 시스템에서 "현재 위치 기준 가장 가까운 가용 기사 K명"을 반복 조회해야 합니다. 어떤 자료구조·알고리즘을 쓰고, 시간 복잡도는 어떻게 되나요? 위치가 계속 갱신될 때의 Trade-off도 함께 설명하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>나의 답변</span><span class="saved-badge" id="badge-q1">저장됨 ✓</span></div>
+        <textarea id="ans-q1" placeholder="답변을 입력하세요..." oninput="saveAns('q1',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2 — 해시 & 복잡도</div>
+      <p>"HashMap은 O(1)이니 항상 빠르다"는 주장의 빈틈을 지적하고, 대규모(수천만 키) 환경에서 발생할 수 있는 두 가지 성능 문제와 각 완화책을 설명하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>나의 답변</span><span class="saved-badge" id="badge-q2">저장됨 ✓</span></div>
+        <textarea id="ans-q2" placeholder="답변을 입력하세요..." oninput="saveAns('q2',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3 — 정렬 선택</div>
+      <p>Java가 객체 정렬엔 Tim Sort, primitive 정렬엔 Dual-Pivot Quick Sort를 쓰는 이유를 Stable·최악 복잡도·메모리 관점에서 설명하세요. 외부 정렬(디스크에 안 들어가는 데이터)에는 무엇을 쓰나요?</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>나의 답변</span><span class="saved-badge" id="badge-q3">저장됨 ✓</span></div>
+        <textarea id="ans-q3" placeholder="답변을 입력하세요..." oninput="saveAns('q3',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>작성한 답변을 복사해서 Claude에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 복사</button>
+      <div class="copy-result" id="copy-result"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>다음 학습 주제</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">cs-fundamentals-coach</div><div class="topic">DP / 그리디 / 백트래킹 패턴 심화</div></div>
+      <div class="next-card"><div class="coach">cs-fundamentals-coach</div><div class="topic">문자열 알고리즘(KMP, Rabin-Karp)</div></div>
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">B+Tree vs LSM Tree 인덱스 구조</div></div>
+      <div class="next-card"><div class="coach">system-design-coach</div><div class="topic">Consistent Hashing 심화</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'neutral',securityLevel:'loose',flowchart:{htmlLabels:true,curve:'basis'}});
+
+const NS = 'jobStudy::cs::01-ds-algo::';
+
+function saveAns(id, val) {
+  localStorage.setItem(NS + id, val);
+  const b = document.getElementById('badge-' + id);
+  if (b) { b.classList.add('show'); setTimeout(() => b.classList.remove('show'), 1800); }
+}
+function loadAll() {
+  document.querySelectorAll('[id^="ans-"]').forEach(el => {
+    const saved = localStorage.getItem(NS + el.id.replace('ans-', ''));
+    if (saved) el.value = saved;
+  });
+}
+function copyForFeedback() {
+  const title = document.title;
+  const qs = document.querySelectorAll('.q-card');
+  let text = `[${title} — Q&A 피드백 요청]\n\n`;
+  qs.forEach((card, i) => {
+    const num = card.querySelector('.q-num')?.innerText || `Q${i+1}`;
+    const q = card.querySelector('p')?.innerText || '';
+    const ta = card.querySelector('textarea');
+    const ans = ta ? ta.value.trim() : '';
+    text += `${num}\n질문: ${q}\n내 답변: ${ans || '(미작성)'}\n\n`;
+  });
+  text += '위 답변들에 대해 시니어 CS 기초 코치 관점에서 피드백 부탁드립니다.';
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('copy-result').textContent = '✓ 클립보드에 복사되었습니다. Claude 채팅창에 붙여넣기 하세요.';
+    setTimeout(() => document.getElementById('copy-result').textContent = '', 4000);
+  });
+}
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      document.querySelectorAll('#sidebar a').forEach(a => a.classList.remove('active'));
+      const link = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, {rootMargin: '-20% 0px -70% 0px'});
+document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+loadAll();
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

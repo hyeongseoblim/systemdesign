@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DDD — Bounded Context · Aggregate · Context Map</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg); color: var(--text);
+      display: flex; min-height: 100vh;
+      font-size: 14.5px; line-height: 1.75;
+    }
+
+    #sidebar {
+      width: 248px; min-height: 100vh;
+      background: var(--card); border-right: 1px solid var(--border);
+      padding: 24px 0; position: fixed; left: 0; top: 0;
+      overflow-y: auto; z-index: 50;
+    }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a {
+      display: block; padding: 7px 20px;
+      font-size: 13px; color: var(--muted);
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip {
+      font-size: 12px; font-weight: 500;
+      padding: 3px 11px; border-radius: 20px;
+      background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+    }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 {
+      font-size: 20px; font-weight: 700;
+      padding-bottom: 12px; border-bottom: 2px solid var(--border);
+      margin-bottom: 24px; display: flex; align-items: center; gap: 8px;
+    }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+
+    .diagram-wrap {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 28px 24px 20px;
+      margin: 18px 0; overflow-x: auto; text-align: center;
+    }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 13.5px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    .sys-card {
+      border-radius: 10px; padding: 18px 22px;
+      margin-bottom: 20px; border-left: 4px solid;
+    }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .sys-card.lm  { background: var(--lm);  border-color: var(--lm-b);  color: var(--lm-t);  }
+    .sys-card.ret { background: var(--ret); border-color: var(--ret-b); color: var(--ret-t); }
+
+    .callout {
+      border-radius: 8px; padding: 13px 16px;
+      margin: 14px 0; border-left: 4px solid; font-size: 13.5px;
+    }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea {
+      width: 100%; min-height: 110px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif;
+      font-size: 14px; line-height: 1.7; resize: vertical;
+      background: #fafcff; color: var(--text);
+      transition: border-color .15s, background .15s;
+    }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+
+    .feedback-box {
+      background: var(--card); border: 1.5px dashed var(--border);
+      border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center;
+    }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 8px; padding: 10px 22px;
+      font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🏛 backend-architecture-coach</div>
+    <h2>Domain-Driven<br/>Design (DDD)</h2>
+  </div>
+  <div class="group-label">전략 설계</div>
+  <a href="#why">1. 왜 DDD인가</a>
+  <a href="#ubiquitous">2. Ubiquitous Language</a>
+  <a href="#bc">3. Bounded Context</a>
+  <a href="#contextmap">4. Context Map</a>
+  <div class="group-label">전술 설계</div>
+  <a href="#building">5. 전술 빌딩블록</a>
+  <a href="#aggregate">6. Aggregate 설계</a>
+  <a href="#strategic">7. 전략 vs 전술</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+
+<main>
+
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">backend-architecture-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">Domain-Driven Design</span>
+    </div>
+    <h1>DDD — Domain-Driven Design<br>Bounded Context · Aggregate · Context Map</h1>
+    <p>서비스 경계를 "기술"이 아니라 <strong>도메인 언어</strong>로 자른다. 전략 설계(경계)를 먼저, 전술 설계(코드 구조)를 나중에. Deep-dive는 <span class="deep">🔥 Deep-dive</span>.</p>
+  </header>
+
+  <!-- ── Section 1 ── -->
+  <section id="why">
+    <h2>1. 왜 DDD인가 — 문제 → 해결</h2>
+
+    <p><strong>문제</strong>: 큰 시스템에서 "상품", "주문" 같은 단어가 부서마다 다른 의미인데 하나의 거대 모델로 욱여넣으면, 모든 곳에 영향을 주는 <em>God Model(만능 모델)</em>이 생겨 변경이 마비된다.</p>
+    <p><strong>해결</strong>: <strong>DDD(Domain-Driven Design, 도메인 주도 설계)</strong>는 도메인을 의미 경계로 나누고(<code>Bounded Context</code>), 그 안에서 도메인 전문가와 개발자가 같은 언어(<code>Ubiquitous Language</code>)를 쓰며, 일관성 경계(<code>Aggregate</code>)를 명확히 한다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    P["같은 단어 '상품'"]
+    P --> C1["Catalog 컨텍스트\n= 전시용 상품정보\n(이름·이미지·설명)"]
+    P --> C2["Inventory 컨텍스트\n= 재고 가능한 SKU\n(수량·로케이션)"]
+    P --> C3["Billing 컨텍스트\n= 과금 대상 항목\n(단가·세금)"]
+
+    style P fill:#fee2e2,stroke:#ef4444
+    style C1 fill:#dbeafe,stroke:#3b82f6
+    style C2 fill:#fef3c7,stroke:#f59e0b
+    style C3 fill:#fce7f3,stroke:#ec4899
+      </div>
+      <div class="cap">"상품"은 컨텍스트마다 다른 모델이다. 하나로 합치려는 시도가 곧 강결합의 시작.</div>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 적용 조건 — DDD를 항상 쓰진 않는다</div>
+      DDD는 <strong>도메인 복잡도가 높을 때</strong> 가치가 크다. 단순 CRUD 게시판에 전술 패턴(Aggregate, Repository, Domain Event)을 다 끼우면 오버엔지니어링. 핵심 도메인(Core domain)에만 깊게 투자하고, 보조 도메인(Supporting/Generic)은 가볍게 간다.
+    </div>
+  </section>
+
+  <!-- ── Section 2 ── -->
+  <section id="ubiquitous">
+    <h2>2. Ubiquitous Language (유비쿼터스 언어)</h2>
+
+    <p>도메인 전문가와 개발자가 <strong>회의·코드·DB 컬럼·이벤트 이름까지 동일한 용어</strong>를 쓰는 것. 번역 레이어(현업은 "출고지시", 코드는 <code>processItem()</code>)가 끼면 그 틈에서 버그가 자란다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>나쁜 예 (번역 발생)</th><th>좋은 예 (유비쿼터스)</th></tr></thead>
+        <tbody>
+          <tr><td>현업 "재고를 잡아둬라" → 코드 <code>updateStock(-1)</code></td><td><code>inventory.reserve(orderId, qty)</code> — "예약(Reserve)"이라는 도메인 용어 그대로</td></tr>
+          <tr><td>현업 "배송 시작" → 코드 <code>status = 3</code></td><td><code>shipment.dispatch()</code> → <code>ShipmentDispatched</code> 이벤트</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트</div>
+      "도메인 이벤트 이름은 어떻게 짓나요?" → <strong>과거형 + 비즈니스 용어</strong>(<code>OrderPlaced</code>, <code>InventoryReserved</code>). <code>doOrder</code>, <code>processData</code> 같은 명령형/기술용어는 유비쿼터스 언어 위반.
+    </div>
+  </section>
+
+  <!-- ── Section 3 ── -->
+  <section id="bc">
+    <h2>3. Bounded Context (경계 컨텍스트)</h2>
+
+    <p>한 모델이 일관되게 적용되는 <strong>명시적 경계</strong>. 같은 단어가 경계 밖에선 다른 뜻이어도 된다. Bounded Context는 곧 <em>서비스 경계 후보</em>이자 <em>팀 소유권의 단위</em>다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    subgraph LOG["물류 도메인 — Bounded Context 분할"]
+      direction LR
+      CAT["📘 Catalog\n상품 전시"]
+      ORD["🧠 Ordering\n주문 라이프사이클"]
+      INV["🏭 Inventory\n재고·할당"]
+      FUL["📦 Fulfillment\n피킹·패킹·출고"]
+      SHIP["🚛 Shipping\n운송·배송추적"]
+      BILL["💳 Billing\n결제·정산"]
+      RET["♻️ Returns\n반품·환불"]
+    end
+    ORD --> INV
+    ORD --> BILL
+    INV --> FUL
+    FUL --> SHIP
+    SHIP --> RET
+    RET --> BILL
+
+    style CAT fill:#e0e7ff,stroke:#6366f1
+    style ORD fill:#dbeafe,stroke:#3b82f6
+    style INV fill:#fef3c7,stroke:#f59e0b
+    style FUL fill:#fef3c7,stroke:#f59e0b
+    style SHIP fill:#ede9fe,stroke:#8b5cf6
+    style BILL fill:#fce7f3,stroke:#ec4899
+    style RET fill:#dcfce7,stroke:#22c55e
+      </div>
+      <div class="cap">물류 도메인의 Bounded Context 예 — 각 컨텍스트가 "상품"·"주문"의 의미를 독자적으로 가진다.</div>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정</div>
+      "서비스"는 만들었는데 <strong>Bounded Context를 안 정의</strong>하면, 같은 <code>Product</code> 클래스를 모든 서비스가 공유 jar로 import → 한 곳 변경이 전 서비스에 전파. 경계마다 <strong>자기만의 모델</strong>을 가져야 한다.
+    </div>
+  </section>
+
+  <!-- ── Section 4 ── -->
+  <section id="contextmap">
+    <h2>4. Context Map (컨텍스트 맵)</h2>
+
+    <p>Bounded Context들 <strong>사이의 관계와 통합 방식</strong>을 그린 지도. "어느 쪽이 갑이고, 어떻게 변경 압력이 전파되는가"를 명시한다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관계 패턴</th><th>의미</th><th>물류 예시</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Partnership</strong></td><td>두 팀이 운명 공동체로 함께 변경</td><td>주문 ↔ 결제 (동시 출시 협의)</td></tr>
+          <tr><td><strong>Customer/Supplier</strong></td><td>공급자가 소비자 요구를 반영</td><td>Inventory(공급) → Ordering(소비)</td></tr>
+          <tr><td><strong>Conformist</strong></td><td>약자가 강자 모델을 그대로 수용</td><td>외부 택배사 API 포맷 그대로 따름</td></tr>
+          <tr><td><strong>ACL (Anti-Corruption Layer, 부패 방지 계층)</strong></td><td>외부 모델을 내 모델로 번역해 오염 차단</td><td>레거시 WMS / 외부 운송사 연동 어댑터</td></tr>
+          <tr><td><strong>OHS (Open Host Service)</strong></td><td>공개 표준 API로 다수 소비자에 제공</td><td>배송추적 조회 API (수많은 셀러가 소비)</td></tr>
+          <tr><td><strong>Published Language</strong></td><td>공유 스키마/표준 메시지 포맷</td><td>운송장 이벤트 Avro/Protobuf 스키마</td></tr>
+          <tr><td><strong>Shared Kernel</strong></td><td>두 컨텍스트가 작은 공통 모델 공유 (위험)</td><td>공통 Money/Address VO — 최소화 권장</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    EXT["외부 택배사 API\n(레거시 포맷)"]
+    ACL["ACL\n부패 방지 계층\n번역 어댑터"]
+    SHIP["Shipping 컨텍스트\n(내 모델)"]
+    INV["Inventory\n(Supplier)"]
+    ORD["Ordering\n(Customer)"]
+
+    EXT -->|"오염된 모델"| ACL
+    ACL -->|"정제된 내 모델"| SHIP
+    INV -->|"Customer/Supplier\nOHS + Published Language"| ORD
+
+    style EXT fill:#fee2e2,stroke:#ef4444
+    style ACL fill:#fff7ed,stroke:#ea580c
+    style SHIP fill:#ede9fe,stroke:#8b5cf6
+    style INV fill:#fef3c7,stroke:#f59e0b
+    style ORD fill:#dbeafe,stroke:#3b82f6
+      </div>
+      <div class="cap">ACL은 외부/레거시 모델이 내 도메인을 오염시키지 못하게 막는 핵심 방어선이다.</div>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트</div>
+      "레거시 WMS를 새 시스템과 통합하라"는 문제에서 정답 키워드는 <strong>ACL</strong>. 외부의 지저분한 모델을 그대로 받지 말고 번역 계층에서 차단해야 한다고 답하면 시니어 신호. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- ── Section 5 ── -->
+  <section id="building">
+    <h2>5. 전술 빌딩블록 (Tactical Building Blocks)</h2>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>블록</th><th>정의</th><th>예시</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Entity(엔티티)</strong></td><td>식별자(ID)로 구분, 가변</td><td><code>Order</code>, <code>Shipment</code></td></tr>
+          <tr><td><strong>Value Object(값 객체)</strong></td><td>값으로 동등성 판단, 불변</td><td><code>Money</code>, <code>Address</code>, <code>Weight</code></td></tr>
+          <tr><td><strong>Aggregate(애그리거트)</strong></td><td>일관성 경계로 묶인 객체 그래프</td><td><code>Order</code> + <code>OrderLine</code>들</td></tr>
+          <tr><td><strong>Aggregate Root(루트)</strong></td><td>외부가 접근하는 유일한 진입점</td><td><code>Order</code> (OrderLine은 직접 못 건드림)</td></tr>
+          <tr><td><strong>Domain Event(도메인 이벤트)</strong></td><td>도메인에서 일어난 사실(과거형)</td><td><code>OrderPlaced</code></td></tr>
+          <tr><td><strong>Repository(리포지토리)</strong></td><td>Aggregate 단위 영속화 추상화</td><td><code>OrderRepository</code></td></tr>
+          <tr><td><strong>Domain Service(도메인 서비스)</strong></td><td>한 Entity에 안 속하는 도메인 로직</td><td><code>AllocationService</code> (창고 할당)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+classDiagram
+    class Order {
+      <<Aggregate Root>>
+      +OrderId id
+      +CustomerId customerId
+      +OrderStatus status
+      +Money totalAmount
+      +place()
+      +cancel()
+      +addLine(sku, qty)
+    }
+    class OrderLine {
+      <<Entity>>
+      +SkuId sku
+      +int quantity
+      +Money unitPrice
+    }
+    class Money {
+      <<Value Object>>
+      +long amount
+      +Currency currency
+    }
+    class Address {
+      <<Value Object>>
+      +String zipcode
+      +String detail
+    }
+    Order "1" *-- "1..*" OrderLine : 일관성 경계 내
+    OrderLine *-- Money : unitPrice
+    Order *-- Address : shippingAddress
+      </div>
+      <div class="cap">Order Aggregate — 외부는 오직 <strong>Aggregate Root(Order)</strong>를 통해서만 OrderLine에 접근한다.</div>
+    </div>
+  </section>
+
+  <!-- ── Section 6 ── -->
+  <section id="aggregate">
+    <h2>6. Aggregate 설계 — 한 트랜잭션 = 한 Aggregate</h2>
+
+    <p>Aggregate의 핵심은 <strong>Invariant(불변식)</strong>를 지키는 일관성 경계다. 규칙: <em>한 트랜잭션에서는 하나의 Aggregate만 수정</em>한다. 여러 Aggregate를 동시에 바꿔야 하면 그건 도메인 이벤트 + 최종 일관성(Eventual Consistency)으로 푼다.</p>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — Aggregate를 너무 크게</div>
+      "주문 안에 결제·배송·재고까지 다 넣자" → Aggregate가 비대해져 한 주문 수정 때마다 거대한 객체 그래프에 락이 걸린다. Cut-off 직전 주문 폭주 시 <strong>락 경합·트랜잭션 실패</strong> 폭발. 작게 쪼개고 ID 참조로 느슨하게 연결하라. <span class="deep">🔥 Deep-dive</span>
+    </div>
+
+    <h3>Aggregate 설계 4원칙 (Vaughn Vernon)</h3>
+    <ol>
+      <li><strong>진짜 불변식만 한 Aggregate에</strong> — 즉시 일관성이 꼭 필요한 규칙만 같이 둔다.</li>
+      <li><strong>작게 설계</strong> — 클수록 동시성·메모리·락 비용 증가.</li>
+      <li><strong>다른 Aggregate는 ID로만 참조</strong> — 객체 직접 참조 금지 (<code>customerId</code>지 <code>Customer</code> 객체 아님).</li>
+      <li><strong>경계 밖 변경은 최종 일관성</strong> — 도메인 이벤트로 비동기 처리.</li>
+    </ol>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    subgraph T1["트랜잭션 1 (즉시 일관성)"]
+      O["Order Aggregate\nOrderPlaced"]
+    end
+    subgraph T2["트랜잭션 2 (최종 일관성)"]
+      I["Inventory Aggregate\nreserve()"]
+    end
+    O -->|"OrderPlaced 이벤트\n(비동기)"| I
+
+    style T1 fill:#dbeafe,stroke:#3b82f6
+    style T2 fill:#fef3c7,stroke:#f59e0b
+      </div>
+      <div class="cap">Order와 Inventory는 별개 Aggregate → 한 트랜잭션에 묶지 않고 이벤트로 연결. 이 구조가 Saga로 이어진다.</div>
+    </div>
+  </section>
+
+  <!-- ── Section 7 ── -->
+  <section id="strategic">
+    <h2>7. 전략 설계 vs 전술 설계 — 순서가 중요</h2>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th></th><th>전략 설계 (Strategic)</th><th>전술 설계 (Tactical)</th></tr></thead>
+        <tbody>
+          <tr><td>관심사</td><td>큰 그림 — 경계와 관계</td><td>코드 — 객체 모델</td></tr>
+          <tr><td>도구</td><td>Bounded Context, Context Map, Subdomain</td><td>Aggregate, Entity, VO, Repository</td></tr>
+          <tr><td>순서</td><td><strong>먼저</strong></td><td>나중</td></tr>
+          <tr><td>실패 시</td><td>서비스 경계가 틀려 분산 모놀리스</td><td>코드가 지저분하지만 국소적 손해</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 (가장 흔한 실수)</div>
+      많은 개발자가 곧장 <strong>전술 설계(Aggregate/Repository 코드)</strong>로 뛰어든다. 하지만 경계(Bounded Context)가 틀리면 코드를 아무리 잘 짜도 시스템이 깨진다. <strong>"먼저 Event Storming으로 경계를 그리고, 그 다음 Aggregate를 설계한다"</strong>가 정석 답변이다.
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 실무 적용 — Event Storming</div>
+      도메인 전문가와 함께 <strong>도메인 이벤트(주황 포스트잇) → 커맨드(파랑) → Aggregate(노랑) → Bounded Context</strong> 순으로 워크샵하면 경계가 자연히 드러난다. 04(Saga)·03(Event-Driven)이 이 결과물 위에 세워진다.
+    </div>
+  </section>
+
+  <!-- ── Section 8: 이해도 확인 ── -->
+  <section id="quiz">
+    <h2>8. 이해도 확인 질문</h2>
+
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>물류 도메인에서 "상품(Product)"이 Catalog / Inventory / Billing 컨텍스트에서 각각 어떻게 <strong>다른 모델</strong>인지 속성 수준으로 설명하고, 이를 하나의 공유 클래스로 합치면 왜 위험한지 말해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div>
+        <textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>"한 트랜잭션 = 한 Aggregate" 원칙을 따를 때, 주문 생성 시 재고를 동시에 차감하고 싶다면 어떻게 설계해야 하나요? 즉시 일관성과 최종 일관성 중 무엇을 선택하고 왜인지 설명해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div>
+        <textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>레거시 WMS와 외부 택배사 API를 신규 Shipping 컨텍스트에 통합할 때 Context Map의 어떤 패턴(<strong>ACL · Conformist · OHS</strong>)을 어디에 적용할지 그리고 그 이유를 설명해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div>
+        <textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <!-- ── Section 9: 다음 학습 ── -->
+  <section id="next">
+    <h2>9. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card">
+        <div class="coach">backend-architecture-coach</div>
+        <div class="topic">Event-Driven Architecture (03)</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">backend-architecture-coach</div>
+        <div class="topic">Saga · 분산 트랜잭션 (04)</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">backend-architecture-coach</div>
+        <div class="topic">CQRS · Event Sourcing (05)</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">logistics-domain-coach</div>
+        <div class="topic">물류 도메인 전체 지도 복습</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    themeVariables: {
+      primaryColor: '#dbeafe',
+      primaryTextColor: '#1e293b',
+      primaryBorderColor: '#3b82f6',
+      lineColor: '#64748b',
+      secondaryColor: '#fef3c7',
+      tertiaryColor: '#ede9fe',
+      fontSize: '13px'
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  const NS = 'jobStudy::backend::architecture::02-ddd::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(NS + id);
+    if (saved) el.value = saved;
+
+    let timer;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(NS + id, el.value);
+        const badge = document.getElementById('saved' + (i + 1));
+        if (badge) {
+          badge.classList.add('show');
+          setTimeout(() => badge.classList.remove('show'), 1800);
+        }
+      }, 400);
+    });
+  });
+
+  function copyForFeedback() {
+    const questions = [
+      'Q1. "상품"이 Catalog/Inventory/Billing 컨텍스트에서 각각 어떻게 다른 모델인지 속성 수준으로 설명하고, 하나로 합치면 왜 위험한지 말해보세요.',
+      'Q2. "한 트랜잭션 = 한 Aggregate" 원칙하에 주문 생성 시 재고를 차감하려면 어떻게 설계하나요? 즉시/최종 일관성 선택과 이유를 설명해보세요.',
+      'Q3. 레거시 WMS와 외부 택배사 API를 Shipping 컨텍스트에 통합할 때 ACL·Conformist·OHS를 어디에 적용할지와 이유를 설명해보세요.'
+    ];
+
+    const lines = ['[DDD — 이해도 확인 Q&A 피드백 요청]\n세션: backend/architecture/02-ddd.html\n'];
+    ansIds.forEach((id, i) => {
+      const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)';
+      lines.push(questions[i]);
+      lines.push('A' + (i + 1) + '. ' + ans + '\n');
+    });
+
+    const text = lines.join('\n');
+    const resultEl = document.getElementById('copyResult');
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.';
+      }).catch(() => fallbackCopy(text, resultEl));
+    } else {
+      fallbackCopy(text, resultEl);
+    }
+  }
+
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try {
+      document.execCommand('copy');
+      el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.';
+    } catch {
+      el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.';
+    }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

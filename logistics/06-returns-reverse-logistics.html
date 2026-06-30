@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>반품 · 역물류 심화 — 정·역 상태 합류 · QC · 환불 흐름</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; font-size: 14.5px; line-height: 1.75; }
+    #sidebar { width: 248px; min-height: 100vh; background: var(--card); border-right: 1px solid var(--border); padding: 24px 0; position: fixed; left: 0; top: 0; overflow-y: auto; z-index: 50; }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a { display: block; padding: 7px 20px; font-size: 13px; color: var(--muted); text-decoration: none; border-left: 3px solid transparent; transition: all .15s; }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip { font-size: 12px; font-weight: 500; padding: 3px 11px; border-radius: 20px; background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 { font-size: 20px; font-weight: 700; padding-bottom: 12px; border-bottom: 2px solid var(--border); margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+    .diagram-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px 20px; margin: 18px 0; overflow-x: auto; text-align: center; }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    .sys-card { border-radius: 10px; padding: 18px 22px; margin-bottom: 20px; border-left: 4px solid; }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .sys-card.lm  { background: var(--lm);  border-color: var(--lm-b);  color: var(--lm-t);  }
+    .sys-card.ret { background: var(--ret); border-color: var(--ret-b); color: var(--ret-t); }
+    .callout { border-radius: 8px; padding: 13px 16px; margin: 14px 0; border-left: 4px solid; font-size: 13.5px; }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea { width: 100%; min-height: 110px; border: 1.5px solid var(--border); border-radius: 8px; padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif; font-size: 14px; line-height: 1.7; resize: vertical; background: #fafcff; color: var(--text); transition: border-color .15s, background .15s; }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+    .feedback-box { background: var(--card); border: 1.5px dashed var(--border); border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center; }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; transition: background .15s; }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🚚 logistics-domain-coach</div>
+    <h2>반품 · 역물류<br/>Reverse Logistics</h2>
+  </div>
+  <div class="group-label">핵심 개념</div>
+  <a href="#concept">1. 역물류 개념과 반품률 KPI</a>
+  <a href="#flow">2. 반품 전체 흐름</a>
+  <a href="#state">3. 반품 상태 머신 · 정·역 합류</a>
+  <a href="#qc">4. 검수(QC) — 상태 분류</a>
+  <a href="#refund">5. 환불 흐름 · 타이밍 Trade-off</a>
+  <a href="#edge">6. 엣지 케이스</a>
+  <div class="group-label">사례 & 연결</div>
+  <a href="#cases">7. 사례 비교</a>
+  <a href="#design">8. 백엔드 설계 연결</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">9. 이해도 확인 질문</a>
+  <a href="#next">10. 다음 학습 후보</a>
+</nav>
+
+<main>
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">logistics-domain-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">역물류 심화</span>
+    </div>
+    <h1>반품 · 교환 역물류<br>정·역방향 상태 합류 · QC · 환불 흐름</h1>
+    <p>고객 → 창고로 거꾸로 흐르는 Reverse Logistics(역물류)를 상태 머신으로 모델링하고, 정방향 주문 상태와 역방향 반품 상태가 어디서 합류하는지, 검수(QC)·환불 타이밍을 백엔드 설계 관점에서 연결한다.</p>
+  </header>
+
+  <!-- 1 -->
+  <section id="concept">
+    <h2>1. 역물류(Reverse Logistics) 개념과 반품률 KPI</h2>
+    <div class="sys-card ret">
+      <div class="sys-label">핵심 책임</div>
+      <div class="sys-title">고객이 받은 상품을 <em>거꾸로 회수·검수·재처리</em>하는 흐름. 정방향(Forward)과 별도의 비용·상태·재고 모델이 필요하다.</div>
+    </div>
+    <p>Reverse Logistics(역물류)는 정방향 물류(창고 → 고객)와 반대로 <strong>고객 → 창고로 상품이 거꾸로 흐르는 모든 과정</strong>을 말한다. 크게 세 갈래다.</p>
+    <ul>
+      <li><strong>반품(Return)</strong>: 단순 변심·하자로 상품을 돌려받고 환불.</li>
+      <li><strong>교환(Exchange)</strong>: 다른 옵션(사이즈/색상)·신품으로 맞교환. 회수 + 신규 출고가 합쳐짐.</li>
+      <li><strong>회수(Recall/Pickup)</strong>: 리콜·오배송 등으로 능동적으로 거둬들임.</li>
+    </ul>
+    <h3>왜 정방향과 별도 최적화가 필요한가</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>정방향(Forward)</th><th>역방향(Reverse)</th></tr></thead>
+        <tbody>
+          <tr><td>흐름 방향</td><td>창고 → 고객 (예측 가능)</td><td>고객 → 창고 (산발적·예측 난해)</td></tr>
+          <tr><td>상품 상태</td><td>신품 단일 상태</td><td>정상/하자/오사용 등 <strong>품질 불확실</strong></td></tr>
+          <tr><td>핵심 작업</td><td>피킹·패킹·출고</td><td><strong>검수(QC)</strong>·등급 분류·재처리 판정</td></tr>
+          <tr><td>재고 처리</td><td>차감(Deduct)</td><td>조건부 환원(Restock) 또는 폐기</td></tr>
+          <tr><td>비용 구조</td><td>건당 표준화</td><td>건별 편차 큼(검수 인건비·재포장)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 정량 감각 — 반품률 KPI</div>
+      반품률(Return Rate)은 업종별 편차가 크다. 일반 이커머스 <strong>5~10%</strong>, <strong>의류·패션은 20~30%</strong>(사이즈 미스). 반대로 식품(컬리 등)은 신선·소비재 특성상 <strong>1~3%</strong>로 낮다. 핵심 보조 지표: 재판매 가능률(Restock Rate, 검수 통과 비율), 역물류 처리 리드타임(반품 신청 → 환불 완료까지 일수).
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="flow">
+    <h2>2. 반품 전체 흐름 — 신청부터 재처리까지</h2>
+    <p>반품 신청(Return Request)에서 시작해 수거(Pickup) → 검수(QC) → 분기(환불/교환/재판매/폐기)로 갈라진다. 검수 결과가 모든 후속 분기의 <strong>관문(Gate)</strong>이다.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    Start(["반품 신청(Return Request)"]) --> Schedule["수거 예약(Pickup Scheduled)"]
+    Schedule --> Pickup["택배기사 회수(Picked Up)"]
+    Pickup --> Inbound["반품 입고 · 검수 대기"]
+    Inbound --> QC{"검수(QC) 판정"}
+    QC -->|"정상(재판매 가능)"| Restock["재고 환원(Restock)\n→ 정방향 가용재고 복귀"]
+    QC -->|"하자(공급사 책임)"| Vendor["공급사 반송 / 클레임"]
+    QC -->|"오사용·파손(고객 책임)"| Reject["반품 거부\n→ 재반송 또는 부분환불"]
+    QC -->|"재판매 불가"| Dispose["폐기 / 리퍼브 처리"]
+    Restock --> Refund["환불(Refund) 또는 교환 출고"]
+    Vendor --> Refund
+    Dispose --> Refund
+    Reject --> End2(["고객 협의"])
+    Refund --> End(["반품 완료(Closed)"])
+
+    style Restock fill:#dcfce7,stroke:#22c55e
+    style QC fill:#fce7f3,stroke:#ec4899
+    style Reject fill:#fff7ed,stroke:#ea580c
+    style Dispose fill:#fee2e2,stroke:#ef4444
+      </div>
+      <div class="cap">반품 흐름 분기 — 검수(QC) 판정이 재고 환원·환불·폐기를 가르는 단일 관문</div>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 핵심 — 검수가 게이트</div>
+      정방향에서 "출고"가 비가역적이듯, 역방향에서는 <strong>검수 통과 여부</strong>가 재고 환원·환불·재판매의 모든 분기를 결정한다. 검수 전에 재고를 가용 상태로 올리거나 환불을 확정하면 손실·정합성 오류로 직결된다.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="state">
+    <h2>3. 반품 상태 머신 — 정·역방향 상태 합류 지점</h2>
+    <p>반품도 주문과 마찬가지로 <strong>Enum + 명시적 전이</strong>로 상태를 강제한다. 중요한 것은 정방향 주문의 <code>RETURNED</code> 상태와 역방향 반품 상태 머신이 <strong>어디서 합류(Join)하는가</strong>이다.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+stateDiagram-v2
+    state "정방향 주문" as FWD {
+        DELIVERED --> RETURN_REQUESTED : ReturnRequested
+        RETURN_REQUESTED --> RETURNED : 역물류 완료 신호 수신
+        RETURNED --> [*]
+    }
+    state "역방향 반품" as REV {
+        [*] --> ReturnRequested : 반품 접수
+        ReturnRequested --> PickupScheduled : 수거 예약
+        PickupScheduled --> PickedUp : 회수 완료
+        PickedUp --> Inspected : 검수(QC) 수행
+        Inspected --> Approved : QC 통과
+        Inspected --> Rejected : QC 불합격
+        Approved --> Refunded : 환불 처리
+        Approved --> Exchanged : 교환 출고
+        Rejected --> ReturnToCustomer : 재반송
+    }
+    note right of REV : Approved → Refunded/Exchanged 도달 시\n정방향에 "역물류 완료" 이벤트 발행\n→ 주문이 RETURNED로 전이 (합류점)
+      </div>
+      <div class="cap">정방향 주문 상태와 역방향 반품 상태 머신 — 역방향이 Approved→Refunded에 도달하면 정방향 RETURNED로 합류</div>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 상태 합류(Join)</div>
+      "주문 상태와 반품 상태를 한 Enum에 다 넣어도 되나?" → No. 정방향 라이프사이클과 역방향 라이프사이클은 <strong>별도 Aggregate(집합체)</strong>로 분리하고, 역방향이 종결될 때 <strong>도메인 이벤트(<code>ReturnCompleted</code>)</strong>를 발행해 정방향 주문을 <code>RETURNED</code>로 전이시킨다. 두 머신을 이벤트로 느슨하게 연결하는 것이 합류 지점이다. <span class="deep">🔥 Deep-dive</span>
+    </div>
+    <h3>왜 별도 상태 머신으로 분리하나</h3>
+    <ul>
+      <li><strong>생명주기 차이</strong>: 한 주문에 반품이 여러 번(라인별·부분) 걸릴 수 있어 1:N. 주문 헤더 상태로는 표현 불가.</li>
+      <li><strong>합류 시점 명시</strong>: <code>Approved → Refunded</code> 도달이라는 단일 지점에서만 정방향을 건드림 → 상태 꼬임 방지.</li>
+      <li><strong>멱등성</strong>: <code>ReturnCompleted</code> 이벤트가 재전송돼도 주문은 한 번만 <code>RETURNED</code>로 전이.</li>
+    </ul>
+  </section>
+
+  <!-- 4 -->
+  <section id="qc">
+    <h2>4. 검수(QC, Quality Check) — 상태 분류와 재고 환원</h2>
+    <p>QC(Quality Check, 품질 검수)는 회수된 상품을 등급으로 분류하고, <strong>재판매(Restock) 가능 여부와 재고 환원 시점</strong>을 결정하는 핵심 단계다.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>QC 분류</th><th>판정 기준</th><th>재판매 가능?</th><th>재고 환원(Restock) 처리</th><th>환불 방향</th></tr></thead>
+        <tbody>
+          <tr><td><strong>정상(Good)</strong></td><td>미개봉·신품 동등</td><td>가능</td><td>가용재고로 즉시 환원</td><td>전액 환불</td></tr>
+          <tr><td><strong>경미 하자(Minor)</strong></td><td>개봉·전시급</td><td>리퍼브 채널 한정</td><td>별도 리퍼브 재고로 환원</td><td>전액 환불</td></tr>
+          <tr><td><strong>공급사 하자(Defective)</strong></td><td>제조 결함</td><td>불가(공급사 반송)</td><td>환원 안 함, 공급사 클레임</td><td>전액 환불</td></tr>
+          <tr><td><strong>고객 오사용(Damaged)</strong></td><td>사용 흔적·파손</td><td>불가</td><td>환원 안 함, 폐기</td><td>부분 환불 또는 거부</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 재고 환원 시점</div>
+      재고를 <strong>"반품 입고 시점"이 아니라 "QC 통과 시점"</strong>에 가용재고로 올려야 한다. 입고 즉시 환원하면, 검수에서 하자로 걸러질 상품이 정방향 판매재고에 섞여 <strong>불량품 재출고</strong>가 발생한다. 환원 전까지는 <code>RETURN_INSPECTING</code> 같은 별도 보류 재고 상태로 격리한다.
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 정량 감각 — 재판매율</div>
+      QC 통과 후 정상 등급으로 가용재고에 복귀하는 비율(Restock Rate)은 단순 변심 반품 위주면 <strong>70~85%</strong>, 의류 패션은 포장 훼손 탓에 <strong>60% 안팎</strong>까지 떨어진다. 재판매율 1%p 차이가 마진에 직결되므로 검수 정확도와 재포장 품질이 핵심 KPI다.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="refund">
+    <h2>5. 환불 흐름 — 타이밍 Trade-off와 회계 처리</h2>
+    <p>환불(Refund)은 결제 PG(Payment Gateway)와 회계 시스템에 동시에 영향을 준다. 핵심 설계 결정은 <strong>"언제 환불할 것인가"</strong> — 회수 즉시(선환불) vs 검수 통과 후(검수후환불)이다.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant C as 고객
+    participant RMS as 반품관리(RMS)
+    participant WMS as WMS(검수)
+    participant PG as 결제 PG
+    participant ACC as 회계
+
+    C->>RMS: 반품 신청
+    RMS->>RMS: PickupScheduled → PickedUp
+    RMS->>WMS: 반품 입고 · 검수 요청
+    WMS-->>RMS: QC 결과(Approved)
+    Note over RMS,WMS: 검수 통과 시점에만 환불 트리거
+    RMS->>PG: Refund(orderId, amount, Idempotency-Key)
+    PG-->>RMS: Refunded(refundId)
+    RMS->>ACC: 매출 차감 · 환불 전표 기표
+    RMS-->>C: 환불 완료 알림
+    Note over RMS: 부분 환불 시 amount = 라인 단위 합산
+      </div>
+      <div class="cap">검수후환불 시퀀스 — QC Approved 이후에만 PG Refund 호출, 멱등키로 중복 환불 차단</div>
+    </div>
+    <h3>선환불 vs 검수후환불 Trade-off</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>선환불 (회수 즉시)</th><th>검수후환불 (QC 통과 후)</th></tr></thead>
+        <tbody>
+          <tr><td>고객 경험(CX)</td><td>빠른 환불 → 만족도↑</td><td>지연(2~5일) → 불만 가능</td></tr>
+          <tr><td>손실 리스크</td><td>하자·오사용도 선환불 → 환수 어려움</td><td>QC로 걸러내 손실 최소화</td></tr>
+          <tr><td>회계 처리</td><td>환불 후 검수 → 충당금·역분개 복잡</td><td>확정 후 1회 기표 → 단순</td></tr>
+          <tr><td>적합 상황</td><td>저가·신뢰고객·단순변심 위주(쿠팡 즉시환불)</td><td>고가·하자 빈번·B2B</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 부분 환불 & 회계 시점</div>
+      "라인 3개 중 1개만 반품 승인"이면 환불액은 라인 단위로 합산하고, 쿠폰·배송비 안분(按分)까지 계산해야 한다. 회계상 <strong>매출 인식 시점과 환불 인식 시점의 정합</strong>이 중요 — 환불 전표가 원주문과 1:N로 연결돼야 정산·세금계산서 정정이 맞는다. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="edge">
+    <h2>6. 엣지 케이스 — 역물류 특유의 함정</h2>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 회수 중 분실 · 파손</div>
+      택배기사 회수 후 입고 전 상품이 <strong>분실·파손</strong>되면 책임 귀속이 모호하다. <code>PickedUp</code> 상태에서 일정 SLA 내 입고 스캔이 없으면 <strong>"운송 중 분실" 보상 흐름</strong>으로 자동 전이시켜야 한다. 고객에겐 책임 없음 → 선환불 처리, 손실은 운송사 클레임으로 회수.
+    </div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 교환 시 신규 출고와의 합류</div>
+      교환(Exchange)은 <strong>역방향 회수 + 정방향 신규 출고</strong>가 한 트랜잭션에 묶인다. "신상품을 먼저 보낼까(선출고), 회수 후 보낼까(후출고)?"가 핵심. 선출고는 CX는 좋지만 회수 미반환 시 이중 손실. 두 흐름을 <strong>별도 Shipment로 추적하되 하나의 ExchangeCase로 묶어</strong> 상태를 동기화해야 한다.
+    </div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 재고 환원 타이밍 오류</div>
+      QC 통과 전 재고를 환원하면 불량 재출고, 너무 늦게 환원하면 가용재고 누락으로 판매 기회 손실. <strong>"보류 재고(RETURN_INSPECTING) → QC 통과 시 가용 전환"</strong>의 2단계 상태를 두고, 환원 이벤트를 <strong>멱등(Idempotent)</strong>하게 처리해 중복 가산을 막아야 한다.
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section id="cases">
+    <h2>7. 사례 비교 — 정책별 역물류</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>사례</th><th>역물류 특징</th><th>핵심 정책</th></tr></thead>
+        <tbody>
+          <tr><td><strong>쿠팡</strong></td><td>배송 기사가 출고와 동시에 반품을 <strong>같은 동선에서 수거</strong></td><td>회수-입고 동선 통합으로 역물류 리드타임 단축, 단순변심 즉시환불로 CX 우선</td></tr>
+          <tr><td><strong>컬리(샛별배송)</strong></td><td>신선식품 → 반품률 자체가 낮음(1~3%)</td><td>품질 이슈는 재판매 불가 → 폐기·전액환불, 재고 환원보다 즉시 보상 중심</td></tr>
+          <tr><td><strong>일반 이커머스(의류)</strong></td><td>반품률 높음(20~30%), 검수 부하 큼</td><td>검수후환불 + 등급 분류 + 리퍼브 채널 운영, 재판매율 관리가 마진 핵심</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 쿠팡의 동선 통합 효과</div>
+      "배송 나간 기사가 그 권역의 반품을 같이 거둬온다"는 구조는 별도 회수 차량을 띄우지 않아 <strong>역물류 운송비를 사실상 한계비용 0에 수렴</strong>시키고, 회수 → 입고 리드타임을 1~2일 단축한다. 정방향 라우팅 인프라를 역방향에 재사용하는 전형적 시너지.
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section id="design">
+    <h2>8. 백엔드 시스템 디자인 연결</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>역물류 이슈</th><th>설계 패턴</th><th>이유</th></tr></thead>
+        <tbody>
+          <tr><td>정·역 상태 머신 합류</td><td><strong>별도 Aggregate + 도메인 이벤트</strong></td><td>역방향 종결 시 <code>ReturnCompleted</code> 발행 → 정방향 <code>RETURNED</code> 전이, 느슨한 결합</td></tr>
+          <tr><td>상태 전이 이력 추적</td><td><strong>이벤트 소싱(부분 적용)</strong></td><td>"왜 거부됐나" 감사 추적, 분쟁 시 회수~검수~환불 전 과정 재현</td></tr>
+          <tr><td>회수-검수-환불 분산 일관성</td><td><strong>Saga + 보상 트랜잭션</strong></td><td>환불 실패 시 재고 환원 롤백, 검수 실패 시 환불 미발행 보상</td></tr>
+          <tr><td>중복 환불 · 중복 환원</td><td><strong>Idempotency-Key(멱등키)</strong></td><td>PG Refund·재고 환원 이벤트 재전송 시 한 번만 반영</td></tr>
+          <tr><td>재고 환원 타이밍</td><td><strong>보류 재고 상태 분리</strong></td><td><code>RETURN_INSPECTING</code> → QC 통과 시 가용 전환, 2단계 격리</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 정리 — 한 문장</div>
+      "역물류는 정방향과 <strong>별도 상태 머신</strong>으로 모델링하되 <code>ReturnCompleted</code> 이벤트로 정방향에 합류시키고, <strong>검수(QC)를 모든 분기의 게이트</strong>로 두며, 환불·재고 환원은 <strong>Saga + 멱등키 + 보류 재고 격리</strong>로 일관성을 맞춘다."
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section id="quiz">
+    <h2>9. 이해도 확인 질문</h2>
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>정방향 주문 상태 머신과 역방향 반품 상태 머신을 왜 하나의 Enum에 합치면 안 되는지 설명하고, 둘이 어느 지점에서 어떤 메커니즘으로 합류(Join)하는지 서술해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div><textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>반품 상품의 재고 환원(Restock)을 "반품 입고 시점"이 아니라 "QC 통과 시점"에 해야 하는 이유를 설명하고, 그 사이 기간 동안 재고를 어떤 상태로 격리해야 하는지, 환원 이벤트의 멱등성이 왜 필요한지 서술해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div><textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>선환불(회수 즉시 환불)과 검수후환불(QC 통과 후 환불)의 Trade-off를 손실 리스크·고객 경험·회계 처리 관점에서 비교하고, 어떤 상품/고객 조건에서 각각이 적합한지 설명해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div><textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <!-- 10 -->
+  <section id="next">
+    <h2>10. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">logistics-domain-coach</div><div class="topic">교환(Exchange) 흐름 심화 — 회수+신규출고 동기화</div></div>
+      <div class="next-card"><div class="coach">backend-architecture-coach</div><div class="topic">환불 Saga 설계 — 보상 트랜잭션 (Design 모드)</div></div>
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">보류 재고 격리와 재고 정합성 락 전략</div></div>
+      <div class="next-card"><div class="coach">backend-dev-coach</div><div class="topic">멱등 환불 처리 구현 — Idempotency-Key</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'default',
+    themeVariables: { primaryColor: '#dbeafe', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#fef3c7', tertiaryColor: '#ede9fe', fontSize: '13px' },
+    flowchart: { curve: 'basis', padding: 20 }, sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  const NS = 'jobStudy::logistics::06-returns-reverse-logistics::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(NS + id);
+    if (saved) el.value = saved;
+    let timer;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(NS + id, el.value);
+        const badge = document.getElementById('saved' + (i + 1));
+        if (badge) { badge.classList.add('show'); setTimeout(() => badge.classList.remove('show'), 1800); }
+      }, 400);
+    });
+  });
+
+  function copyForFeedback() {
+    const questions = [
+      'Q1. 정방향 주문 상태 머신과 역방향 반품 상태 머신을 합치면 안 되는 이유와, 둘이 어느 지점에서 어떤 메커니즘으로 합류(Join)하는지 설명해보세요.',
+      'Q2. 재고 환원(Restock)을 "반품 입고"가 아닌 "QC 통과" 시점에 해야 하는 이유, 그 사이 재고 격리 상태, 환원 이벤트 멱등성의 필요성을 설명해보세요.',
+      'Q3. 선환불 vs 검수후환불의 Trade-off를 손실 리스크·고객 경험·회계 관점에서 비교하고, 각각이 적합한 상품/고객 조건을 설명해보세요.'
+    ];
+    const lines = ['[반품·역물류 심화 — 이해도 확인 Q&A 피드백 요청]\n세션: logistics/06-returns-reverse-logistics.html\n'];
+    ansIds.forEach((id, i) => {
+      const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)';
+      lines.push(questions[i]); lines.push('A' + (i + 1) + '. ' + ans + '\n');
+    });
+    const text = lines.join('\n');
+    const resultEl = document.getElementById('copyResult');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.';
+      }).catch(() => fallbackCopy(text, resultEl));
+    } else { fallbackCopy(text, resultEl); }
+  }
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.'; }
+    catch { el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.'; }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

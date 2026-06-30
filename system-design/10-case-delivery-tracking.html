@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>라스트마일 실시간 배송 추적 시스템 설계 — System Design 케이스</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg); color: var(--text);
+      display: flex; min-height: 100vh;
+      font-size: 14.5px; line-height: 1.75;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 248px; min-height: 100vh;
+      background: var(--card); border-right: 1px solid var(--border);
+      padding: 24px 0; position: fixed; left: 0; top: 0;
+      overflow-y: auto; z-index: 50;
+    }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a {
+      display: block; padding: 7px 20px;
+      font-size: 13px; color: var(--muted);
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+
+    /* ── Main ── */
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+
+    /* ── Page header ── */
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip {
+      font-size: 12px; font-weight: 500;
+      padding: 3px 11px; border-radius: 20px;
+      background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+    }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+
+    /* ── Sections ── */
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 {
+      font-size: 20px; font-weight: 700;
+      padding-bottom: 12px; border-bottom: 2px solid var(--border);
+      margin-bottom: 24px; display: flex; align-items: center; gap: 8px;
+    }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+
+    /* ── Diagrams ── */
+    .diagram-wrap {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 28px 24px 20px;
+      margin: 18px 0; overflow-x: auto; text-align: center;
+    }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+
+    /* ── Tables ── */
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 13.5px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    /* ── System cards ── */
+    .sys-card {
+      border-radius: 10px; padding: 18px 22px;
+      margin-bottom: 20px; border-left: 4px solid;
+    }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .sys-card.lm  { background: var(--lm);  border-color: var(--lm-b);  color: var(--lm-t);  }
+    .sys-card.ret { background: var(--ret); border-color: var(--ret-b); color: var(--ret-t); }
+
+    /* ── Callouts ── */
+    .callout {
+      border-radius: 8px; padding: 13px 16px;
+      margin: 14px 0; border-left: 4px solid; font-size: 13.5px;
+    }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+
+    /* ── Badges ── */
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+
+    /* ── Q&A cards ── */
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+
+    /* ── Next steps ── */
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+
+    /* ── Q&A Input ── */
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea {
+      width: 100%; min-height: 110px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif;
+      font-size: 14px; line-height: 1.7; resize: vertical;
+      background: #fafcff; color: var(--text);
+      transition: border-color .15s, background .15s;
+    }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+
+    /* ── Feedback button section ── */
+    .feedback-box {
+      background: var(--card); border: 1.5px dashed var(--border);
+      border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center;
+    }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 8px; padding: 10px 22px;
+      font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════ SIDEBAR ══════════════════ -->
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🧩 system-design-coach</div>
+    <h2>라스트마일 실시간<br/>배송 추적 시스템</h2>
+  </div>
+  <div class="group-label">6단계 프레임워크</div>
+  <a href="#req">1. 요구사항 명확화</a>
+  <a href="#estimate">2. 용량 추정</a>
+  <a href="#api">3. API / 데이터 모델</a>
+  <a href="#arch">4. High-level 아키텍처</a>
+  <a href="#deep">5. Deep-dive</a>
+  <a href="#tradeoff">6. Trade-off</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+
+<!-- ══════════════════ MAIN ══════════════════ -->
+<main>
+
+  <!-- Page Header -->
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🏗 Design 모드</span>
+      <span class="chip">system-design-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">Delivery Tracking</span>
+    </div>
+    <h1>라스트마일 실시간 배송 추적 시스템 설계<br>송장번호로 보는 "지금 내 택배 어디?"</h1>
+    <p>대형 이커머스 시스템 디자인 면접의 <strong>최상위 단골</strong>. 수천만 건/일 <code>TrackingEvent</code> 수집·Fan-out, Kafka 파티셔닝, 멱등 소비, 기사앱 오프라인 동기화, 상태 머신 역행 방지까지 — 물류 도메인 강점을 어필할 결정적 케이스. Deep-dive 항목은 <span class="deep">🔥 Deep-dive</span> 로 표시.</p>
+  </header>
+
+  <!-- ── Section 1: 요구사항 ── -->
+  <section id="req">
+    <h2>1. 요구사항 명확화 (Requirements)</h2>
+
+    <div class="sys-card lm">
+      <div class="sys-label">한 줄 정의</div>
+      <div class="sys-title">기사앱 스캔 이벤트를 수집해 <em>송장(Waybill) 상태·위치</em>를 갱신하고, 고객에게 실시간 조회와 상태 변경 푸시를 제공한다. 압도적 read-heavy + 최종 일관성 허용.</div>
+    </div>
+
+    <h3>Functional(기능) 요구사항</h3>
+    <ul>
+      <li><strong>송장번호 조회</strong>: <code>waybill</code>로 현재 상태·진행 단계·예상 도착·위치 조회</li>
+      <li><strong>상태 변경 푸시</strong>: 집하·간선 출발·배송 출발(Out for delivery)·배송 완료 시 푸시/SMS 알림</li>
+      <li><strong>기사앱 스캔 이벤트 수집</strong>: 기사가 바코드 스캔 → <code>TrackingEvent</code> 발생(집하·허브 도착/출발·배송 완료 등)</li>
+      <li><strong>푸시 구독</strong>: 고객이 특정 송장 알림 구독/해제</li>
+    </ul>
+
+    <h3>Non-functional(비기능) 요구사항</h3>
+    <ul>
+      <li><strong>수집 규모</strong>: 수천만 <code>TrackingEvent</code>/일. 피크 시간대(오전 출고/저녁 배송) 몰림.</li>
+      <li><strong>read-heavy</strong>: 조회 QPS가 수집 QPS의 10~50배(고객·CS·셀러가 반복 조회).</li>
+      <li><strong>최종 일관성(Eventual Consistency) 허용</strong>: "스캔 후 수 초 내 조회에 반영"이면 충분. 강한 일관성 불필요.</li>
+      <li><strong>순서 보장</strong>: 같은 송장 내 이벤트는 <strong>시간 순서</strong>가 의미 있음(상태 역행 방지).</li>
+      <li><strong>가용성</strong>: 수집 파이프라인이 죽어도 기사앱은 로컬 큐로 버티고 재전송. 데이터 유실 0 목표.</li>
+      <li><strong>오프라인 내성</strong>: 지하·산간 통신 음영에서 스캔 → 재접속 시 일괄 재전송.</li>
+    </ul>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 왜 이게 최상위 단골인가</div>
+      쿠팡·배민·컬리·CJ대한통운 류의 시스템 디자인 면접에서 <strong>거의 반드시 나온다.</strong> "고객 조회 화면" 같은 표면이 아니라 <strong>수천만 이벤트 수집 + 순서 보장 + 멱등 + Fan-out 알림 + 읽기 모델 분리(CQRS)</strong>를 한 번에 묻는 종합 문제이기 때문. write 파이프라인을 얼마나 깊게 파느냐가 시니어 변별점.
+    </div>
+  </section>
+
+  <!-- ── Section 2: 용량 추정 ── -->
+  <section id="estimate">
+    <h2>2. 용량 추정 (Back-of-the-envelope)</h2>
+
+    <h3>2-1. 수집(쓰기) QPS</h3>
+    <p>가정: <strong>일 5천만 TrackingEvent</strong> (송장 1건당 평균 5~10단계 스캔 × 일 수백만~천만 송장).</p>
+    <ul>
+      <li>1일 = 86,400초 ≈ <code>10⁵ 초</code></li>
+      <li>평균 수집 QPS = 5×10⁷ / 86,400 ≈ <strong>≈ 580 writes/s</strong></li>
+      <li>피크는 출고·배송 시간대 집중 → 평균 × 5~6 ≈ <strong>≈ 3,000~3,500 writes/s</strong></li>
+    </ul>
+
+    <h3>2-2. 조회(읽기) QPS</h3>
+    <ul>
+      <li>읽기 = 쓰기 × 10~50배 가정. 보수적으로 ×20 → 평균 ≈ <strong>≈ 11,000 reads/s</strong></li>
+      <li>피크(배송 몰리는 저녁, 고객 새로고침) ≈ <strong>≈ 50,000~70,000 reads/s</strong></li>
+    </ul>
+    <p>→ 결론: <strong>조회를 위한 읽기 모델(머티리얼라이즈 뷰) + 캐시</strong>가 핵심. 수집은 이벤트 스토어에 append, 조회는 별도 최적화된 모델로 분리(CQRS, Command Query Responsibility Segregation, 명령/조회 책임 분리).</p>
+
+    <h3>2-3. 스토리지 추정</h3>
+    <p>이벤트 1건 ≈ <strong>300B</strong>(송장번호, 상태코드, 위치 lat/lng, 허브ID, 기사ID, timestamp, 디바이스):</p>
+    <ul>
+      <li>일: 5×10⁷ × 300B = 1.5×10¹⁰ B = <strong>≈ 15 GB/day</strong></li>
+      <li>연: 15GB × 365 ≈ <strong>≈ 5.5 TB/year</strong> (이벤트 스토어, 압축 전)</li>
+      <li>핫 데이터(진행 중 배송, 최근 7~14일)만 빠른 저장소, 그 이후는 콜드 스토리지(S3/Glacier)로 티어링.</li>
+    </ul>
+
+    <div class="callout tip">
+      <div class="c-title">💡 외워둘 숫자</div>
+      "일 5천만 이벤트 → 평균 ~580 QPS, 피크 ~3.5K QPS, 일 15GB, 연 5.5TB." 이 한 줄을 술술 말하면 추정 단계 통과. 핵심은 <strong>이벤트가 append-only라 무한 증가 → 티어링/파티셔닝 필수</strong>임을 짚는 것.
+    </div>
+  </section>
+
+  <!-- ── Section 3: API / 데이터 모델 ── -->
+  <section id="api">
+    <h2>3. API / 데이터 모델</h2>
+
+    <h3>3-1. API 설계</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>메서드 · 경로</th><th>설명</th><th>요청 / 응답</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>POST /api/v1/scan-events</code></td>
+            <td>기사앱 스캔 이벤트 수집 (배치 가능)</td>
+            <td>req: <code>{ events: [{ waybill, statusCode, geo, hubId, scannedAt, clientEventId }] }</code> + <code>Idempotency-Key</code></td>
+          </tr>
+          <tr>
+            <td><code>GET /api/v1/tracking/{waybill}</code></td>
+            <td>송장 상태·진행 단계 조회 (핵심 트래픽)</td>
+            <td>res: <code>{ status, steps[], lastLocation, eta }</code></td>
+          </tr>
+          <tr>
+            <td><code>POST /api/v1/tracking/{waybill}/subscribe</code></td>
+            <td>상태 변경 푸시 구독</td>
+            <td>req: <code>{ channel: push|sms, token }</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 수집 API에 Idempotency-Key는 필수</div>
+      기사앱은 <strong>오프라인 후 재전송·네트워크 타임아웃 재시도</strong>로 같은 스캔을 여러 번 보낸다. <code>clientEventId</code>(앱이 생성한 UUID) 또는 <code>Idempotency-Key(멱등성 키)</code>로 중복 스캔을 서버에서 dedup(중복 제거) 해야 함. 안 하면 "배송 완료"가 두 번 찍히고 알림이 두 번 간다.
+    </div>
+
+    <h3>3-2. 데이터 모델 (erDiagram)</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+erDiagram
+    SHIPMENT ||--|| WAYBILL : "1:1 운송장"
+    WAYBILL ||--o{ TRACKING_EVENT : "append-only 이벤트"
+    SHIPMENT ||--o{ DELIVERY_TASK : "라스트마일 작업"
+    WAYBILL {
+        varchar waybill_no PK "송장번호 (조회·파티션 키)"
+        varchar status "현재 상태 (읽기모델 스냅샷)"
+        bigint last_event_seq "마지막 반영 이벤트 순번"
+        timestamp updated_at
+    }
+    TRACKING_EVENT {
+        bigint event_id PK "전역 순번 (append-only)"
+        varchar waybill_no FK "송장번호"
+        varchar client_event_id "기사앱 UUID (멱등 dedup)"
+        varchar status_code "스캔 상태코드"
+        decimal lat
+        decimal lng
+        varchar hub_id "허브/캠프 ID"
+        bigint driver_id
+        timestamp scanned_at "기사앱 실제 스캔 시각"
+        timestamp ingested_at "서버 수신 시각"
+    }
+    SHIPMENT {
+        bigint shipment_id PK
+        bigint order_id FK "OMS 주문 연결"
+        varchar dest_zone "배송 권역"
+    }
+    DELIVERY_TASK {
+        bigint task_id PK
+        bigint driver_id
+        varchar waybill_no FK
+        varchar task_status "배차/진행 상태"
+    }
+      </div>
+      <div class="cap">데이터 모델 — <code>TRACKING_EVENT</code>는 append-only 이벤트 스토어(진실의 원천), <code>WAYBILL.status</code>는 조회용 머티리얼라이즈 뷰(스냅샷). <code>scanned_at</code>(실제 스캔)과 <code>ingested_at</code>(서버 수신)을 분리해 out-of-order 판정에 사용. Shipment 1:1 Waybill, Waybill 1:N TrackingEvent, <code>client_event_id</code>로 중복 스캔 dedup.</div>
+    </div>
+
+    <h4>핵심 설계 결정</h4>
+    <ul>
+      <li><code>TRACKING_EVENT</code>는 <strong>append-only</strong>(수정·삭제 없음) → 감사·재처리·이벤트소싱 가능.</li>
+      <li><code>WAYBILL.status</code>는 이벤트를 접어 만든 <strong>읽기 모델(read model)</strong>. 조회는 이 한 행만 보면 됨 → 수만 QPS 대응.</li>
+      <li><code>(waybill_no, client_event_id)</code> UNIQUE → 멱등 dedup. <code>last_event_seq</code>로 out-of-order/중복 반영 방지.</li>
+    </ul>
+  </section>
+
+  <!-- ── Section 4: High-level 아키텍처 ── -->
+  <section id="arch">
+    <h2>4. High-level 아키텍처</h2>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    Driver(["📱 기사앱\n바코드 스캔 / 로컬 큐"])
+    Cust(["👤 고객 / CS / 셀러"])
+    LB["⚖️ Load Balancer"]
+    Ingest["📥 Ingest API\n수집 + 멱등 dedup"]
+    Kafka["📨 Kafka\ntopic: tracking-events\n(partition = waybill)"]
+    Stream["⚙️ Stream Processor\n상태 머신 갱신 / 순서검증"]
+    ES[("🗄️ Event Store\nTRACKING_EVENT\nappend-only")]
+    Read[("📖 Read Model\nWAYBILL 스냅샷")]
+    CDC["🔄 CDC\nChange Data Capture"]
+    Cache["⚡ Redis\n핫 송장 캐시"]
+    Search[("🔎 Search\nElasticsearch (옵션)")]
+    Notify["🔔 Notification\nFan-out"]
+    Push(["📲 Push / SMS"])
+    Query["🔁 Query API\n조회 (stateless)"]
+
+    Driver -->|"POST scan-events"| LB
+    LB --> Ingest
+    Ingest -->|"발행"| Kafka
+    Kafka --> Stream
+    Stream -->|"append"| ES
+    Stream -->|"upsert 상태"| Read
+    Stream -->|"상태 변경 시"| Notify
+    Notify --> Push
+    Read --> CDC
+    CDC --> Cache
+    CDC --> Search
+
+    Cust -->|"GET tracking"| LB
+    LB --> Query
+    Query --> Cache
+    Cache -.->|"miss"| Read
+
+    style Ingest fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a
+    style Kafka  fill:#ede9fe,stroke:#8b5cf6,color:#3b0764
+    style Stream fill:#fef3c7,stroke:#f59e0b,color:#78350f
+    style Read   fill:#dcfce7,stroke:#22c55e,color:#14532d
+    style Notify fill:#fce7f3,stroke:#ec4899,color:#831843
+    style Cache  fill:#fce7f3,stroke:#ec4899,color:#831843
+      </div>
+      <div class="cap">전체 아키텍처 — 수집(파랑) → Kafka(보라) → Stream 처리(주황) → 이벤트스토어 + 읽기모델(초록) → CDC로 캐시/검색 갱신 → 알림 Fan-out(핑크). 조회는 캐시 우선.</div>
+    </div>
+
+    <h3>송장 상태 머신 (stateDiagram)</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> CREATED : 운송장 발행
+    CREATED --> PICKED_UP : 집하 스캔
+    PICKED_UP --> IN_TRANSIT : 간선 출발
+    IN_TRANSIT --> IN_TRANSIT : 허브 도착/출발 (복수)
+    IN_TRANSIT --> OUT_FOR_DELIVERY : 캠프 도착 / 배차
+    OUT_FOR_DELIVERY --> DELIVERED : 수령 완료 (POD)
+    OUT_FOR_DELIVERY --> DELIVERY_FAILED : 부재 / 거부
+    DELIVERY_FAILED --> OUT_FOR_DELIVERY : 재방문
+    DELIVERY_FAILED --> RETURNED : 최종 반송
+    DELIVERED --> [*]
+    RETURNED --> [*]
+    note right of OUT_FOR_DELIVERY
+        역행 금지: 이미 DELIVERED인데
+        뒤늦게 IN_TRANSIT 이벤트가 와도
+        상태를 되돌리지 않는다 (out-of-order 방어)
+    end note
+      </div>
+      <div class="cap">송장 상태 전이 — Stream Processor가 이 머신으로 전이를 검증. 허용되지 않는 역행 전이는 무시(이벤트는 보존, 상태만 미반영).</div>
+    </div>
+
+    <h3>스캔 이벤트 수집 + 멱등 (sequenceDiagram)</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant D as 기사앱
+    participant I as Ingest API
+    participant K as Kafka (waybill 파티션)
+    participant S as Stream Processor
+    participant E as Event Store
+    participant R as Read Model
+    participant N as Notification
+
+    D->>I: POST scan-events(clientEventId, waybill, DELIVERED)
+    I->>I: dedup 체크 (clientEventId 본 적 있나?)
+    alt 신규 이벤트
+        I->>K: 발행 (key=waybill → 순서 보장)
+        I-->>D: 202 Accepted
+        K->>S: consume (파티션 순서대로)
+        S->>S: 상태 머신 전이 검증\n(seq > last_event_seq?)
+        S->>E: append TRACKING_EVENT
+        S->>R: upsert WAYBILL.status=DELIVERED
+        S->>N: StatusChanged 발행 → 고객 푸시
+    else 중복 (재전송)
+        I-->>D: 202 (이미 처리됨, no-op)
+    end
+      </div>
+      <div class="cap">수집 + 멱등 흐름 — 같은 <code>waybill</code>은 같은 Kafka 파티션으로 라우팅돼 순서 보장. <code>clientEventId</code>로 중복 스캔을 dedup. Stream 단계에서 한 번 더 seq 검증(at-least-once 컨슈머 대비).</div>
+    </div>
+  </section>
+
+  <!-- ── Section 5: Deep-dive ── -->
+  <section id="deep">
+    <h2>5. Deep-dive <span class="deep">🔥 Deep-dive</span></h2>
+
+    <h3>5-1. 수천만 이벤트 Fan-out & 알림</h3>
+    <ul>
+      <li>상태 변경 시 <strong>구독한 고객에게 푸시/SMS Fan-out(팬아웃)</strong>. 모든 스캔이 아니라 <strong>의미 있는 상태 전이</strong>(집하/배송출발/완료)만 알림 → 트래픽 절감.</li>
+      <li>알림은 별도 워커가 Kafka <code>status-changed</code> 토픽 consume → 푸시 게이트웨이로 비동기 발송. 발송 실패는 retry 큐 + DLQ(Dead Letter Queue, 실패 메시지 큐).</li>
+      <li>Rate limiting: 동일 고객에 단시간 중복 알림 억제(coalescing).</li>
+    </ul>
+
+    <h3>5-2. Kafka 파티셔닝 — waybill 키 순서 보장 <span class="deep">🔥</span></h3>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 핵심 — 순서는 "파티션 단위로만" 보장된다</div>
+      Kafka는 <strong>파티션 내에서만</strong> 순서를 보장한다. 그래서 <strong>partition key = waybill_no</strong>로 잡아 같은 송장의 모든 이벤트를 한 파티션에 모은다 → 그 송장의 집하→간선→배송 순서가 유지됨. 송장 간 순서는 어차피 무관하므로 전역 순서는 불필요. "Kafka가 알아서 순서 보장한다"고 답하면 감점 — <strong>파티셔닝 키 선택</strong>을 말해야 한다.
+    </div>
+
+    <h3>5-3. 멱등 소비 (Idempotent Consumer) — 중복 스캔 <span class="deep">🔥</span></h3>
+    <ul>
+      <li>Kafka는 기본 <strong>at-least-once(최소 한 번)</strong> — 컨슈머 재시작·리밸런스 시 같은 메시지 재처리 가능. "Exactly-once는 허상"임을 인지하고 <strong>멱등 소비</strong>로 푼다.</li>
+      <li>방어 2겹: ① Ingest 단계 <code>clientEventId</code> dedup, ② Stream 단계 <code>last_event_seq</code> 비교(이미 반영한 이벤트면 skip).</li>
+      <li>읽기 모델 upsert는 <strong>조건부 UPDATE</strong>(<code>WHERE last_event_seq &lt; :seq</code>)로 원자성 + out-of-order 동시 방어.</li>
+    </ul>
+
+    <h3>5-4. 기사앱 오프라인 동기화 <span class="deep">🔥</span></h3>
+    <ul>
+      <li>지하·산간 음영에서 스캔 → 앱 <strong>로컬 큐(SQLite 등)에 저장</strong> → 재접속 시 <code>scannedAt</code> 원본 시각을 담아 일괄 재전송.</li>
+      <li>서버는 <code>scanned_at</code>(실제 발생)과 <code>ingested_at</code>(수신)을 분리 저장 → 상태/순서 판정은 <strong>scanned_at 기준</strong>. 늦게 도착해도 시간순으로 올바르게 접힘.</li>
+      <li>이게 <strong>out-of-order(순서 뒤바뀜)</strong>의 주원인. 5-5와 연결.</li>
+    </ul>
+
+    <h3>5-5. 상태 머신 역행 방지 (out-of-order) <span class="deep">🔥</span></h3>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — "DELIVERED 후 IN_TRANSIT이 도착"</div>
+      오프라인 재전송으로 <strong>늦게 도착한 과거 이벤트</strong>가 현재 상태를 되돌리면 고객이 "배송완료 → 배송중"으로 보이는 사고. 방어: ① 이벤트에 <strong>단조 증가 seq/scanned_at</strong> 부여, ② 읽기 모델은 <code>seq &gt; last_event_seq</code>일 때만 상태 갱신, ③ 상태 머신에서 <strong>허용된 전이만</strong> 반영(이벤트 자체는 스토어에 모두 보존).
+    </div>
+
+    <h3>5-6. CDC로 읽기 모델 → 캐시/검색 갱신</h3>
+    <ul>
+      <li><code>WAYBILL</code> 읽기 모델 변경을 <strong>CDC(Change Data Capture, 변경 데이터 캡처)</strong>(Debezium 등)로 캡처 → Redis 캐시·Elasticsearch 인덱스 갱신.</li>
+      <li>장점: 애플리케이션이 캐시/검색 동기화를 신경 안 써도 됨(이중 쓰기 제거 → 정합성↑). 단점: 파이프라인 추가 운영 비용.</li>
+    </ul>
+
+    <h3>5-7. 핫 송장 (Hot Waybill)</h3>
+    <ul>
+      <li>바이럴 상품·대형 셀러 송장은 조회가 집중 → Redis 핫스팟. 대응: <strong>앱 로컬 캐시(짧은 TTL)</strong> 추가, 핫키 복제.</li>
+      <li>조회는 read-only라 stale(약간 오래됨) 허용 → TTL 수 초로 잡아 DB 보호.</li>
+    </ul>
+
+    <h3>5-8. 최종 일관성</h3>
+    <p>스캔 → Kafka → Stream → 읽기 모델 → 캐시까지 수 초의 지연 존재. 고객 입장에선 "스캔 후 몇 초 내 반영"이면 충분하므로 <strong>최종 일관성으로 충분</strong>. 강한 일관성을 요구하면 처리량이 급락 — 도메인 특성상 불필요한 비용.</p>
+  </section>
+
+  <!-- ── Section 6: Trade-off ── -->
+  <section id="tradeoff">
+    <h2>6. Trade-off & Alternatives</h2>
+
+    <h3>6-1. 동기 vs 비동기 상태 갱신</h3>
+    <ul>
+      <li><strong>동기</strong>(수집 API가 즉시 상태 갱신): 구현 단순·조회 즉시 일관. 그러나 수집 피크 시 DB 쓰기 경쟁 → latency·장애 전파.</li>
+      <li><strong>비동기</strong>(Kafka 경유): 수집 API는 발행만 → 빠르고 버퍼링으로 피크 흡수(Back-pressure 대응). 대신 최종 일관성·파이프라인 복잡도. <strong>대규모는 비동기 채택.</strong></li>
+    </ul>
+
+    <h3>6-2. 이벤트소싱 vs 상태 스냅샷</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>이벤트 소싱 (append-only 이벤트가 진실)</th><th>상태 스냅샷만 (status 컬럼 UPDATE)</th></tr></thead>
+        <tbody>
+          <tr><td>이력/감사</td><td>전 이력 보존 → 재현·디버깅·분쟁 대응 강함</td><td>현재 상태만 → 이력은 별도 로그 필요</td></tr>
+          <tr><td>재처리</td><td>이벤트 리플레이로 읽기 모델 재구축 가능</td><td>불가 (덮어써짐)</td></tr>
+          <tr><td>조회 성능</td><td>그대로면 매 조회마다 접기 → 느림 → 스냅샷 병행 필요</td><td>단일 행 조회 → 빠름</td></tr>
+          <tr><td>저장 비용</td><td>높음 (모든 이벤트 누적, 티어링 필요)</td><td>낮음</td></tr>
+          <tr><td>결론</td><td>이력·감사·재처리가 중요한 추적엔 적합</td><td>단순·저비용이나 추적 도메인엔 정보 손실</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>→ 추적 시스템은 <strong>하이브리드가 정석</strong>: 이벤트 스토어(append-only)를 진실의 원천으로 두고, 빠른 조회를 위해 <strong>스냅샷(읽기 모델)을 함께</strong> 유지(CQRS). 이벤트소싱의 이력 강점과 스냅샷의 조회 속도를 모두 취함.</p>
+
+    <h3>6-3. Push vs Pull 추적</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>Push (서버 → 고객 실시간 전송)</th><th>Pull (고객이 조회 시 갱신)</th></tr></thead>
+        <tbody>
+          <tr><td>실시간성</td><td>높음 (상태 변경 즉시 푸시)</td><td>고객이 열 때만 최신</td></tr>
+          <tr><td>서버 비용</td><td>구독 관리·연결·Fan-out 비용 큼</td><td>저렴 (조회 시 캐시 조회)</td></tr>
+          <tr><td>적합</td><td>"배송 출발/완료" 같은 핵심 전이 알림</td><td>"내 택배 어디?" 반복 조회 화면</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>→ <strong>둘 다 쓴다</strong>: 핵심 상태 전이는 Push(푸시/SMS), 상세 진행 화면은 Pull(캐시 조회). 모든 스캔을 Push하면 비용 폭발이므로 의미 있는 전이만 선별.</p>
+
+    <h3>6-4. Strong vs Eventual Consistency</h3>
+    <p>추적은 <strong>Eventual로 충분</strong>(수 초 지연 무해). Strong을 고집하면 수집 경로에 동기 합의가 끼어 처리량 급락. 단 <strong>"배송 완료" 같은 결제·정산 트리거가 되는 전이</strong>는 다운스트림에서 멱등하게 한 번만 처리되도록 보장(중복 정산 방지) — 일관성 등급을 이벤트별로 차등 적용하는 게 시니어다운 답변.</p>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 실제 사례 — 풀필먼트 · 라스트마일 도메인 연결</div>
+      <strong>쿠팡 CLS(쿠팡로지스틱스서비스)</strong>: 자체 배송망 수직 통합으로 기사앱 스캔이 곧바로 추적·고객 푸시로 흐름 → 데이터 일관성·실시간성이 3PL 위탁보다 강함. <strong>CJ대한통운</strong>: 허브앤스포크 전 구간 송장 스캔(집하·서브터미널·허브·배송), 다수 주체 이벤트가 합류 → 멱등·순서 보장이 특히 중요. <strong>컬리 샛별배송</strong>: Cut-off 23:00→07:00 도착의 짧은 윈도, 새벽 음영 지역 오프라인 동기화가 빈번. 세 사례 모두 "Kafka 파티셔닝 + 멱등 + 읽기모델 분리"가 그대로 적용된다.
+    </div>
+  </section>
+
+  <!-- ── Section 7: 이해도 확인 ── -->
+  <section id="quiz">
+    <h2>7. 이해도 확인 질문</h2>
+
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>같은 송장의 이벤트 <strong>순서를 어떻게 보장</strong>할지 Kafka 파티셔닝 관점에서 설명하고, "Kafka가 알아서 전역 순서를 보장한다"가 왜 틀린 답인지 함께 설명해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>내 답변</span>
+          <span class="saved-badge" id="saved1">저장됨 ✓</span>
+        </div>
+        <textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>기사앱이 <strong>오프라인 후 재전송</strong>해서 늦게 도착한 과거 스캔이 "이미 DELIVERED인 송장"을 IN_TRANSIT으로 되돌리려 합니다. 이 <strong>out-of-order + 상태 역행</strong>을 데이터 모델과 처리 로직에서 각각 어떻게 막을지 구체적으로 답해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>내 답변</span>
+          <span class="saved-badge" id="saved2">저장됨 ✓</span>
+        </div>
+        <textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>이 시스템에서 <strong>이벤트소싱과 상태 스냅샷을 함께 쓰는 이유(CQRS)</strong>를 조회 성능·이력 보존·재처리 관점에서 설명하고, 둘 중 하나만 쓰면 어떤 문제가 생기는지 제시해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>내 답변</span>
+          <span class="saved-badge" id="saved3">저장됨 ✓</span>
+        </div>
+        <textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <!-- ── Section 8: 다음 학습 ── -->
+  <section id="next">
+    <h2>8. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card">
+        <div class="coach">backend-architecture-coach</div>
+        <div class="topic">Outbox 패턴 & 이중 쓰기 문제 해결</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">system-design-coach</div>
+        <div class="topic">알림(Notification) Fan-out 시스템 심화</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">infra-coach + backend-architecture-coach</div>
+        <div class="topic">Kafka 운영 — 파티션·컨슈머그룹·DLQ</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">system-design-coach</div>
+        <div class="topic">실시간 배차(VRP) & 기사 위치 스트리밍</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // ── Mermaid ──
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    themeVariables: {
+      primaryColor: '#dbeafe',
+      primaryTextColor: '#1e293b',
+      primaryBorderColor: '#3b82f6',
+      lineColor: '#64748b',
+      secondaryColor: '#fef3c7',
+      tertiaryColor: '#ede9fe',
+      fontSize: '13px'
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+
+  // ── Active sidebar link on scroll ──
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  // ── Q&A localStorage (key namespace per file) ──
+  const NS = 'jobStudy::system-design::10-case-delivery-tracking::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+
+  // Load saved answers on page load
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(NS + id);
+    if (saved) el.value = saved;
+
+    // Auto-save with debounce
+    let timer;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(NS + id, el.value);
+        const badge = document.getElementById('saved' + (i + 1));
+        if (badge) {
+          badge.classList.add('show');
+          setTimeout(() => badge.classList.remove('show'), 1800);
+        }
+      }, 400);
+    });
+  });
+
+  // ── Copy Q&A for feedback ──
+  function copyForFeedback() {
+    const questions = [
+      'Q1. 같은 송장의 이벤트 순서를 Kafka 파티셔닝 관점에서 어떻게 보장하나요? "Kafka가 알아서 전역 순서를 보장한다"가 왜 틀린 답인지 함께 설명해보세요.',
+      'Q2. 기사앱 오프라인 재전송으로 늦게 도착한 과거 스캔이 이미 DELIVERED인 송장을 IN_TRANSIT으로 되돌리려 할 때, out-of-order + 상태 역행을 데이터 모델과 처리 로직에서 각각 어떻게 막나요?',
+      'Q3. 이벤트소싱과 상태 스냅샷을 함께 쓰는 이유(CQRS)를 조회 성능·이력 보존·재처리 관점에서 설명하고, 둘 중 하나만 쓰면 생기는 문제를 제시해보세요.'
+    ];
+
+    const lines = ['[라스트마일 실시간 배송 추적 시스템 설계 — 이해도 확인 Q&A 피드백 요청]\n세션: system-design/10-case-delivery-tracking.html\n'];
+    ansIds.forEach((id, i) => {
+      const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)';
+      lines.push(questions[i]);
+      lines.push('A' + (i + 1) + '. ' + ans + '\n');
+    });
+
+    const text = lines.join('\n');
+    const resultEl = document.getElementById('copyResult');
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.';
+      }).catch(() => fallbackCopy(text, resultEl));
+    } else {
+      fallbackCopy(text, resultEl);
+    }
+  }
+
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try {
+      document.execCommand('copy');
+      el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.';
+    } catch {
+      el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.';
+    }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

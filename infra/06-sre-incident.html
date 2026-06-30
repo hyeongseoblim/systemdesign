@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SRE · 장애 대응 — SLO / Error Budget / 포스트모템</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; font-size: 14.5px; line-height: 1.75; }
+    #sidebar { width: 248px; min-height: 100vh; background: var(--card); border-right: 1px solid var(--border); padding: 24px 0; position: fixed; left: 0; top: 0; overflow-y: auto; z-index: 50; }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a { display: block; padding: 7px 20px; font-size: 13px; color: var(--muted); text-decoration: none; border-left: 3px solid transparent; transition: all .15s; }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip { font-size: 12px; font-weight: 500; padding: 3px 11px; border-radius: 20px; background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 { font-size: 20px; font-weight: 700; padding-bottom: 12px; border-bottom: 2px solid var(--border); margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+    .diagram-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px 20px; margin: 18px 0; overflow-x: auto; text-align: center; }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    .sys-card { border-radius: 10px; padding: 18px 22px; margin-bottom: 20px; border-left: 4px solid; }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .sys-card.lm  { background: var(--lm);  border-color: var(--lm-b);  color: var(--lm-t);  }
+    .sys-card.ret { background: var(--ret); border-color: var(--ret-b); color: var(--ret-t); }
+    .callout { border-radius: 8px; padding: 13px 16px; margin: 14px 0; border-left: 4px solid; font-size: 13.5px; }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea { width: 100%; min-height: 110px; border: 1.5px solid var(--border); border-radius: 8px; padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif; font-size: 14px; line-height: 1.7; resize: vertical; background: #fafcff; color: var(--text); transition: border-color .15s, background .15s; }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+    .feedback-box { background: var(--card); border: 1.5px dashed var(--border); border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center; }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; transition: background .15s; }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">☁️ infra-coach</div>
+    <h2>SRE · 장애 대응<br/>SLO · Error Budget</h2>
+  </div>
+  <div class="group-label">SRE 기본</div>
+  <a href="#what">1. SRE란</a>
+  <a href="#slislo">2. SLI / SLO / SLA</a>
+  <a href="#budget">3. Error Budget</a>
+  <a href="#toil">4. Toil 감소</a>
+  <div class="group-label">장애 대응</div>
+  <a href="#incident">5. Incident 대응</a>
+  <a href="#postmortem">6. 포스트모템</a>
+  <a href="#chaos">7. 카오스 엔지니어링</a>
+  <div class="group-label">사례 & 점검</div>
+  <a href="#case">8. 물류 장애 대응</a>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+
+<main>
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">infra-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">SRE · Incident</span>
+    </div>
+    <h1>SRE · 장애 대응<br>SLI/SLO · Error Budget · 포스트모템 · 카오스</h1>
+    <p>SRE는 "운영을 소프트웨어 엔지니어링 문제로 푸는" 분야. 핵심은 <strong>신뢰성을 숫자(SLO)로 정의</strong>하고, <strong>Error Budget(오류 예산)</strong>으로 개발 속도와 안정성의 균형을 객관화하는 것. <span class="deep">🔥 Deep-dive</span>.</p>
+  </header>
+
+  <!-- 1 -->
+  <section id="what">
+    <h2>1. SRE(Site Reliability Engineering)란</h2>
+    <div class="sys-card oms">
+      <div class="sys-label">한 줄 정의</div>
+      <div class="sys-title">신뢰성(Reliability)을 <em>측정 가능한 목표</em>로 정의하고, 그 목표를 충족하는 한도 내에서 <em>최대한 빨리 기능을 출시</em>하도록 운영을 자동화한다.</div>
+    </div>
+    <p>핵심 철학: <strong>100% 가용성은 목표가 아니다</strong>. 99.999%를 만드는 비용은 99.9%의 수십 배인데 사용자는 체감 못 한다. "적절한 신뢰성 목표"를 정하고, 남는 여유(Error Budget)는 기능 출시에 쓴다.</p>
+  </section>
+
+  <!-- 2 -->
+  <section id="slislo">
+    <h2>2. SLI / SLO / SLA — 셋의 관계</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>용어</th><th>정의</th><th>예시</th><th>주체</th></tr></thead>
+        <tbody>
+          <tr><td><strong>SLI</strong> (Service Level Indicator, 지표)</td><td>실제 측정한 신뢰성 수치</td><td>"성공 요청 비율 99.95%"</td><td>측정값</td></tr>
+          <tr><td><strong>SLO</strong> (Service Level Objective, 목표)</td><td>SLI의 <strong>내부 목표치</strong></td><td>"99.9% 이상"</td><td>팀 내부 약속</td></tr>
+          <tr><td><strong>SLA</strong> (Service Level Agreement, 협약)</td><td>고객과의 <strong>계약 + 위약 패널티</strong></td><td>"99.5% 미달 시 환불"</td><td>대외 계약</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    SLI["📏 SLI\n측정값 99.95%"] --> SLO["🎯 SLO\n내부 목표 99.9%"]
+    SLO --> SLA["📜 SLA\n고객 계약 99.5%"]
+    Note["SLA < SLO 여야 안전\n(SLO 어겨도 계약은 지킴)"]
+
+    style SLI fill:#dbeafe,stroke:#3b82f6
+    style SLO fill:#fef3c7,stroke:#f59e0b
+    style SLA fill:#fce7f3,stroke:#ec4899
+      </div>
+      <div class="cap">SLA &lt; SLO &lt; SLI 관계 — 내부 목표(SLO)를 계약(SLA)보다 빡세게 잡아 버퍼 확보</div>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트</div>
+      세 용어를 섞어 쓰면 감점. <strong>SLI는 측정값, SLO는 내부 목표, SLA는 대외 계약</strong>. 그리고 "SLO를 SLA보다 엄격하게 잡아야, SLO를 어겨도 고객 계약 위반(패널티)은 막을 버퍼가 생긴다"까지 말하면 실무 이해도 인증.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="budget">
+    <h2>3. Error Budget(오류 예산)</h2>
+    <div class="sys-card tms">
+      <div class="sys-label">정의</div>
+      <div class="sys-title"><strong>Error Budget = 1 − SLO</strong>. SLO가 99.9%면, 0.1%만큼은 "고장 나도 되는 예산". 이 예산을 <em>신기능 출시 리스크</em>에 쓴다.</div>
+    </div>
+    <p>월 SLO 99.9% → 한 달(약 43,200분) 중 <strong>약 43분</strong>의 다운타임이 허용 예산. 이 숫자가 개발팀과 운영팀의 갈등을 객관적 규칙으로 바꾼다.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> Healthy : 예산 충분
+    Healthy --> ShipFast : 예산 남음 → 공격적 배포
+    ShipFast --> Healthy : 안정적
+    ShipFast --> Burning : 장애로 예산 소진
+    Burning --> Freeze : 예산 소진 → 기능 동결
+    Freeze --> Stabilize : 안정화·기술부채 상환에 집중
+    Stabilize --> Healthy : 예산 회복
+      </div>
+      <div class="cap">Error Budget 정책 — 예산 남으면 빠르게 출시, 소진되면 기능 동결하고 안정화</div>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 갈등을 규칙으로</div>
+      "개발은 빨리 출시하려 하고 운영은 막으려 한다"는 고질병을, Error Budget은 <strong>"예산 남으면 출시 OK, 소진되면 자동으로 기능 동결"</strong>이라는 공유 규칙으로 해소한다. 누구의 감정이 아니라 숫자가 결정한다.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section id="toil">
+    <h2>4. Toil(토일, 반복 운영 업무) 감소</h2>
+    <p><strong>Toil</strong> = 수동적·반복적·자동화 가능하지만 안 한·서비스 성장에 비례해 늘어나는 운영 업무. (예: 매번 손으로 하는 배포, 수동 인증서 갱신, 반복 알람 대응)</p>
+    <ul>
+      <li>Google SRE 기준: <strong>Toil이 업무의 50%를 넘으면 위험 신호</strong>. 자동화에 투자해야 한다.</li>
+      <li>자동화 투자 판단: "이 반복 작업을 자동화하는 비용 vs 앞으로 절약할 시간"으로 정량 비교.</li>
+    </ul>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정</div>
+      Toil을 "원래 운영은 그런 것"이라며 방치하면, 팀이 불 끄기에만 매달려 개선·자동화에 쓸 시간이 사라지는 악순환에 빠진다. Toil 비율을 측정하고 상한선을 정하라.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="incident">
+    <h2>5. Incident(장애) 대응 — Runbook & 역할 분리</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    Detect["🚨 감지\n(SLO 알람)"] --> Triage["분류\n심각도(Sev) 판정"]
+    Triage --> Roles["역할 배정"]
+    Roles --> IC["IC\nIncident Commander\n(지휘·의사결정)"]
+    Roles --> Comms["Comms\n(대내외 커뮤니케이션)"]
+    Roles --> Ops["Ops\n(실제 조치·복구)"]
+    IC --> Mitigate["완화\n(롤백·차단·우회)"]
+    Mitigate --> Resolve["해결"]
+    Resolve --> PM["포스트모템"]
+
+    style Detect fill:#fee2e2,stroke:#ef4444
+    style IC fill:#ede9fe,stroke:#8b5cf6
+    style Comms fill:#dbeafe,stroke:#3b82f6
+    style Ops fill:#fef3c7,stroke:#f59e0b
+    style PM fill:#dcfce7,stroke:#22c55e
+      </div>
+      <div class="cap">Incident Command — IC/Comms/Ops 역할 분리. 한 사람이 다 하면 지휘가 무너진다</div>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 복구가 원인 규명보다 먼저</div>
+      "장애 나면 뭐부터?" → <strong>"원인부터 찾는다"는 흔한 오답</strong>. 우선순위는 ① <strong>완화(Mitigation) — 일단 사용자 영향 멈추기</strong>(롤백·트래픽 차단·우회), ② 그 다음 원인 규명. 근본 원인은 복구 후 포스트모템에서. 면접에선 "MTTR(평균 복구 시간)을 줄이려면 원인 규명보다 완화를 먼저"라고 답하라. <span class="deep">🔥 Deep-dive</span>
+    </div>
+    <h3>Graceful Degradation / Back-pressure / Shed load</h3>
+    <ul>
+      <li><strong>Graceful degradation(우아한 성능 저하)</strong>: 추천 서비스 죽으면 추천 없이라도 주문은 받기.</li>
+      <li><strong>Back-pressure(배압)</strong>: 다운스트림이 못 따라오면 상류에 "천천히" 신호.</li>
+      <li><strong>Shed load(부하 차단)</strong>: 과부하 시 일부 요청을 빠르게 거절해 전체 붕괴 방지.</li>
+    </ul>
+  </section>
+
+  <!-- 6 -->
+  <section id="postmortem">
+    <h2>6. Postmortem(포스트모템) — Blameless</h2>
+    <div class="sys-card lm">
+      <div class="sys-label">핵심 원칙</div>
+      <div class="sys-title"><strong>Blameless(비난 없는)</strong> — "누가 잘못했나"가 아니라 "어떤 시스템·프로세스가 그 실수를 가능하게 했나"를 묻는다.</div>
+    </div>
+    <h3>포스트모템 표준 구성</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>섹션</th><th>내용</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Summary</strong></td><td>무슨 일이, 얼마나 영향(사용자·시간·매출)</td></tr>
+          <tr><td><strong>Timeline</strong></td><td>감지→완화→해결까지 시각별 사건</td></tr>
+          <tr><td><strong>Root Cause</strong></td><td>근본 원인 (5 Whys 등)</td></tr>
+          <tr><td><strong>Action Items</strong></td><td>재발 방지 — <strong>담당자·기한 명시</strong></td></tr>
+          <tr><td><strong>Lessons Learned</strong></td><td>잘된 점·아쉬운 점·운 좋았던 점</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정</div>
+      포스트모템이 <strong>"담당자 문책"으로 끝나면</strong>, 다음부터 사람들이 장애를 숨긴다 → 더 큰 사고. Action Item이 "조심하자" 같은 추상론이면 무의미 — <strong>구체적·검증 가능·담당자/기한 있는</strong> 개선만 유효하다.
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section id="chaos">
+    <h2>7. Chaos Engineering(카오스 엔지니어링) 개요</h2>
+    <p>장애를 <strong>일부러 주입</strong>해 시스템이 견디는지 사전에 검증한다. "장애는 일어난다"를 전제로, 통제된 환경에서 약점을 미리 찾는다.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    H["가설\n'AZ 하나 죽어도 정상'"] --> E["실험\n(AZ 장애 주입)"]
+    E --> O["관측\n(SLO 영향 측정)"]
+    O -->|"견딤"| Conf["신뢰 확보"]
+    O -->|"무너짐"| Fix["약점 개선"]
+    Fix --> H
+
+    style H fill:#dbeafe,stroke:#3b82f6
+    style E fill:#fef3c7,stroke:#f59e0b
+    style O fill:#ede9fe,stroke:#8b5cf6
+    style Fix fill:#fee2e2,stroke:#ef4444
+      </div>
+      <div class="cap">Chaos Engineering — 가설→실험→관측→개선. Netflix Chaos Monkey가 원조</div>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 성급히 뛰어들기 전에</div>
+      카오스 엔지니어링은 <strong>관측성·SLO·롤백이 먼저 갖춰진 뒤</strong>에 의미 있다. 측정 못 하는 시스템에 장애를 주입하면 그냥 장애를 만드는 것. Gameday(통제된 모의 장애 훈련)부터 시작해 점진 확대하라.
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section id="case">
+    <h2>8. 물류 연결 — Cut-off 직전 주문 서비스 장애</h2>
+    <div class="callout tip">
+      <div class="c-title">💡 시나리오 — 새벽배송 마감 10분 전 주문 API 지연</div>
+      22:50, Cut-off(23:00) 10분 전에 주문 API p99 지연이 5초로 치솟고 에러율 급증. 사용자가 주문을 못 넣으면 <strong>곧바로 매출 손실 + 익일 배송 실패</strong>.
+      <ol>
+        <li><strong>완화 우선</strong>: 원인 규명 전, 직전 배포를 즉시 롤백(혹은 피처 플래그 OFF). MTTR 단축이 최우선.</li>
+        <li><strong>Graceful degradation</strong>: 추천·쿠폰 추천 같은 비핵심 호출을 차단(Shed load)해 주문 핵심 경로 자원 확보.</li>
+        <li><strong>역할</strong>: IC가 "Cut-off를 10분 연장할지"를 비즈니스와 즉시 결정(Comms), Ops는 복구 집행.</li>
+        <li><strong>Error Budget</strong>: 이번 장애로 이달 예산이 소진되면, 다음 스프린트는 기능 동결하고 주문 경로 안정화(부하 테스트·Shed load 정교화)에 투자.</li>
+        <li><strong>Postmortem</strong>: Blameless로 "왜 Cut-off 직전 배포가 가능했나"를 묻고, Action Item으로 <strong>피크 시간대 배포 동결(freeze window)</strong>을 규칙화.</li>
+      </ol>
+      <strong>Trade-off</strong>: Cut-off 연장은 고객 경험을 지키지만 창고·간선·기사 스케줄 전체를 밀어 비용이 든다. SLO·매출 영향·운영 비용을 IC가 저울질해 결정한다.
+    </div>
+  </section>
+
+  <!-- Quiz -->
+  <section id="quiz">
+    <h2>9. 이해도 확인 질문</h2>
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>SLI / SLO / SLA를 각각 정의하고, <strong>왜 SLO를 SLA보다 엄격하게</strong> 설정해야 하는지, 그리고 SLO 99.9%가 월 다운타임으로 몇 분인지 계산해 설명해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div><textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>새벽배송 Cut-off 10분 전 주문 API에 장애가 났습니다. <strong>완화(Mitigation)를 원인 규명보다 먼저</strong> 해야 하는 이유를 MTTR·Graceful degradation·Shed load 개념으로 답하고, IC/Comms/Ops 역할이 각각 무엇을 할지 설명해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div><textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>Error Budget이 개발팀과 운영팀의 "빨리 출시 vs 안정성" 갈등을 어떻게 <strong>객관적 규칙</strong>으로 바꾸는지 설명하고, 포스트모템이 Blameless여야 하는 이유를 함께 답해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div><textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>10. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">infra-coach</div><div class="topic">관측성 스택 (05)</div></div>
+      <div class="next-card"><div class="coach">infra-coach</div><div class="topic">CI/CD · 배포 전략 (04)</div></div>
+      <div class="next-card"><div class="coach">system-design-coach</div><div class="topic">고가용성 시스템 설계 (Design 모드)</div></div>
+      <div class="next-card"><div class="coach">backend-dev-coach</div><div class="topic">Circuit Breaker · Back-pressure 구현</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'default',
+    themeVariables: { primaryColor: '#dbeafe', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#fef3c7', tertiaryColor: '#ede9fe', fontSize: '13px' },
+    flowchart: { curve: 'basis', padding: 20 }, sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { navLinks.forEach(a => a.classList.remove('active')); const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`); if (active) active.classList.add('active'); } });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  const NS = 'jobStudy::infra::06-sre-incident::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(NS + id);
+    if (saved) el.value = saved;
+    let timer;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(NS + id, el.value);
+        const badge = document.getElementById('saved' + (i + 1));
+        if (badge) { badge.classList.add('show'); setTimeout(() => badge.classList.remove('show'), 1800); }
+      }, 400);
+    });
+  });
+  function copyForFeedback() {
+    const questions = [
+      'Q1. SLI/SLO/SLA를 정의하고, SLO를 SLA보다 엄격히 설정하는 이유와 SLO 99.9%의 월 허용 다운타임(분)을 계산해 설명해보세요.',
+      'Q2. Cut-off 직전 주문 API 장애에서 완화를 원인 규명보다 먼저 해야 하는 이유를 MTTR·Graceful degradation·Shed load로 답하고, IC/Comms/Ops 역할을 설명해보세요.',
+      'Q3. Error Budget이 "빨리 출시 vs 안정성" 갈등을 객관적 규칙으로 바꾸는 원리와, 포스트모템이 Blameless여야 하는 이유를 답해보세요.'
+    ];
+    const lines = ['[SRE · 장애 대응 — 이해도 확인 Q&A 피드백 요청]\n세션: infra/06-sre-incident.html\n'];
+    ansIds.forEach((id, i) => {
+      const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)';
+      lines.push(questions[i]); lines.push('A' + (i + 1) + '. ' + ans + '\n');
+    });
+    const text = lines.join('\n');
+    const resultEl = document.getElementById('copyResult');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => { resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.'; }).catch(() => fallbackCopy(text, resultEl));
+    } else { fallbackCopy(text, resultEl); }
+  }
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.'; }
+    catch { el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.'; }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

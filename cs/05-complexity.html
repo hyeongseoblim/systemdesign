@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>복잡도 분석 — 빅오·시간/공간·DP/그리디·자료구조 복잡도표</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root{--bg:#f8fafc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--accent:#059669}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14.5px;line-height:1.75}
+#sidebar{width:248px;min-height:100vh;background:var(--card);border-right:1px solid var(--border);padding:24px 0;position:fixed;left:0;top:0;overflow-y:auto;z-index:50}
+#sidebar .brand{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:16px}
+#sidebar .brand .tag{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+#sidebar .brand h2{font-size:14px;font-weight:700;line-height:1.4}
+#sidebar .group-label{padding:12px 20px 4px;font-size:10.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em}
+#sidebar a{display:block;padding:7px 20px;font-size:13px;color:var(--muted);text-decoration:none;border-left:3px solid transparent;transition:all .15s}
+#sidebar a:hover,#sidebar a.active{color:var(--accent);background:var(--bg);border-left-color:var(--accent)}
+main{margin-left:248px;flex:1;max-width:1080px;padding:48px 56px}
+.page-hdr{margin-bottom:48px;padding-bottom:32px;border-bottom:2px solid var(--border)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{font-size:12px;font-weight:500;padding:3px 11px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.accent{background:#d1fae5;border-color:var(--accent);color:#064e3b}
+.page-hdr h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:10px}
+.page-hdr p{color:var(--muted)}
+section{margin-bottom:64px;scroll-margin-top:24px}
+section>h2{font-size:20px;font-weight:700;padding-bottom:12px;border-bottom:2px solid var(--border);margin-bottom:24px}
+h3{font-size:16px;font-weight:600;margin:28px 0 12px}
+h4{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:20px 0 8px}
+p{margin-bottom:10px}ul,ol{padding-left:22px;margin:8px 0 10px}li{margin-bottom:4px}
+.diagram-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px 24px 20px;margin:18px 0;overflow-x:auto;text-align:center}
+.diagram-wrap .cap{font-size:12px;color:var(--muted);margin-top:14px}
+.mermaid{display:inline-block}
+.tbl-wrap{overflow-x:auto;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+th{background:#f1f5f9;font-weight:600;font-size:12.5px;padding:9px 14px;border-bottom:1px solid var(--border);text-align:left}
+td{padding:9px 14px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+tr:last-child td{border-bottom:none}tr:hover td{background:#fafafa}
+.callout{border-radius:8px;padding:13px 16px;margin:14px 0;border-left:4px solid;font-size:13.5px}
+.callout .c-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.callout.interview{background:#fef2f2;border-color:#dc2626}.callout.interview .c-title{color:#dc2626}
+.callout.warn{background:#fff7ed;border-color:#ea580c}.callout.warn .c-title{color:#ea580c}
+.callout.tip{background:#f0fdf4;border-color:#16a34a}.callout.tip .c-title{color:#16a34a}
+.deep{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:4px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;margin-left:6px}
+code{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#be185d}
+pre{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#1e293b;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:14px 0;line-height:1.6}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:14px}
+.q-card .q-num{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px}
+.ans-area{margin-top:12px}
+.ans-label{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.saved-badge{font-size:11px;color:#16a34a;opacity:0;transition:opacity .4s}.saved-badge.show{opacity:1}
+.ans-area textarea{width:100%;min-height:110px;border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-family:'Noto Sans KR',sans-serif;font-size:14px;line-height:1.7;resize:vertical;background:#fafcff;color:var(--text);transition:border-color .15s}
+.ans-area textarea:focus{outline:none;border-color:var(--accent);background:#fff}
+.ans-area textarea::placeholder{color:#cbd5e1}
+.feedback-box{background:var(--card);border:1.5px dashed var(--border);border-radius:12px;padding:22px 24px;margin-top:28px;text-align:center}
+.feedback-box p{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+.btn-feedback{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:background .15s}
+.btn-feedback:hover{background:#047857}
+.copy-result{margin-top:12px;font-size:13px;color:#16a34a;min-height:20px}
+.next-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:14px}
+.next-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;transition:box-shadow .15s}
+.next-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.next-card .coach{font-size:11px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:5px}
+.next-card .topic{font-size:13px;font-weight:500}
+@media(max-width:860px){#sidebar{display:none}main{margin-left:0;padding:24px 20px}}
+</style>
+</head>
+<body>
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🧮 cs-fundamentals-coach</div>
+    <h2>복잡도 분석<br>Complexity</h2>
+  </div>
+  <div class="group-label">표기법</div>
+  <a href="#bigo">1. 빅오 · 오메가 · 세타</a>
+  <a href="#growth">2. 증가율 위계</a>
+  <div class="group-label">분석</div>
+  <a href="#time-space">3. 시간 · 공간 복잡도</a>
+  <a href="#amortized">4. 분할상환 분석</a>
+  <a href="#paradigm">5. DP / 그리디 / 분할정복</a>
+  <div class="group-label">레퍼런스</div>
+  <a href="#cheatsheet">6. 자료구조 복잡도표</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#qa">Q&amp;A 연습</a>
+  <a href="#next">다음 학습</a>
+</nav>
+<main>
+  <div class="page-hdr">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">cs-fundamentals-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip">복잡도 분석</span>
+    </div>
+    <h1>복잡도 분석<br>빅오 · 시간/공간 · DP/그리디 · 복잡도표</h1>
+    <p>복잡도를 "외워서" 말하면 시니어 면접에서 걸린다. <strong>왜</strong> 그 복잡도인지 — 점화식·분할상환·최악/평균을 근거로 설명할 수 있어야 한다. 대규모 트래픽에서 O(n²)와 O(n log n)의 차이는 곧 서버 비용과 SLA의 차이다.</p>
+  </div>
+
+  <!-- 1 -->
+  <section id="bigo">
+    <h2>1. 빅오(Big-O) · 오메가 · 세타</h2>
+    <p>점근 표기법(Asymptotic Notation)은 입력 n이 커질 때 성장률을 <strong>상수·저차항을 무시하고</strong> 표현한다.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>표기</th><th>의미</th><th>경계</th><th>쓰임</th></tr></thead>
+        <tbody>
+          <tr><td><strong>O(f) — Big-O</strong></td><td>상한(upper bound)</td><td>"아무리 나빠도 이 이하"</td><td>최악 보장 — 가장 흔히 사용</td></tr>
+          <tr><td><strong>Ω(f) — Big-Omega</strong></td><td>하한(lower bound)</td><td>"아무리 좋아도 이 이상"</td><td>최선의 한계, 문제의 하한 증명</td></tr>
+          <tr><td><strong>Θ(f) — Big-Theta</strong></td><td>상·하한 일치(tight)</td><td>"정확히 이 차수"</td><td>정확한 성장률 표현</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 — "O를 정확히 쓰는가"</div>
+      흔히 "이 알고리즘은 O(n)"이라 말하지만, 정확히는 <strong>최악이 O(n)</strong>이라는 뜻이다. 평균·최악을 구분하라: Quick Sort는 평균 Θ(n log n), 최악 O(n²). 또 Big-O는 상한이라 "O(n²) 알고리즘이 O(n³)이기도 하다"는 형식적으로 참이지만, 면접에선 <strong>가장 빡빡한(tight) 경계</strong>를 말해야 한다 → 사실상 Θ를 답하는 셈.
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="growth">
+    <h2>2. 증가율 위계 (Growth Hierarchy)</h2>
+    <pre>
+O(1) < O(log n) < O(√n) < O(n) < O(n log n) < O(n²) < O(2ⁿ) < O(n!)
+상수    로그        제곱근    선형     선형로그       이차      지수      팩토리얼
+
+n = 1,000,000 일 때 대략의 연산 수
+O(1)        : 1
+O(log n)    : ~20
+O(n)        : 1,000,000
+O(n log n)  : ~20,000,000
+O(n²)       : 1,000,000,000,000   ← 1초 안에 불가능
+O(2ⁿ)       : 사실상 영원
+    </pre>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    A["O(1)<br/>HashMap 조회"] --> B["O(log n)<br/>이진탐색·B+Tree"]
+    B --> C["O(n)<br/>순차 스캔"]
+    C --> D["O(n log n)<br/>비교 정렬 한계"]
+    D --> E["O(n²)<br/>중첩 루프"]
+    E --> F["O(2ⁿ)<br/>완전탐색"]
+
+    style A fill:#dcfce7,stroke:#059669
+    style D fill:#fef3c7,stroke:#d97706
+    style E fill:#fff7ed,stroke:#ea580c
+    style F fill:#fef2f2,stroke:#dc2626
+      </div>
+      <div class="cap">실무 경계선: n이 크면 O(n log n) 이하로 끌어내려야 하고, O(n²)·O(2ⁿ)는 입력 크기를 의심하라</div>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 면접 입력 크기 감 잡기</div>
+      제약(constraint)이 알고리즘을 알려준다. n ≤ 20 → 비트마스크/완전탐색 O(2ⁿ) 허용. n ≤ 5,000 → O(n²) 가능. n ≤ 10⁵~10⁶ → O(n log n) 필요. n ≥ 10⁷ → O(n)/O(log n)만. "1초 ≈ 10⁸ 연산"을 기준 삼아 역산하라.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="time-space">
+    <h2>3. 시간 &amp; 공간 복잡도 (Time &amp; Space)</h2>
+    <p>시간 복잡도만 보면 절반이다. <strong>공간 복잡도</strong> — 추가 메모리, 재귀 호출 스택, 보조 자료구조 — 도 함께 분석해야 한다. 둘 사이엔 흔히 <strong>Trade-off</strong>가 있다.</p>
+
+    <h3>Time-Space Trade-off 예시</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>기법</th><th>시간</th><th>공간</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Memoization</strong></td><td>↓ (중복 계산 제거)</td><td>↑ (캐시 저장)</td><td>Fibonacci O(2ⁿ)→O(n), 대신 O(n) 메모리</td></tr>
+          <tr><td><strong>Hash Index</strong></td><td>↓ 조회 O(1)</td><td>↑ 해시 테이블</td><td>DB 인덱스: 조회 빠르게, 저장공간·쓰기 비용 증가</td></tr>
+          <tr><td><strong>In-place 정렬</strong></td><td>= </td><td>↓ O(1)</td><td>Heap Sort: 메모리 아끼지만 캐시 비친화</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>재귀의 공간 복잡도 — 흔한 함정</h3>
+    <pre>
+// 재귀 깊이 = 공간 복잡도(호출 스택)
+int sum(int n) {            // 공간 O(n) — 스택 프레임 n개 쌓임
+    if (n == 0) return 0;
+    return n + sum(n - 1);  // 꼬리 재귀지만 JVM은 TCO 미지원 → 스택 누적
+}
+// n이 크면 StackOverflowError → 반복문 O(1) 공간으로 변환 필요
+    </pre>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 함정 — "시간만 보고 공간을 잊는다"</div>
+      재귀 DFS/분할정복은 시간이 O(n log n)이어도 호출 스택이 O(깊이)를 먹는다. 대규모 입력에서 OOM·StackOverflow의 원인. 면접에서 복잡도를 답할 때 <strong>시간과 공간을 항상 쌍으로</strong> 말하면 시니어 인상을 준다.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section id="amortized">
+    <h2>4. 분할상환 분석 (Amortized Analysis)</h2>
+    <p>개별 연산은 가끔 비싸지만, <strong>연산 시퀀스 전체로 평균을 내면</strong> 싼 경우가 있다. 최악 한 번이 아니라 "긴 호출열의 평균 비용"을 본다 — 평균(average)과는 다른 개념(확률 가정 없음).</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    A["append × 7<br/>각 O(1)"] --> B["8번째 append:<br/>용량 초과 → 2배 확장<br/>O(n) 복사!"]
+    B --> C["이후 append<br/>다시 O(1)"]
+    C --> D["전체 n번 평균<br/>= amortized O(1)"]
+
+    style B fill:#fef2f2,stroke:#dc2626
+    style D fill:#dcfce7,stroke:#059669
+      </div>
+      <div class="cap">Dynamic Array — 가끔 O(n) 복사가 일어나지만, 전체로 평균 내면 분할상환 O(1)</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>연산</th><th>최악(단일)</th><th>분할상환</th><th>이유</th></tr></thead>
+        <tbody>
+          <tr><td>Dynamic Array <code>append</code></td><td>O(n)</td><td>O(1)</td><td>2배 확장: 복사 비용이 다음 n번에 분산</td></tr>
+          <tr><td>HashMap <code>put</code></td><td>O(n)</td><td>O(1)</td><td>Rehashing 비용이 전체에 분산</td></tr>
+          <tr><td>Union-Find <code>find</code></td><td>O(log n)</td><td>~O(α(n))</td><td>경로 압축 + rank → 거의 상수</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 — "ArrayList add는 O(1)인가?"</div>
+      정확한 답: <strong>분할상환(amortized) O(1)</strong>이고, 리사이징이 걸리는 그 순간은 O(n)이다. 그래서 크기를 알면 <code>new ArrayList&lt;&gt;(capacity)</code>로 미리 잡아 복사를 없앤다. "amortized"라는 단어를 정확히 쓰면 깊이를 증명한다.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="paradigm">
+    <h2>5. DP / 그리디 / 분할정복 복잡도</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>패러다임</th><th>핵심</th><th>복잡도 분석법</th><th>대표 예 (복잡도)</th></tr></thead>
+        <tbody>
+          <tr><td><strong>분할정복(Divide &amp; Conquer)</strong></td><td>쪼개서 풀고 합침</td><td>마스터 정리(점화식)</td><td>Merge Sort T(n)=2T(n/2)+O(n)=O(n log n)</td></tr>
+          <tr><td><strong>동적계획법(DP)</strong></td><td>부분문제 + 메모이제이션</td><td>상태 수 × 전이 비용</td><td>0/1 Knapsack O(nW), LCS O(nm)</td></tr>
+          <tr><td><strong>그리디(Greedy)</strong></td><td>매 단계 국소 최적 선택</td><td>정렬 + 선형 스캔이 흔함</td><td>활동 선택 O(n log n), Dijkstra O(E log V)</td></tr>
+          <tr><td><strong>백트래킹(Backtracking)</strong></td><td>탐색 + 가지치기</td><td>분기 × 깊이(지수적, 가지치기로 완화)</td><td>N-Queens O(n!), 부분집합 O(2ⁿ)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>마스터 정리 (Master Theorem) 직관</h3>
+    <pre>
+T(n) = a·T(n/b) + O(n^d)   (a≥1, b>1)
+
+비교 d vs log_b(a):
+  d > log_b(a)  →  T(n) = O(n^d)           (분할 비용이 지배)
+  d = log_b(a)  →  T(n) = O(n^d · log n)    (균형)  ← Merge Sort: a=2,b=2,d=1
+  d < log_b(a)  →  T(n) = O(n^(log_b a))    (재귀가 지배)
+    </pre>
+
+    <div class="callout tip">
+      <div class="c-title">💡 DP vs 그리디 — 언제 그리디가 맞나</div>
+      그리디는 <strong>탐욕적 선택 속성</strong>과 <strong>최적 부분 구조</strong>가 증명될 때만 정답을 보장한다(예: Dijkstra, MST). 증명 없이 그리디를 쓰면 반례에 깨진다 — 동전 거스름돈이 대표적(특정 액면이면 그리디 실패 → DP 필요). 면접에서 그리디를 제안하면 <strong>왜 국소 최적이 전역 최적인지</strong> 한 줄 근거를 붙여라.
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="cheatsheet">
+    <h2>6. 자료구조 연산 복잡도표 (Cheat Sheet)</h2>
+    <p>면접에서 즉답해야 하는 핵심 표. 평균 / 최악을 구분해서 외우되, <strong>왜</strong>를 함께 기억하라.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>자료구조</th><th>접근</th><th>탐색</th><th>삽입</th><th>삭제</th><th>공간</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Array</strong></td><td>O(1)</td><td>O(n)</td><td>O(n)</td><td>O(n)</td><td>O(n)</td><td>인덱스 즉시, 중간 삽입 시 이동</td></tr>
+          <tr><td><strong>Dynamic Array</strong></td><td>O(1)</td><td>O(n)</td><td>O(1)†</td><td>O(n)</td><td>O(n)</td><td>† amortized, 끝 삽입</td></tr>
+          <tr><td><strong>Linked List</strong></td><td>O(n)</td><td>O(n)</td><td>O(1)*</td><td>O(1)*</td><td>O(n)</td><td>* 위치 알 때</td></tr>
+          <tr><td><strong>Stack / Queue</strong></td><td>O(n)</td><td>O(n)</td><td>O(1)</td><td>O(1)</td><td>O(n)</td><td>끝/앞 전용 접근</td></tr>
+          <tr><td><strong>HashMap</strong></td><td>—</td><td>O(1) / O(n)‡</td><td>O(1) / O(n)‡</td><td>O(1) / O(n)‡</td><td>O(n)</td><td>‡ 평균 / 최악(충돌·리사이즈)</td></tr>
+          <tr><td><strong>TreeMap (R-B)</strong></td><td>—</td><td>O(log n)</td><td>O(log n)</td><td>O(log n)</td><td>O(n)</td><td>정렬·Range 보장</td></tr>
+          <tr><td><strong>Heap (PQ)</strong></td><td>O(1) peek</td><td>O(n)</td><td>O(log n)</td><td>O(log n)</td><td>O(n)</td><td>min/max 특화</td></tr>
+          <tr><td><strong>Trie</strong></td><td>—</td><td>O(L)</td><td>O(L)</td><td>O(L)</td><td>O(Σ·N)</td><td>L=키 길이, 접두사 검색</td></tr>
+          <tr><td><strong>B+Tree</strong></td><td>—</td><td>O(log n)</td><td>O(log n)</td><td>O(log n)</td><td>O(n)</td><td>디스크 친화, DB 인덱스</td></tr>
+          <tr><td><strong>Union-Find</strong></td><td>—</td><td>O(α(n))</td><td>O(α(n))</td><td>—</td><td>O(n)</td><td>경로압축+rank, 사실상 상수</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 — 표를 외우지 말고 "왜"로 재구성하라</div>
+      Array 접근이 O(1)인 이유는 <strong>연속 메모리 + 주소 산술</strong>이고, LinkedList 탐색이 O(n)인 이유는 <strong>포인터 추적</strong>이다. TreeMap이 O(log n)인 이유는 <strong>균형 트리 높이</strong>, B+Tree가 같은 O(log n)이어도 DB에 쓰이는 이유는 <strong>높은 fan-out으로 디스크 I/O 횟수가 적기</strong> 때문. 원리를 알면 표는 저절로 복원된다.
+    </div>
+  </section>
+
+  <!-- Q&A -->
+  <section id="qa">
+    <h2>Q&amp;A 연습</h2>
+    <p>아래 질문에 직접 답변을 작성하세요. 자동 저장되며 피드백 요청 시 복사할 수 있습니다.</p>
+
+    <div class="q-card">
+      <div class="q-num">Q1 — Big-O 증명</div>
+      <p>"ArrayList의 add는 O(1)"이라는 말의 정확한 의미를 분할상환(amortized) 관점에서 설명하세요. 단일 호출이 O(n)이 되는 순간은 언제이며, 이를 어떻게 회피할 수 있나요?</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>나의 답변</span><span class="saved-badge" id="badge-q1">저장됨 ✓</span></div>
+        <textarea id="ans-q1" placeholder="답변을 입력하세요..." oninput="saveAns('q1',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2 — 시간 vs 공간</div>
+      <p>Fibonacci를 재귀로 짜면 O(2ⁿ)입니다. Memoization과 Bottom-up DP로 각각 최적화했을 때의 시간·공간 복잡도를 쓰고, 공간을 O(1)까지 더 줄이는 방법과 그 Trade-off를 설명하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>나의 답변</span><span class="saved-badge" id="badge-q2">저장됨 ✓</span></div>
+        <textarea id="ans-q2" placeholder="답변을 입력하세요..." oninput="saveAns('q2',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3 — 입력 크기 추론</div>
+      <p>면접에서 "n ≤ 100,000, 1초 제한" 제약을 봤습니다. 허용 가능한 시간 복잡도를 추론하는 과정을 설명하고, 같은 문제를 n ≤ 20으로 줄이면 어떤 접근(완전탐색/비트마스크 등)이 새로 가능해지는지 서술하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>나의 답변</span><span class="saved-badge" id="badge-q3">저장됨 ✓</span></div>
+        <textarea id="ans-q3" placeholder="답변을 입력하세요..." oninput="saveAns('q3',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>작성한 답변을 복사해서 Claude에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 복사</button>
+      <div class="copy-result" id="copy-result"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>다음 학습 주제</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">cs-fundamentals-coach</div><div class="topic">DP 점화식 세우기 패턴 심화</div></div>
+      <div class="next-card"><div class="coach">cs-fundamentals-coach</div><div class="topic">NP-hard와 근사·휴리스틱</div></div>
+      <div class="next-card"><div class="coach">cs-fundamentals-coach</div><div class="topic">자료구조 & 알고리즘 면접 패턴</div></div>
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">인덱스 복잡도와 실행계획</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'neutral',securityLevel:'loose',flowchart:{htmlLabels:true,curve:'basis'}});
+
+const NS = 'jobStudy::cs::05-complexity::';
+
+function saveAns(id, val) {
+  localStorage.setItem(NS + id, val);
+  const b = document.getElementById('badge-' + id);
+  if (b) { b.classList.add('show'); setTimeout(() => b.classList.remove('show'), 1800); }
+}
+function loadAll() {
+  document.querySelectorAll('[id^="ans-"]').forEach(el => {
+    const saved = localStorage.getItem(NS + el.id.replace('ans-', ''));
+    if (saved) el.value = saved;
+  });
+}
+function copyForFeedback() {
+  const title = document.title;
+  const qs = document.querySelectorAll('.q-card');
+  let text = `[${title} — Q&A 피드백 요청]\n\n`;
+  qs.forEach((card, i) => {
+    const num = card.querySelector('.q-num')?.innerText || `Q${i+1}`;
+    const q = card.querySelector('p')?.innerText || '';
+    const ta = card.querySelector('textarea');
+    const ans = ta ? ta.value.trim() : '';
+    text += `${num}\n질문: ${q}\n내 답변: ${ans || '(미작성)'}\n\n`;
+  });
+  text += '위 답변들에 대해 시니어 CS 기초 코치 관점에서 피드백 부탁드립니다.';
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('copy-result').textContent = '✓ 클립보드에 복사되었습니다. Claude 채팅창에 붙여넣기 하세요.';
+    setTimeout(() => document.getElementById('copy-result').textContent = '', 4000);
+  });
+}
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      document.querySelectorAll('#sidebar a').forEach(a => a.classList.remove('active'));
+      const link = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, {rootMargin: '-20% 0px -70% 0px'});
+document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+loadAll();
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

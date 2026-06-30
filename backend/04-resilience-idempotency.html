@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>복원력 · 멱등성 — Retry·Circuit Breaker·Idempotency-Key</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root { --bg:#f8fafc; --card:#fff; --border:#e2e8f0; --text:#1e293b; --muted:#64748b; --accent:#6366f1; --oms:#dbeafe; --oms-b:#3b82f6; --oms-t:#1e3a8a; --wms:#fef3c7; --wms-b:#f59e0b; --wms-t:#78350f; --tms:#ede9fe; --tms-b:#8b5cf6; --tms-t:#3b0764; --lm:#dcfce7; --lm-b:#22c55e; --lm-t:#14532d; --ret:#fce7f3; --ret-b:#ec4899; --ret-t:#831843; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; font-size: 14.5px; line-height: 1.75; }
+    #sidebar { width: 248px; min-height: 100vh; background: var(--card); border-right: 1px solid var(--border); padding: 24px 0; position: fixed; left: 0; top: 0; overflow-y: auto; z-index: 50; }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a { display: block; padding: 7px 20px; font-size: 13px; color: var(--muted); text-decoration: none; border-left: 3px solid transparent; transition: all .15s; }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip { font-size: 12px; font-weight: 500; padding: 3px 11px; border-radius: 20px; background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 { font-size: 20px; font-weight: 700; padding-bottom: 12px; border-bottom: 2px solid var(--border); margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+    .diagram-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px 20px; margin: 18px 0; overflow-x: auto; text-align: center; }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    .sys-card { border-radius: 10px; padding: 18px 22px; margin-bottom: 20px; border-left: 4px solid; }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .callout { border-radius: 8px; padding: 13px 16px; margin: 14px 0; border-left: 4px solid; font-size: 13.5px; }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; } .callout.interview .c-title { color: #dc2626; }
+    .callout.warn { background: #fff7ed; border-color: #ea580c; } .callout.warn .c-title { color: #ea580c; }
+    .callout.tip { background: #f0fdf4; border-color: #16a34a; } .callout.tip .c-title { color: #16a34a; }
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+    pre { background: #0f172a; border-radius: 10px; padding: 18px 20px; margin: 14px 0; overflow-x: auto; }
+    pre code { background: none; color: #e2e8f0; padding: 0; font-size: 12.5px; line-height: 1.7; }
+    pre .cmt { color: #64748b; } pre .kw { color: #c084fc; } pre .str { color: #86efac; } pre .fn { color: #93c5fd; } pre .err { color: #fca5a5; }
+    .code-cap { font-size: 11.5px; color: var(--muted); margin: -6px 0 16px; padding-left: 4px; }
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea { width: 100%; min-height: 110px; border: 1.5px solid var(--border); border-radius: 8px; padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif; font-size: 14px; line-height: 1.7; resize: vertical; background: #fafcff; color: var(--text); transition: border-color .15s, background .15s; }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+    .feedback-box { background: var(--card); border: 1.5px dashed var(--border); border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center; }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; transition: background .15s; }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">⚙️ backend-dev-coach</div>
+    <h2>복원력 · 멱등성<br/>Retry · CB · Idempotency</h2>
+  </div>
+  <div class="group-label">복원력 패턴</div>
+  <a href="#timeout">1. Timeout — 출발점</a>
+  <a href="#retry">2. Retry · Backoff · Jitter</a>
+  <a href="#cb">3. Circuit Breaker</a>
+  <a href="#bulkhead">4. Bulkhead</a>
+  <div class="group-label">멱등성</div>
+  <a href="#idem-key">5. Idempotency-Key 설계 ⭐</a>
+  <a href="#idem-consumer">6. 멱등 소비자 (Kafka)</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+
+<main>
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">backend-dev-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">복원력 · 멱등성</span>
+    </div>
+    <h1>복원력(Resilience) · 멱등성(Idempotency)<br>Retry · Circuit Breaker · Idempotency-Key</h1>
+    <p>분산 시스템에서 <strong>장애는 일어난다(전제)</strong>. 핵심은 "한 컴포넌트의 장애가 전체로 번지지 않게" 막는 것이다. 그리고 재시도하는 순간 <strong>중복 처리(이중 결제 등)</strong>가 따라오므로 멱등성이 한 세트로 묶인다.</p>
+  </header>
+
+  <!-- 1 -->
+  <section id="timeout">
+    <h2>1. Timeout — 모든 복원력의 출발점</h2>
+    <p>Timeout이 없으면 다른 모든 패턴이 의미 없다. 응답 없는 호출이 스레드를 무한 점유하면 <strong>스레드풀 고갈 → 캐스케이딩 장애(Cascading Failure)</strong>로 번진다.</p>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 기본 타임아웃 무한대</div>
+      RestTemplate·일부 HTTP 클라이언트는 기본 타임아웃이 <strong>무한대(0)</strong>다. 연결(connect)·읽기(read) 타임아웃을 반드시 명시해야 한다. 또한 <strong>다운스트림 타임아웃 &lt; 업스트림 타임아웃</strong> 규칙을 지켜야 안쪽이 먼저 끊겨 자원을 회수한다.
+    </div>
+    <pre><code><span class="cmt">// WebClient — connect/response 타임아웃 명시</span>
+<span class="kw">val</span> client = WebClient.builder()
+    .clientConnector(ReactorClientHttpConnector(
+        HttpClient.create()
+            .responseTimeout(Duration.ofSeconds(2))          <span class="cmt">// 읽기 타임아웃</span>
+            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 500) <span class="cmt">// 연결 타임아웃</span>
+    )).build()</code></pre>
+  </section>
+
+  <!-- 2 -->
+  <section id="retry">
+    <h2>2. Retry · Backoff · Jitter</h2>
+    <p>일시적(transient) 장애는 재시도로 회복된다. 단 <strong>(1) 멱등 연산만, (2) 지수 백오프 + 지터, (3) 최대 횟수</strong> 세 조건을 지켜야 한다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    Call["외부 호출"] --> R{"성공?"}
+    R -->|"예"| Done["완료"]
+    R -->|"아니오"| C{"재시도 가능한 에러?\n(5xx/timeout/429)"}
+    C -->|"아니오 (4xx)"| Fail["즉시 실패\n재시도 무의미"]
+    C -->|"예"| M{"최대 횟수 초과?"}
+    M -->|"예"| Fail2["포기 → Fallback"]
+    M -->|"아니오"| W["대기:\nbase × 2^n + random jitter"]
+    W --> Call
+    style Done fill:#dcfce7,stroke:#22c55e
+    style Fail fill:#fee2e2,stroke:#ef4444
+      </div>
+      <div class="cap">재시도 결정 트리 — 4xx는 재시도 금지, 지수 백오프에 지터를 더해 동시 재시도 충돌 방지</div>
+    </div>
+
+    <h4>왜 Jitter(지터)가 필요한가</h4>
+    <p>장애 후 모든 클라이언트가 <em>정확히 같은 간격</em>으로 재시도하면 <strong>Thundering Herd(동시 재시도 폭주)</strong>가 발생해 막 회복한 서버를 다시 죽인다. 각 클라이언트의 대기 시간에 랜덤성을 더해 분산시킨다.</p>
+
+    <pre><code><span class="cmt">// Resilience4j — 지수 백오프 + 지터 + 재시도 대상 한정</span>
+<span class="kw">val</span> config = RetryConfig.custom&lt;Any&gt;()
+    .maxAttempts(3)
+    .intervalFunction(IntervalFunction.ofExponentialRandomBackoff(
+        Duration.ofMillis(100),  <span class="cmt">// initial</span>
+        2.0,                     <span class="cmt">// multiplier</span>
+        0.5))                    <span class="cmt">// jitter factor (±50%)</span>
+    .retryExceptions(IOException::<span class="kw">class</span>.java, TimeoutException::<span class="kw">class</span>.java)
+    .ignoreExceptions(BadRequestException::<span class="kw">class</span>.java)  <span class="cmt">// 4xx는 재시도 안 함</span>
+    .build()</code></pre>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 다층 재시도 곱셈</div>
+      클라이언트 3회 × 게이트웨이 3회 × 서비스 3회 = <strong>최대 27배 트래픽</strong>. 재시도는 <strong>한 레이어에서만</strong> 하거나, 안쪽 레이어는 재시도하지 않도록 설계해야 한다. 비멱등 연산(POST)을 재시도하면 중복 생성 — 그래서 멱등성(5절)이 필수.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="cb">
+    <h2>3. Circuit Breaker — 회로 차단기</h2>
+    <p>다운스트림이 계속 실패하는데 재시도를 반복하면 자원만 낭비한다. <code>Circuit Breaker(회로 차단기)</code>는 실패율이 임계치를 넘으면 <strong>회로를 열어 즉시 실패(Fail-fast)</strong>시키고, 일정 시간 후 시험 호출로 회복을 탐지한다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> CLOSED
+    CLOSED --> OPEN : 실패율 > 임계치 (예: 50%)
+    OPEN --> HALF_OPEN : wait duration 경과
+    HALF_OPEN --> CLOSED : 시험 호출 성공
+    HALF_OPEN --> OPEN : 시험 호출 실패
+    note right of CLOSED : 정상 — 호출 통과
+    note right of OPEN : 차단 — 즉시 실패/Fallback<br/>다운스트림에 부하 안 줌
+    note right of HALF_OPEN : 회복 탐색 — 제한된 호출만 허용
+      </div>
+      <div class="cap">Circuit Breaker 상태 머신 — OPEN 상태에서 다운스트림을 쉬게 해 회복을 돕는다</div>
+    </div>
+
+    <pre><code><span class="kw">@CircuitBreaker</span>(name = <span class="str">"paymentService"</span>, fallbackMethod = <span class="str">"payFallback"</span>)
+<span class="kw">@Retry</span>(name = <span class="str">"paymentService"</span>)
+<span class="kw">fun</span> <span class="fn">pay</span>(cmd: PayCommand): PayResult = paymentClient.call(cmd)
+
+<span class="cmt">// Fallback — 회로가 열렸을 때 호출됨 (큐잉·캐시·대체 응답)</span>
+<span class="kw">fun</span> <span class="fn">payFallback</span>(cmd: PayCommand, e: Throwable): PayResult {
+    log.warn(<span class="str">"payment circuit open, queueing: {}"</span>, cmd.orderId)
+    <span class="kw">return</span> PayResult.deferred(cmd.orderId)   <span class="cmt">// 나중에 재처리</span>
+}</code></pre>
+    <div class="code-cap">Resilience4j 적용 순서: Retry가 CircuitBreaker를 감싼다(재시도 후에도 실패하면 회로 카운트 반영)</div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 Netflix Hystrix → Resilience4j</div>
+      Netflix가 Hystrix로 대중화한 패턴. 지금은 Hystrix가 유지보수 종료되어 <strong>Resilience4j</strong>가 사실상 표준이다. 함수형·경량이고 Retry/CB/Bulkhead/RateLimiter를 모듈로 조합한다.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section id="bulkhead">
+    <h2>4. Bulkhead — 격벽 격리</h2>
+    <p>배의 격벽처럼, 한 다운스트림 호출이 <strong>전체 스레드풀을 독점</strong>하지 못하게 자원을 칸막이로 나눈다. 느린 결제 API가 주문 조회 스레드까지 잡아먹는 사태를 막는다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    In["요청"] --> B1["격벽 A\n결제용 풀 (10)"]
+    In --> B2["격벽 B\n조회용 풀 (20)"]
+    In --> B3["격벽 C\n알림용 풀 (5)"]
+    B1 --> Pay["결제 API (느림)"]
+    B2 --> Query["조회 (빠름)"]
+    style B1 fill:#fee2e2,stroke:#ef4444
+    style B2 fill:#dcfce7,stroke:#22c55e
+      </div>
+      <div class="cap">Bulkhead — 결제용 풀이 고갈돼도 조회용 풀은 멀쩡 → 장애 격리</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>패턴</th><th>막는 문제</th><th>핵심 파라미터</th></tr></thead>
+        <tbody>
+          <tr><td>Timeout</td><td>무한 대기</td><td>connect / read timeout</td></tr>
+          <tr><td>Retry</td><td>일시적 실패</td><td>maxAttempts, backoff, jitter</td></tr>
+          <tr><td>Circuit Breaker</td><td>지속 실패에 자원 낭비</td><td>failureRate, waitDuration</td></tr>
+          <tr><td>Bulkhead</td><td>한 호출의 자원 독점</td><td>maxConcurrentCalls</td></tr>
+          <tr><td>Rate Limiter</td><td>과부하·다운스트림 보호</td><td>limitForPeriod</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="idem-key">
+    <h2>5. ⭐ Idempotency-Key 설계 — 비멱등 POST 길들이기</h2>
+
+    <div class="sys-card oms">
+      <div class="sys-label">결제 · 주문 핵심</div>
+      <div class="sys-title">네트워크 타임아웃 후 클라이언트가 재시도해도 <em>이중 결제·중복 주문</em>이 안 나게</div>
+    </div>
+
+    <p>클라이언트가 요청마다 <strong>고유 키(UUID)</strong>를 <code>Idempotency-Key</code> 헤더로 보낸다. 서버는 이 키로 "이미 처리한 요청인지"를 판별하고, 처리했다면 <strong>저장해둔 원래 응답</strong>을 그대로 반환한다(재처리 안 함). 토스·Stripe 결제 API의 표준 방식.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant S as Server
+    participant DB as Idempotency Store
+    C->>S: POST /payments<br/>Idempotency-Key: abc-123
+    S->>DB: INSERT key=abc-123 (UNIQUE)
+    alt 키 최초 — 정상 처리
+        DB-->>S: 삽입 성공
+        S->>S: 결제 실행
+        S->>DB: 응답 본문 저장 (key→result)
+        S-->>C: 200 + 결과
+    else 키 중복 — 재시도 도착
+        DB-->>S: UNIQUE 위반 (이미 존재)
+        S->>DB: 저장된 응답 조회
+        S-->>C: 200 + 동일한 원래 결과 (재처리 X)
+    end
+      </div>
+      <div class="cap">Idempotency-Key 흐름 — UNIQUE 제약으로 동시 중복까지 원자적으로 차단</div>
+    </div>
+
+    <pre><code><span class="kw">@Transactional</span>
+<span class="kw">fun</span> <span class="fn">pay</span>(key: String, cmd: PayCommand): PayResult {
+    <span class="cmt">// 1) UNIQUE 제약으로 선점 시도 — 동시 중복도 DB가 막아줌</span>
+    <span class="kw">val</span> claimed = idempotencyRepo.tryInsert(key, status = PROCESSING)
+    <span class="kw">if</span> (!claimed) {
+        <span class="kw">val</span> existing = idempotencyRepo.find(key)
+        <span class="kw">return when</span> (existing.status) {
+            DONE       -&gt; existing.toResult()        <span class="cmt">// 저장된 응답 재반환</span>
+            PROCESSING -&gt; <span class="kw">throw</span> RequestInProgressException()  <span class="cmt">// 409</span>
+        }
+    }
+    <span class="cmt">// 2) 실제 결제 (최초 1회만)</span>
+    <span class="kw">val</span> result = paymentGateway.charge(cmd)
+    idempotencyRepo.complete(key, result)            <span class="cmt">// status=DONE + 응답 저장</span>
+    <span class="kw">return</span> result
+}</code></pre>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 키의 TTL과 요청 본문 일치 검증</div>
+      (1) 멱등 키 저장에 <strong>TTL(24h 등)</strong>을 두지 않으면 테이블이 무한 증가한다. (2) 같은 키로 <strong>다른 본문</strong>이 오면 <code>422</code>로 거부해야 한다(키 재사용 공격·버그 방지). Stripe는 키+요청 해시를 함께 검증한다.
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 멱등성 ≠ 재시도 안전</div>
+      "재시도하면 중복 안 나게 하려면?" → 단순 "키 저장"이 아니라 <strong>동시에 같은 키 2개가 들어올 때</strong>를 어떻게 막느냐가 핵심. <code>UNIQUE 제약 + 원자적 선점</code>으로 답해야 한다. 분산락보다 DB UNIQUE가 단순·견고. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="idem-consumer">
+    <h2>6. 멱등 소비자 — Kafka At-least-once 다루기</h2>
+
+    <div class="sys-card tms">
+      <div class="sys-label">TMS / Last-mile</div>
+      <div class="sys-title">TrackingEvent가 <em>중복 수신</em>돼도 상태가 망가지지 않게</div>
+    </div>
+
+    <p>Kafka는 기본 <strong>At-least-once(최소 1회)</strong> 전달이다. 리밸런싱·재처리로 같은 메시지가 두 번 올 수 있다. 소비자는 <strong>멱등하게</strong> 처리하거나, <strong>처리 이력(dedup)</strong>을 둬야 한다.</p>
+
+    <pre><code><span class="kw">@KafkaListener</span>(topics = [<span class="str">"tracking-events"</span>])
+<span class="kw">fun</span> <span class="fn">onEvent</span>(event: TrackingEvent, ack: Acknowledgment) {
+    <span class="cmt">// 1) 이벤트 고유 ID로 중복 판별 (UNIQUE)</span>
+    <span class="kw">if</span> (processedRepo.existsById(event.eventId)) {
+        ack.acknowledge(); <span class="kw">return</span>   <span class="cmt">// 이미 처리 — skip</span>
+    }
+    <span class="cmt">// 2) 비즈니스 처리 + 처리 마킹을 같은 트랜잭션으로</span>
+    shipmentService.applyTracking(event)
+    processedRepo.save(ProcessedEvent(event.eventId))
+    ack.acknowledge()   <span class="cmt">// 수동 커밋 — 처리 성공 후에만</span>
+}</code></pre>
+    <div class="code-cap">자동 커밋(enable.auto.commit=true)은 처리 전에 오프셋이 커밋돼 유실 위험 → 수동 커밋 + dedup 권장</div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 자동 커밋 + 비멱등 처리 = 유실/중복</div>
+      Kafka 자동 커밋이 켜진 채 처리 중 죽으면, 오프셋은 이미 넘어가 <strong>유실</strong>되거나 재시작 후 <strong>중복</strong> 처리된다. "Exactly-once"는 트랜잭션·idempotent producer로 가능하지만 비용·제약이 크다. 실무는 보통 <strong>At-least-once + 멱등 소비자</strong>로 푼다.
+    </div>
+  </section>
+
+  <!-- Quiz -->
+  <section id="quiz">
+    <h2>7. 이해도 확인 질문</h2>
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>재시도에 <strong>지수 백오프 + 지터</strong>를 쓰는 이유를 Thundering Herd 개념으로 설명하고, "다층 재시도 곱셈" 문제를 어떻게 방지할지 제시해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div><textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>결제 API에서 동시에 같은 <code>Idempotency-Key</code> 요청 2개가 들어왔습니다. 둘 다 처리되지 않게 막는 메커니즘을 <strong>DB 레벨</strong>에서 구체적으로 설명하고, 키 TTL·본문 검증이 왜 필요한지 답해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div><textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>Kafka로 TrackingEvent를 소비하는데 같은 이벤트가 중복 수신됩니다. At-least-once 전제에서 <strong>멱등 소비자</strong>를 어떻게 구현할지, 자동 커밋을 왜 끄는지 설명해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div><textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>8. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">backend-dev-coach</div><div class="topic">06. 관측성 — 분산 추적으로 재시도 추적</div></div>
+      <div class="next-card"><div class="coach">backend-architecture-coach</div><div class="topic">Outbox + CDC 이벤트 발행 신뢰성</div></div>
+      <div class="next-card"><div class="coach">infra-coach</div><div class="topic">Resilience4j + Spring Cloud Gateway</div></div>
+      <div class="next-card"><div class="coach">backend-architecture-coach</div><div class="topic">Saga 보상 트랜잭션 · 멱등성</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', themeVariables: { primaryColor: '#dbeafe', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#fef3c7', tertiaryColor: '#ede9fe', fontSize: '13px' }, flowchart: { curve: 'basis', padding: 20 }, sequence: { actorMargin: 50, messageMargin: 35 } });
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => { entries.forEach(e => { if (e.isIntersecting) { navLinks.forEach(a => a.classList.remove('active')); const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`); if (active) active.classList.add('active'); } }); }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+  const NS = 'jobStudy::backend::04-resilience-idempotency::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id); if (!el) return;
+    const saved = localStorage.getItem(NS + id); if (saved) el.value = saved;
+    let timer;
+    el.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { localStorage.setItem(NS + id, el.value); const badge = document.getElementById('saved' + (i + 1)); if (badge) { badge.classList.add('show'); setTimeout(() => badge.classList.remove('show'), 1800); } }, 400); });
+  });
+  function copyForFeedback() {
+    const questions = [
+      'Q1. 재시도에 지수 백오프 + 지터를 쓰는 이유를 Thundering Herd 개념으로 설명하고, 다층 재시도 곱셈 문제 방지법을 제시해보세요.',
+      'Q2. 동시에 같은 Idempotency-Key 요청 2개가 들어왔을 때 둘 다 처리되지 않게 막는 DB 레벨 메커니즘과, 키 TTL·본문 검증의 필요성을 설명해보세요.',
+      'Q3. Kafka로 TrackingEvent 소비 시 중복 수신을 At-least-once 전제에서 멱등 소비자로 어떻게 처리하고, 자동 커밋을 왜 끄는지 설명해보세요.'
+    ];
+    const lines = ['[복원력·멱등성 — 이해도 확인 Q&A 피드백 요청]\n세션: backend/04-resilience-idempotency.html\n'];
+    ansIds.forEach((id, i) => { const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)'; lines.push(questions[i]); lines.push('A' + (i + 1) + '. ' + ans + '\n'); });
+    const text = lines.join('\n'); const resultEl = document.getElementById('copyResult');
+    if (navigator.clipboard) { navigator.clipboard.writeText(text).then(() => { resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.'; }).catch(() => fallbackCopy(text, resultEl)); } else { fallbackCopy(text, resultEl); }
+  }
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.'; } catch { el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.'; }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

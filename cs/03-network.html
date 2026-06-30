@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>네트워크 — TCP·HTTP·HTTPS/TLS·DNS·CDN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root{--bg:#f8fafc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--accent:#059669}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14.5px;line-height:1.75}
+#sidebar{width:248px;min-height:100vh;background:var(--card);border-right:1px solid var(--border);padding:24px 0;position:fixed;left:0;top:0;overflow-y:auto;z-index:50}
+#sidebar .brand{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:16px}
+#sidebar .brand .tag{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+#sidebar .brand h2{font-size:14px;font-weight:700;line-height:1.4}
+#sidebar .group-label{padding:12px 20px 4px;font-size:10.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em}
+#sidebar a{display:block;padding:7px 20px;font-size:13px;color:var(--muted);text-decoration:none;border-left:3px solid transparent;transition:all .15s}
+#sidebar a:hover,#sidebar a.active{color:var(--accent);background:var(--bg);border-left-color:var(--accent)}
+main{margin-left:248px;flex:1;max-width:1080px;padding:48px 56px}
+.page-hdr{margin-bottom:48px;padding-bottom:32px;border-bottom:2px solid var(--border)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{font-size:12px;font-weight:500;padding:3px 11px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.accent{background:#d1fae5;border-color:var(--accent);color:#064e3b}
+.page-hdr h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:10px}
+.page-hdr p{color:var(--muted)}
+section{margin-bottom:64px;scroll-margin-top:24px}
+section>h2{font-size:20px;font-weight:700;padding-bottom:12px;border-bottom:2px solid var(--border);margin-bottom:24px}
+h3{font-size:16px;font-weight:600;margin:28px 0 12px}
+h4{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:20px 0 8px}
+p{margin-bottom:10px}ul,ol{padding-left:22px;margin:8px 0 10px}li{margin-bottom:4px}
+.diagram-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px 24px 20px;margin:18px 0;overflow-x:auto;text-align:center}
+.diagram-wrap .cap{font-size:12px;color:var(--muted);margin-top:14px}
+.mermaid{display:inline-block}
+.tbl-wrap{overflow-x:auto;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+th{background:#f1f5f9;font-weight:600;font-size:12.5px;padding:9px 14px;border-bottom:1px solid var(--border);text-align:left}
+td{padding:9px 14px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+tr:last-child td{border-bottom:none}tr:hover td{background:#fafafa}
+.callout{border-radius:8px;padding:13px 16px;margin:14px 0;border-left:4px solid;font-size:13.5px}
+.callout .c-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.callout.interview{background:#fef2f2;border-color:#dc2626}.callout.interview .c-title{color:#dc2626}
+.callout.warn{background:#fff7ed;border-color:#ea580c}.callout.warn .c-title{color:#ea580c}
+.callout.tip{background:#f0fdf4;border-color:#16a34a}.callout.tip .c-title{color:#16a34a}
+.deep{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:4px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;margin-left:6px}
+code{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#be185d}
+pre{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#1e293b;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:14px 0;line-height:1.6}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:14px}
+.q-card .q-num{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px}
+.ans-area{margin-top:12px}
+.ans-label{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.saved-badge{font-size:11px;color:#16a34a;opacity:0;transition:opacity .4s}.saved-badge.show{opacity:1}
+.ans-area textarea{width:100%;min-height:110px;border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-family:'Noto Sans KR',sans-serif;font-size:14px;line-height:1.7;resize:vertical;background:#fafcff;color:var(--text);transition:border-color .15s}
+.ans-area textarea:focus{outline:none;border-color:var(--accent);background:#fff}
+.ans-area textarea::placeholder{color:#cbd5e1}
+.feedback-box{background:var(--card);border:1.5px dashed var(--border);border-radius:12px;padding:22px 24px;margin-top:28px;text-align:center}
+.feedback-box p{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+.btn-feedback{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:background .15s}
+.btn-feedback:hover{background:#047857}
+.copy-result{margin-top:12px;font-size:13px;color:#16a34a;min-height:20px}
+.next-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:14px}
+.next-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;transition:box-shadow .15s}
+.next-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.next-card .coach{font-size:11px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:5px}
+.next-card .topic{font-size:13px;font-weight:500}
+@media(max-width:860px){#sidebar{display:none}main{margin-left:0;padding:24px 20px}}
+</style>
+</head>
+<body>
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🧮 cs-fundamentals-coach</div>
+    <h2>네트워크<br>TCP · HTTP · TLS</h2>
+  </div>
+  <div class="group-label">계층 · 전송</div>
+  <a href="#osi">1. OSI / TCP-IP 계층</a>
+  <a href="#handshake">2. TCP 핸드셰이크</a>
+  <a href="#congestion">3. 혼잡 제어</a>
+  <div class="group-label">애플리케이션</div>
+  <a href="#http">4. HTTP/1.1 · 2 · 3</a>
+  <a href="#tls">5. HTTPS / TLS</a>
+  <div class="group-label">인프라</div>
+  <a href="#dns">6. DNS</a>
+  <a href="#cdn">7. CDN</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#qa">Q&amp;A 연습</a>
+  <a href="#next">다음 학습</a>
+</nav>
+<main>
+  <div class="page-hdr">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">cs-fundamentals-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip">네트워크</span>
+    </div>
+    <h1>네트워크<br>TCP · HTTP · HTTPS/TLS · DNS · CDN</h1>
+    <p>"URL을 치면 무슨 일이 일어나는가"는 면접 단골이자, 지연(latency) 디버깅의 출발점이다. DNS → TCP → TLS → HTTP 각 단계의 RTT(Round-Trip Time, 왕복 시간)를 머릿속에 그릴 수 있어야 한다. 관찰 도구는 <code>ss</code>, <code>tcpdump</code>, <code>dig</code>, <code>curl -w</code>로 연결한다.</p>
+  </div>
+
+  <!-- 1 -->
+  <section id="osi">
+    <h2>1. OSI 7계층 / TCP-IP 4계층</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>OSI 7</th><th>TCP/IP 4</th><th>역할</th><th>대표 프로토콜 / 단위(PDU)</th></tr></thead>
+        <tbody>
+          <tr><td>7 Application<br/>6 Presentation<br/>5 Session</td><td>Application</td><td>애플리케이션 데이터·인코딩·세션</td><td>HTTP·gRPC·DNS·TLS / Message</td></tr>
+          <tr><td>4 Transport</td><td>Transport</td><td>종단 간 신뢰성·포트 다중화</td><td>TCP·UDP·QUIC / Segment</td></tr>
+          <tr><td>3 Network</td><td>Internet</td><td>호스트 간 라우팅·주소 지정</td><td>IP·ICMP / Packet</td></tr>
+          <tr><td>2 Data Link<br/>1 Physical</td><td>Link</td><td>인접 노드 전송·물리 매체</td><td>Ethernet·ARP / Frame</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 백엔드 관점 — 계층은 디버깅 분기점</div>
+      장애가 어느 계층인지 빠르게 가르면 진단이 빨라진다. <code>ping</code>(L3) → 도달성, <code>telnet host port</code>/<code>ss</code>(L4) → 포트·연결, <code>curl -v</code>(L7) → TLS·HTTP 응답. "L7 LB는 경로 기반 라우팅, L4 LB는 IP:Port 기반"의 차이도 이 계층 모델에서 나온다.
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="handshake">
+    <h2>2. TCP 핸드셰이크 (3-way / 4-way)</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant C as 클라이언트
+    participant S as 서버
+    Note over C,S: 연결 수립 — 3-way Handshake
+    C->>S: SYN (seq=x)
+    S->>C: SYN-ACK (seq=y, ack=x+1)
+    C->>S: ACK (ack=y+1)
+    Note over C,S: ESTABLISHED — 데이터 전송 가능
+    Note over C,S: 연결 종료 — 4-way Handshake
+    C->>S: FIN
+    S->>C: ACK
+    Note over S: 남은 데이터 전송 가능(Half-close)
+    S->>C: FIN
+    C->>S: ACK
+    Note over C: TIME_WAIT (2×MSL)
+      </div>
+      <div class="cap">3-way로 양방향 시퀀스 번호 동기화, 4-way는 양쪽이 독립적으로 닫기 때문</div>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 단골 — "왜 연결은 3-way, 종료는 4-way? TIME_WAIT은 왜?"</div>
+      <strong>3 vs 4</strong>: 수립 땐 서버의 ACK와 SYN을 SYN-ACK로 합칠 수 있지만, 종료 땐 서버가 보낼 데이터가 남아있을 수 있어 ACK와 FIN을 분리한다(Half-close).<br>
+      <strong>TIME_WAIT(2×MSL)</strong>: ① 마지막 ACK 유실 시 재전송된 FIN에 응답하기 위해, ② 네트워크에 떠도는 지연 패킷이 같은 4-tuple의 새 연결에 섞이지 않도록. <code>ss -tan | grep TIME-WAIT | wc -l</code>로 측정. 너무 많으면 포트 고갈 → <strong>연결 풀링</strong>·<code>SO_REUSEADDR</code>·<code>tcp_tw_reuse</code>로 완화.
+    </div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 함정 — TIME_WAIT은 능동 종료(Active Close) 측에 쌓인다</div>
+      서버가 먼저 끊으면 TIME_WAIT이 서버에 쌓여 포트가 마른다. 그래서 보통 <strong>클라이언트가 먼저 닫게</strong> 설계하고, 서버↔서버 호출은 Keep-Alive 커넥션 풀로 연결 자체를 재사용해 종료 빈도를 줄인다.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="congestion">
+    <h2>3. 혼잡 제어 (Congestion Control)</h2>
+    <p>TCP는 네트워크 혼잡을 감지해 전송 속도를 스스로 조절한다. <strong>혼잡 윈도우(cwnd)</strong>를 키우고 줄이는 알고리즘이 핵심이다.</p>
+    <pre>
+Slow Start (느린 시작)        : cwnd를 RTT마다 2배 (지수 증가) — ssthresh까지
+Congestion Avoidance (혼잡 회피): ssthresh 이후 RTT마다 +1 (선형 증가)
+Fast Retransmit / Recovery    : 중복 ACK 3회 → 손실 추정, 즉시 재전송
+손실 감지 시                   : cwnd를 줄이고 다시 회피 구간으로
+    </pre>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>알고리즘</th><th>혼잡 신호</th><th>특징</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Reno / NewReno</strong></td><td>패킷 손실</td><td>고전적, 손실 기반(AIMD)</td></tr>
+          <tr><td><strong>CUBIC</strong></td><td>패킷 손실</td><td>Linux 기본, 고대역폭·고지연에 강함</td></tr>
+          <tr><td><strong>BBR (Google)</strong></td><td>대역폭·RTT 측정</td><td>손실 무시, 버퍼블로트 회피. YouTube 적용</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 — Nagle vs TCP_NODELAY</div>
+      Nagle 알고리즘은 작은 패킷을 모아 보내 대역폭을 아끼지만, Delayed ACK와 만나면 수십 ms 지연이 생긴다. 그래서 지연에 민감한 <strong>실시간·RPC 서버는 <code>TCP_NODELAY</code>로 Nagle을 끈다</strong>. "왜 내 gRPC가 가끔 40ms 느린가"의 흔한 범인.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section id="http">
+    <h2>4. HTTP 버전 진화 (1.1 / 2 / 3)</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    H1["HTTP/1.1<br/>요청-응답 직렬<br/>HOL Blocking(앱 레벨)"] -->|멀티플렉싱| H2["HTTP/2<br/>한 TCP에 다중 스트림<br/>HPACK 헤더 압축"]
+    H2 -->|"TCP HOL 해결"| H3["HTTP/3<br/>QUIC(UDP 기반)<br/>스트림 독립·0-RTT"]
+    H2 -.->|"패킷 손실 시<br/>전체 스트림 정지"| TCPHOL["TCP 레벨<br/>HOL Blocking 잔존"]
+
+    style H1 fill:#fef3c7,stroke:#d97706
+    style H2 fill:#dbeafe,stroke:#3b82f6
+    style H3 fill:#dcfce7,stroke:#059669
+    style TCPHOL fill:#fef2f2,stroke:#dc2626
+      </div>
+      <div class="cap">진화의 핵심은 HOL(Head-of-Line) Blocking 제거 — HTTP/2는 앱 레벨, HTTP/3은 TCP 레벨까지 해결</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>버전</th><th>전송</th><th>핵심 개선</th><th>남은 문제</th></tr></thead>
+        <tbody>
+          <tr><td><strong>HTTP/1.0</strong></td><td>TCP</td><td>요청마다 연결 수립/종료</td><td>높은 지연·연결 비용</td></tr>
+          <tr><td><strong>HTTP/1.1</strong></td><td>TCP</td><td>Keep-Alive, 파이프라이닝</td><td>응답 순서 보장 → HOL Blocking</td></tr>
+          <tr><td><strong>HTTP/2</strong></td><td>TCP</td><td>멀티플렉싱, HPACK, 바이너리 프레이밍, 서버 푸시</td><td>TCP 단일 손실이 전 스트림 정지</td></tr>
+          <tr><td><strong>HTTP/3</strong></td><td>QUIC(UDP)</td><td>스트림 독립, 연결 이주, 0-RTT</td><td>UDP 차단·미들박스, CPU 부담</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>멱등성(Idempotency) &amp; 안전(Safe) 메서드</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>메서드</th><th>Safe</th><th>Idempotent</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td>GET / HEAD</td><td>✅</td><td>✅</td><td>상태 변경 없음 → 캐시·재시도 안전</td></tr>
+          <tr><td>PUT / DELETE</td><td>❌</td><td>✅</td><td>여러 번 호출해도 결과 동일</td></tr>
+          <tr><td>POST</td><td>❌</td><td>❌</td><td>중복 시 부작용 → <code>Idempotency-Key</code> 필요</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 백엔드 연결 — 결제·주문 재시도</div>
+      네트워크 타임아웃 후 재시도 시 POST가 중복 결제를 낼 수 있다. 클라이언트가 <code>Idempotency-Key</code> 헤더를 붙이고 서버가 키-결과를 저장하면, 재시도여도 동일 응답을 돌려준다. 멱등성은 HTTP 스펙 지식이자 분산 시스템 신뢰성의 핵심.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="tls">
+    <h2>5. HTTPS / TLS 핸드셰이크</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant C as 클라이언트
+    participant S as 서버
+    Note over C,S: TLS 1.3 — 1-RTT
+    C->>S: ClientHello (지원 암호 스위트 + key_share)
+    S->>C: ServerHello (선택 스위트 + key_share)<br/>+ Certificate + CertVerify + Finished
+    Note over C,S: 여기서 양측 대칭키 산출 완료(ECDHE)
+    C->>S: Finished
+    Note over C,S: 암호화된 애플리케이션 데이터 시작
+    Note over C: 재방문 시 0-RTT(PSK)로 즉시 전송 가능
+      </div>
+      <div class="cap">TLS 1.3은 키교환을 ClientHello에 실어 1-RTT로 단축 — 1.2의 2-RTT 대비 절반</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>항목</th><th>TLS 1.2</th><th>TLS 1.3</th></tr></thead>
+        <tbody>
+          <tr><td>핸드셰이크 RTT</td><td>2-RTT</td><td>1-RTT (재연결 0-RTT)</td></tr>
+          <tr><td>키 교환</td><td>RSA / DHE / ECDHE</td><td>ECDHE만(전방향 비밀성 강제)</td></tr>
+          <tr><td>암호 스위트</td><td>다수(취약한 것 포함)</td><td>AEAD만, 취약 알고리즘 제거</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 — "HTTPS면 안전하다"는 함정</div>
+      TLS는 ① <strong>기밀성</strong>(대칭키 암호화) ② <strong>무결성</strong>(MAC) ③ <strong>인증</strong>(인증서 체인 → CA)을 제공하지만, <strong>인증서 검증을 클라이언트가 제대로 해야</strong> 의미가 있다. 검증을 끄거나 만료/자가서명을 무시하면 MITM(중간자 공격)에 뚫린다. <code>SNI</code>(여러 도메인 한 IP), <code>ALPN</code>(HTTP/2 협상), <strong>mTLS</strong>(상호 인증, 서비스 메시) 개념도 함께.
+    </div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 대표 공격</div>
+      MITM(중간자), Replay(재전송 → nonce·타임스탬프), Downgrade(구버전 강요 → TLS 1.3 강제·HSTS), CSRF(<code>SameSite</code> 쿠키·토큰), XSS(이스케이프·CSP), SQLi(파라미터 바인딩). 쿠키는 <code>HttpOnly</code>(JS 접근 차단)·<code>Secure</code>(HTTPS만)·<code>SameSite</code>로 방어.
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="dns">
+    <h2>6. DNS (Domain Name System)</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant C as 클라이언트
+    participant R as Resolver(재귀)
+    participant Root as Root
+    participant TLD as TLD(.com)
+    participant Auth as 권한 서버
+    C->>R: www.coupang.com A?
+    R->>Root: .com 어디?
+    Root-->>R: TLD 서버 주소
+    R->>TLD: coupang.com 어디?
+    TLD-->>R: 권한 서버 주소
+    R->>Auth: www.coupang.com A?
+    Auth-->>R: 1.2.3.4 (TTL=300)
+    R-->>C: 1.2.3.4
+    Note over R: TTL 동안 캐싱 → 다음 질의 즉답
+      </div>
+      <div class="cap">재귀 질의(Resolver) + 반복 질의(Root→TLD→Auth) — 캐싱 계층이 TTL로 동작</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>레코드</th><th>의미</th><th>용도</th></tr></thead>
+        <tbody>
+          <tr><td><strong>A / AAAA</strong></td><td>도메인 → IPv4 / IPv6</td><td>기본 주소 매핑</td></tr>
+          <tr><td><strong>CNAME</strong></td><td>도메인 → 다른 도메인</td><td>별칭, CDN 연결</td></tr>
+          <tr><td><strong>MX</strong></td><td>메일 서버</td><td>이메일 라우팅</td></tr>
+          <tr><td><strong>TXT</strong></td><td>임의 텍스트</td><td>SPF·도메인 소유 검증</td></tr>
+          <tr><td><strong>SRV</strong></td><td>서비스 위치(host:port)</td><td>서비스 디스커버리</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 함정 — DNS 라운드로빈 LB의 한계</div>
+      A 레코드 여러 개로 부하를 분산할 수 있지만, ① <strong>TTL 캐싱</strong> 때문에 장애 IP를 즉시 빼지 못하고, ② 클라이언트·Resolver가 캐시한 IP를 계속 써서 트래픽이 균등하지 않다. 그래서 프로덕션은 DNS는 진입점으로만 쓰고, 실제 분산은 L4/L7 LB·헬스체크로 한다. <code>dig +trace</code>로 질의 경로를 직접 추적하라.
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section id="cdn">
+    <h2>7. CDN (Content Delivery Network)</h2>
+    <p>CDN은 사용자와 지리적으로 가까운 <strong>Edge(엣지) 서버</strong>에 콘텐츠를 캐싱해 지연을 줄이고 Origin 부하를 낮춘다. 정적 자원(이미지·JS·CSS)뿐 아니라 동적 가속·DDoS 완화에도 쓰인다.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    U["👤 사용자(부산)"] --> E["🌐 CDN Edge(부산 PoP)"]
+    E -->|Cache Hit| U
+    E -->|Cache Miss| O["🏢 Origin(서울)"]
+    O -->|"응답 + Cache-Control"| E
+    E -->|캐시 후 응답| U
+
+    style E fill:#dcfce7,stroke:#059669
+    style O fill:#dbeafe,stroke:#3b82f6
+      </div>
+      <div class="cap">Edge 캐시 Hit이면 Origin까지 안 감 — 지연↓, Origin 부하↓</div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>캐시 제어 헤더</th><th>역할</th></tr></thead>
+        <tbody>
+          <tr><td><code>Cache-Control: max-age</code></td><td>캐시 유효 기간(초)</td></tr>
+          <tr><td><code>ETag</code> / <code>If-None-Match</code></td><td>변경 검증 → 304 Not Modified로 대역폭 절약</td></tr>
+          <tr><td><code>Vary</code></td><td>요청 헤더별로 캐시 분기(예: Accept-Encoding)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 실무 연결 — 캐시 무효화가 어렵다</div>
+      "There are only two hard things: cache invalidation and naming things." 정적 자원은 파일명에 해시를 박는 <strong>Cache Busting</strong>(<code>app.3f9a.js</code>)으로 영구 캐시 + 즉시 갱신을 동시에 얻는다. 동적 콘텐츠는 짧은 TTL + <code>stale-while-revalidate</code>로 가용성과 신선도를 절충한다.
+    </div>
+  </section>
+
+  <!-- Q&A -->
+  <section id="qa">
+    <h2>Q&amp;A 연습</h2>
+    <p>아래 질문에 직접 답변을 작성하세요. 자동 저장되며 피드백 요청 시 복사할 수 있습니다.</p>
+
+    <div class="q-card">
+      <div class="q-num">Q1 — TCP & TIME_WAIT</div>
+      <p>고트래픽 서버에서 <code>ss -s</code>로 보니 TIME_WAIT 소켓이 수만 개입니다. 이 소켓이 어느 쪽(능동/수동 종료)에 쌓이는지, 시스템에 미치는 영향, 그리고 근본 해결책을 설명하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>나의 답변</span><span class="saved-badge" id="badge-q1">저장됨 ✓</span></div>
+        <textarea id="ans-q1" placeholder="답변을 입력하세요..." oninput="saveAns('q1',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2 — HTTP/2 vs HTTP/3</div>
+      <p>HTTP/2가 멀티플렉싱으로 HOL Blocking을 해결했다고 하는데, HTTP/3가 또 등장한 이유는 무엇인가요? "TCP 레벨 HOL Blocking"이 무엇이고 QUIC이 이를 어떻게 푸는지 설명하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>나의 답변</span><span class="saved-badge" id="badge-q2">저장됨 ✓</span></div>
+        <textarea id="ans-q2" placeholder="답변을 입력하세요..." oninput="saveAns('q2',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3 — URL을 치면</div>
+      <p>브라우저에 <code>https://www.coupang.com</code>을 입력하고 페이지가 뜰 때까지, DNS·TCP·TLS·HTTP·CDN 각 단계에서 무슨 일이 일어나는지 RTT 관점으로 순서대로 설명하세요. 어디를 최적화하면 첫 화면이 빨라질까요?</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>나의 답변</span><span class="saved-badge" id="badge-q3">저장됨 ✓</span></div>
+        <textarea id="ans-q3" placeholder="답변을 입력하세요..." oninput="saveAns('q3',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>작성한 답변을 복사해서 Claude에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 복사</button>
+      <div class="copy-result" id="copy-result"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>다음 학습 주제</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">cs-fundamentals-coach</div><div class="topic">TCP 혼잡 제어(BBR) 심화</div></div>
+      <div class="next-card"><div class="coach">cs-fundamentals-coach</div><div class="topic">동시성 이론(메모리 모델·CAS)</div></div>
+      <div class="next-card"><div class="coach">infra-coach</div><div class="topic">L4 vs L7 로드밸런서 설계</div></div>
+      <div class="next-card"><div class="coach">system-design-coach</div><div class="topic">글로벌 CDN + 멀티리전 설계</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'neutral',securityLevel:'loose',flowchart:{htmlLabels:true,curve:'basis'}});
+
+const NS = 'jobStudy::cs::03-network::';
+
+function saveAns(id, val) {
+  localStorage.setItem(NS + id, val);
+  const b = document.getElementById('badge-' + id);
+  if (b) { b.classList.add('show'); setTimeout(() => b.classList.remove('show'), 1800); }
+}
+function loadAll() {
+  document.querySelectorAll('[id^="ans-"]').forEach(el => {
+    const saved = localStorage.getItem(NS + el.id.replace('ans-', ''));
+    if (saved) el.value = saved;
+  });
+}
+function copyForFeedback() {
+  const title = document.title;
+  const qs = document.querySelectorAll('.q-card');
+  let text = `[${title} — Q&A 피드백 요청]\n\n`;
+  qs.forEach((card, i) => {
+    const num = card.querySelector('.q-num')?.innerText || `Q${i+1}`;
+    const q = card.querySelector('p')?.innerText || '';
+    const ta = card.querySelector('textarea');
+    const ans = ta ? ta.value.trim() : '';
+    text += `${num}\n질문: ${q}\n내 답변: ${ans || '(미작성)'}\n\n`;
+  });
+  text += '위 답변들에 대해 시니어 CS 기초 코치 관점에서 피드백 부탁드립니다.';
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('copy-result').textContent = '✓ 클립보드에 복사되었습니다. Claude 채팅창에 붙여넣기 하세요.';
+    setTimeout(() => document.getElementById('copy-result').textContent = '', 4000);
+  });
+}
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      document.querySelectorAll('#sidebar a').forEach(a => a.classList.remove('active'));
+      const link = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, {rootMargin: '-20% 0px -70% 0px'});
+document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+loadAll();
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>URL 단축기 설계 — System Design 케이스</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg); color: var(--text);
+      display: flex; min-height: 100vh;
+      font-size: 14.5px; line-height: 1.75;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 248px; min-height: 100vh;
+      background: var(--card); border-right: 1px solid var(--border);
+      padding: 24px 0; position: fixed; left: 0; top: 0;
+      overflow-y: auto; z-index: 50;
+    }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a {
+      display: block; padding: 7px 20px;
+      font-size: 13px; color: var(--muted);
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+
+    /* ── Main ── */
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+
+    /* ── Page header ── */
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip {
+      font-size: 12px; font-weight: 500;
+      padding: 3px 11px; border-radius: 20px;
+      background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+    }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+
+    /* ── Sections ── */
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 {
+      font-size: 20px; font-weight: 700;
+      padding-bottom: 12px; border-bottom: 2px solid var(--border);
+      margin-bottom: 24px; display: flex; align-items: center; gap: 8px;
+    }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+
+    /* ── Diagrams ── */
+    .diagram-wrap {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 28px 24px 20px;
+      margin: 18px 0; overflow-x: auto; text-align: center;
+    }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+
+    /* ── Tables ── */
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 13.5px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    /* ── System cards ── */
+    .sys-card {
+      border-radius: 10px; padding: 18px 22px;
+      margin-bottom: 20px; border-left: 4px solid;
+    }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .sys-card.lm  { background: var(--lm);  border-color: var(--lm-b);  color: var(--lm-t);  }
+    .sys-card.ret { background: var(--ret); border-color: var(--ret-b); color: var(--ret-t); }
+
+    /* ── Callouts ── */
+    .callout {
+      border-radius: 8px; padding: 13px 16px;
+      margin: 14px 0; border-left: 4px solid; font-size: 13.5px;
+    }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+
+    /* ── Badges ── */
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+
+    /* ── Q&A cards ── */
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+
+    /* ── Next steps ── */
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+
+    /* ── Q&A Input ── */
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea {
+      width: 100%; min-height: 110px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif;
+      font-size: 14px; line-height: 1.7; resize: vertical;
+      background: #fafcff; color: var(--text);
+      transition: border-color .15s, background .15s;
+    }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+
+    /* ── Feedback button section ── */
+    .feedback-box {
+      background: var(--card); border: 1.5px dashed var(--border);
+      border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center;
+    }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 8px; padding: 10px 22px;
+      font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════ SIDEBAR ══════════════════ -->
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🧩 system-design-coach</div>
+    <h2>URL 단축기 설계<br/>System Design 케이스</h2>
+  </div>
+  <div class="group-label">6단계 프레임워크</div>
+  <a href="#req">1. 요구사항 명확화</a>
+  <a href="#estimate">2. 용량 추정</a>
+  <a href="#api">3. API / 데이터 모델</a>
+  <a href="#arch">4. High-level 아키텍처</a>
+  <a href="#keygen">4-B. 키 생성 전략 비교</a>
+  <a href="#deep">5. Deep-dive</a>
+  <a href="#tradeoff">6. Trade-off</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+
+<!-- ══════════════════ MAIN ══════════════════ -->
+<main>
+
+  <!-- Page Header -->
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🏗 Design 모드</span>
+      <span class="chip">system-design-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">URL Shortener</span>
+    </div>
+    <h1>URL 단축기(URL Shortener) 설계<br>read-heavy 시스템의 정석 케이스</h1>
+    <p>시스템 디자인 면접의 입문이자 영원한 단골. 단순해 보이지만 <strong>키 생성·캐싱·301 vs 302·분석 비동기 수집</strong>까지 들어가면 시니어 변별력이 갈린다. 6단계 프레임워크로 끝까지 판다. Deep-dive 항목은 <span class="deep">🔥 Deep-dive</span> 로 표시.</p>
+  </header>
+
+  <!-- ── Section 1: 요구사항 ── -->
+  <section id="req">
+    <h2>1. 요구사항 명확화 (Requirements)</h2>
+
+    <div class="sys-card oms">
+      <div class="sys-label">한 줄 정의</div>
+      <div class="sys-title">긴 URL을 짧은 키로 매핑하고, 짧은 키 접근 시 원본으로 <em>리다이렉트</em>한다. 압도적 read-heavy(읽기 우세) 시스템.</div>
+    </div>
+
+    <h3>Functional(기능) 요구사항</h3>
+    <ul>
+      <li><strong>단축</strong>: <code>long_url</code> 입력 → <code>short_url</code> 발급 (예: <code>https://nav.to/aZ3kT9q</code>)</li>
+      <li><strong>리다이렉트</strong>: <code>short_url</code> 접근 → 원본으로 HTTP redirect</li>
+      <li><strong>커스텀 별칭(Custom Alias)</strong>: 사용자가 <code>nav.to/myevent</code> 처럼 직접 지정 가능</li>
+      <li><strong>만료(Expiration)</strong>: TTL(Time To Live, 유효 기간) 설정 가능, 만료 후 410 Gone</li>
+      <li><strong>클릭 통계(Analytics)</strong>: 클릭 수, Referer(유입 경로), 지역, 디바이스 집계</li>
+    </ul>
+
+    <h3>Non-functional(비기능) 요구사항</h3>
+    <ul>
+      <li><strong>읽기:쓰기 = 100:1</strong> — read-heavy. 리다이렉트가 절대 다수. 읽기 latency가 제품 체감을 지배.</li>
+      <li><strong>고가용성(High Availability)</strong>: 리다이렉트는 죽으면 안 된다. 링크가 인쇄물·QR에 박혀 영구 사용됨.</li>
+      <li><strong>저지연(Low Latency)</strong>: 리다이렉트 p99 < 50ms 목표.</li>
+      <li><strong>키 예측 불가(Non-predictable)</strong>: 키를 순차 증가로 노출하면 경쟁사·크롤러가 전체 URL을 enumeration(전수 조회).</li>
+      <li><strong>일관성</strong>: 단축은 Read-your-writes(자기가 쓴 건 바로 읽힘) 수준이면 충분. 통계는 최종 일관성(Eventual Consistency) 허용.</li>
+    </ul>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 첫 5분이 평가를 가른다</div>
+      "URL 단축기 만드세요"에 바로 테이블부터 그리면 감점. <strong>읽기:쓰기 비율, 키 길이/문자셋, 커스텀 별칭 여부, 만료·통계 필요성</strong>을 먼저 물어야 한다. 면접관은 "당신이 스코프를 통제할 수 있는가"를 본다.
+    </div>
+  </section>
+
+  <!-- ── Section 2: 용량 추정 ── -->
+  <section id="estimate">
+    <h2>2. 용량 추정 (Back-of-the-envelope)</h2>
+
+    <h3>2-1. 쓰기 QPS</h3>
+    <p>가정: <strong>쓰기(단축 생성) 1억 건/월</strong>.</p>
+    <ul>
+      <li>1개월 ≈ 30일 × 86,400초 ≈ <code>2.6 × 10⁶ 초</code> (≈ 약 250만 초)</li>
+      <li>평균 쓰기 QPS = 1억 / 2.6×10⁶ ≈ <strong>≈ 40 writes/s</strong></li>
+      <li>피크 QPS ≈ 평균 × 5 ≈ <strong>≈ 200 writes/s</strong></li>
+    </ul>
+
+    <h3>2-2. 읽기 QPS (100:1)</h3>
+    <ul>
+      <li>평균 읽기 QPS = 40 × 100 = <strong>≈ 4,000 reads/s</strong></li>
+      <li>피크 읽기 QPS ≈ 4,000 × 5 ≈ <strong>≈ 20,000 reads/s</strong></li>
+    </ul>
+    <p>→ 결론: 쓰기는 단일 노드도 감당. <strong>읽기 2만 QPS를 어떻게 받느냐가 설계의 핵심</strong>. 캐시 + 읽기 복제(Read Replica)가 필수.</p>
+
+    <h3>2-3. 5년 누적 URL 수 → 키 길이 산정</h3>
+    <ul>
+      <li>1억/월 × 12 × 5년 = <strong>60억 ≈ 6 × 10⁹ 개</strong></li>
+      <li>키 문자셋: <code>base62</code> = [a-z A-Z 0-9] = 62종</li>
+      <li>키 길이별 공간:
+        <ul>
+          <li>6자 = 62⁶ ≈ <strong>568억</strong> (≈ 5.7×10¹⁰) — 60억 수용 가능하나 여유 10배뿐</li>
+          <li>7자 = 62⁷ ≈ <strong>3.5조</strong> (≈ 3.5×10¹²) — 60억의 약 580배 여유 → <strong>7자 채택</strong></li>
+        </ul>
+      </li>
+    </ul>
+
+    <div class="callout tip">
+      <div class="c-title">💡 외워둘 base62 치트시트</div>
+      62⁶ ≈ 568억, 62⁷ ≈ 3.5조, 62⁸ ≈ 218조. "수십억~수조 규모면 7자"는 거의 모든 면접에서 통하는 기본값. bit.ly·TinyURL도 6~7자대.
+    </div>
+
+    <h3>2-4. 스토리지 추정</h3>
+    <p>레코드 1건당 대략:</p>
+    <ul>
+      <li><code>key</code> 7B + <code>long_url</code> 평균 100B + 메타(created, expire, ownerId, 카운터) ≈ 100B → <strong>레코드 ≈ 약 500B</strong> (인덱스·오버헤드 포함 넉넉히)</li>
+      <li>5년 60억 × 500B = <strong>3 × 10¹² B ≈ 3 TB</strong></li>
+    </ul>
+    <p>→ 단일 RDBMS 한 대로도 수 TB는 가능하지만, 6×10⁹ 행 + 2만 읽기 QPS 면 <strong>읽기 복제 다수 + 향후 샤딩</strong>을 염두에 둔다.</p>
+
+    <h3>2-5. 캐시 메모리</h3>
+    <p>읽기는 인기 URL에 쏠린다(80/20). 핫 20%만 캐시:</p>
+    <ul>
+      <li>하루 읽기 ≈ 4,000 × 86,400 ≈ 3.5억 reads/day, 고유 URL이 그중 약 20% = 약 7천만 핫키</li>
+      <li>핫키 1건 캐시 ≈ (key 7B + url 100B + 오버헤드) ≈ 약 200B → 7천만 × 200B ≈ <strong>14 GB</strong></li>
+    </ul>
+    <p>→ Redis 한 클러스터(수십 GB)로 충분히 핫셋 수용. <strong>캐시 히트율 90%+ 면 DB 읽기 부하가 1/10로 떨어진다.</strong></p>
+  </section>
+
+  <!-- ── Section 3: API / 데이터 모델 ── -->
+  <section id="api">
+    <h2>3. API / 데이터 모델</h2>
+
+    <h3>3-1. API 설계 (REST)</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>메서드 · 경로</th><th>설명</th><th>요청 / 응답</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>POST /api/v1/shorten</code></td>
+            <td>단축 URL 생성</td>
+            <td>req: <code>{ longUrl, customAlias?, expireAt? }</code> → res: <code>{ shortUrl, key }</code></td>
+          </tr>
+          <tr>
+            <td><code>GET /{key}</code></td>
+            <td>리다이렉트 (핵심 트래픽)</td>
+            <td><strong>301</strong> 또는 <strong>302</strong> + <code>Location: long_url</code></td>
+          </tr>
+          <tr>
+            <td><code>GET /api/v1/{key}/stats</code></td>
+            <td>클릭 통계 조회</td>
+            <td>res: <code>{ clicks, byCountry, byReferer, byDevice }</code></td>
+          </tr>
+          <tr>
+            <td><code>DELETE /api/v1/{key}</code></td>
+            <td>링크 삭제 (소유자만)</td>
+            <td>인증 필요 (API Key / OAuth)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 면접 함정 — 301 vs 302 즉답</div>
+      <strong>301(Moved Permanently)</strong>: 브라우저·중간 프록시가 <strong>응답을 영구 캐시</strong> → 이후 클릭이 우리 서버로 안 옴 → <strong>클릭 통계를 못 센다.</strong> 대신 서버 부하·지연은 최소.<br>
+      <strong>302(Found, 임시)</strong>: 매번 우리 서버를 거침 → 통계 수집 가능, 만료·차단 즉시 반영. 대신 트래픽 100% 흡수.<br>
+      → <strong>"통계가 핵심 기능이면 302"</strong>가 정답 방향. 통계 불필요·성능 최우선이면 301. 이 Trade-off를 말로 풀어야 한다.
+    </div>
+
+    <h3>3-2. 데이터 모델 (erDiagram)</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+erDiagram
+    URL_MAPPING ||--o{ CLICK_EVENT : "발생"
+    URL_MAPPING {
+        char7 key PK "base62 단축키 (PK + 캐시키)"
+        varchar long_url "원본 URL"
+        bigint owner_id FK "소유자 (nullable)"
+        timestamp created_at "생성 시각"
+        timestamp expire_at "만료 시각 (nullable)"
+        boolean is_active "활성 여부 (삭제 soft)"
+    }
+    CLICK_EVENT {
+        bigint event_id PK "클릭 이벤트 (append-only)"
+        char7 key FK "단축키"
+        timestamp clicked_at "클릭 시각"
+        varchar referer "유입 경로"
+        varchar country "지역 (GeoIP)"
+        varchar device "디바이스"
+    }
+    USER ||--o{ URL_MAPPING : "소유"
+    USER {
+        bigint owner_id PK
+        varchar email
+        varchar api_key "인증 키"
+    }
+      </div>
+      <div class="cap">데이터 모델 — 리다이렉트 경로는 <code>URL_MAPPING</code>만 보면 됨(단일 PK 조회). 통계는 <code>CLICK_EVENT</code>에 비동기 적재.</div>
+    </div>
+
+    <h4>인덱스 / 스키마 결정</h4>
+    <ul>
+      <li><code>key</code>는 <strong>PK이자 캐시 키</strong>. 리다이렉트는 PK point-lookup 한 번 → 인덱스 추가 불필요(클러스터드 인덱스로 끝).</li>
+      <li>커스텀 별칭은 <code>key</code> 컬럼에 그대로 저장(별도 alias 컬럼 두면 조회 분기 발생). <code>UNIQUE</code> 제약으로 중복 방지.</li>
+      <li><code>CLICK_EVENT</code>는 append-only(추가 전용) → 시계열 파티셔닝(월별) 또는 별도 OLAP(Online Analytical Processing, 분석용) 저장소로 분리.</li>
+    </ul>
+  </section>
+
+  <!-- ── Section 4: High-level 아키텍처 ── -->
+  <section id="arch">
+    <h2>4. High-level 아키텍처</h2>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    User(["👤 클라이언트"])
+    LB["⚖️ Load Balancer\n(L7, 지역 분산)"]
+    WApp["✍️ Write Service\n단축 생성 API"]
+    RApp["🔁 Redirect Service\n리다이렉트 (stateless)"]
+    KGS["🔑 KGS\nKey Generation Service\n사전 생성 키 풀"]
+    Cache["⚡ Redis Cache\n핫 URL 80/20"]
+    DBM[("🗄️ DB Primary\nURL_MAPPING")]
+    DBR[("🗄️ Read Replica\n×N")]
+    Kafka["📨 Kafka\nclick-events"]
+    OLAP[("📊 Analytics Store\nClickHouse/OLAP")]
+
+    User -->|"POST /shorten"| LB
+    User -->|"GET /{key}"| LB
+    LB --> WApp
+    LB --> RApp
+
+    WApp -->|"키 발급 요청"| KGS
+    WApp -->|"INSERT"| DBM
+    WApp -.->|"write-through"| Cache
+
+    RApp -->|"1.조회"| Cache
+    Cache -.->|"miss → 2.조회"| DBR
+    RApp -->|"3.302 + click 비동기"| Kafka
+    Kafka --> OLAP
+
+    DBM -->|"복제"| DBR
+
+    style WApp fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a
+    style RApp fill:#dcfce7,stroke:#22c55e,color:#14532d
+    style KGS  fill:#fef3c7,stroke:#f59e0b,color:#78350f
+    style Cache fill:#fce7f3,stroke:#ec4899,color:#831843
+    style Kafka fill:#ede9fe,stroke:#8b5cf6,color:#3b0764
+      </div>
+      <div class="cap">High-level 아키텍처 — 읽기 경로(초록)와 쓰기 경로(파랑)를 분리. 통계는 Kafka로 비동기 흘려 리다이렉트 latency를 보호.</div>
+    </div>
+
+    <h3>리다이렉트 요청 흐름 (읽기 — 핵심)</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    A["GET /{key}"] --> B{"Redis\n캐시 히트?"}
+    B -->|"Hit 90%"| C["302 Location:\nlong_url 반환"]
+    B -->|"Miss 10%"| D[("Read Replica\nSELECT by PK")]
+    D --> E{"존재 &\n만료 전?"}
+    E -->|"Yes"| F["캐시 채움\n(TTL)"]
+    F --> C
+    E -->|"만료"| G["410 Gone"]
+    E -->|"없음"| H["404 Not Found"]
+    C --> I["click 이벤트\nKafka 비동기 발행"]
+
+    style C fill:#dcfce7,stroke:#22c55e
+    style G fill:#fff7ed,stroke:#ea580c
+    style H fill:#fee2e2,stroke:#ef4444
+      </div>
+      <div class="cap">리다이렉트 흐름 — 캐시 우선, miss 시 Read Replica. click 발행은 응답 후 비동기(latency 0 영향).</div>
+    </div>
+
+    <h3>키 발급 흐름 (KGS 방식 — sequenceDiagram)</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant U as 클라이언트
+    participant W as Write Service
+    participant K as KGS (키 풀)
+    participant DB as DB Primary
+    participant C as Cache
+
+    U->>W: POST /shorten(longUrl)
+    W->>K: 미사용 키 1개 요청
+    K->>K: used 테이블에서 키 1개 pop\n(원자적 마킹)
+    K-->>W: key = "aZ3kT9q"
+    W->>DB: INSERT(key, longUrl, expireAt)
+    DB-->>W: OK (UNIQUE 충돌 없음 보장)
+    W->>C: write-through (key → longUrl)
+    W-->>U: { shortUrl }
+    Note over K,DB: KGS는 키를 미리 대량 생성해두므로\n쓰기 경로에서 충돌 검사·재시도가 없다
+      </div>
+      <div class="cap">KGS 키 발급 — 사전 생성된 키 풀에서 pop. 쓰기 경로의 충돌·재시도를 제거해 latency 안정화.</div>
+    </div>
+  </section>
+
+  <!-- ── Section 4.5: 키 생성 전략 비교 ── -->
+  <section id="keygen">
+    <h2>4-B. 키 생성 전략 비교 <span class="deep">🔥 Deep-dive</span></h2>
+    <p>이 시스템의 진짜 깊이는 "어떻게 짧고·유일하고·예측 불가능한 키를 만드는가"에 있다. 네 가지 전략을 비교한다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>전략</th><th>방식</th><th>충돌(Collision)</th><th>예측 가능성</th><th>확장성 / 비용</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>① 해시 truncate</strong><br>(MD5/SHA → 앞 7자)</td>
+            <td>long_url 해시 후 base62 7자 절단</td>
+            <td><strong>높음</strong> — 절단 시 비둘기집 충돌. 충돌 시 salt 추가 후 재해시 루프 필요</td>
+            <td>낮음(URL 의존) — 단 같은 URL은 같은 키(중복 제거엔 장점)</td>
+            <td>충돌 처리 비용이 트래픽 증가에 비선형</td>
+          </tr>
+          <tr>
+            <td><strong>② base62(auto-inc id)</strong></td>
+            <td>DB auto-increment id를 base62 인코딩</td>
+            <td><strong>없음</strong> — id가 유일하므로 충돌 0</td>
+            <td><strong>매우 높음(위험)</strong> — id 순차 → 키 순차 → enumeration 가능</td>
+            <td>단순·저렴하나 단일 시퀀스가 SPOF·샤딩 난점</td>
+          </tr>
+          <tr>
+            <td><strong>③ KGS(사전 생성)</strong><br>Key Generation Service</td>
+            <td>오프라인에서 랜덤 키 대량 생성 → used/unused 테이블 → 쓰기 시 pop</td>
+            <td><strong>없음</strong> — 생성 단계에서 중복 제거 완료</td>
+            <td><strong>낮음(좋음)</strong> — 무작위 키라 예측 불가</td>
+            <td>쓰기 경로 충돌 0, latency 안정. 키 풀 관리·중복 발급 방지 필요</td>
+          </tr>
+          <tr>
+            <td><strong>④ 분산 ID(Snowflake)</strong></td>
+            <td>timestamp+machineId+seq → base62</td>
+            <td><strong>없음</strong> — 전역 유일 보장</td>
+            <td>중간 — timestamp 비트로 시간 추론 가능, 키가 길어짐(보통 11자+)</td>
+            <td>분산 환경 최강, 단 키 길이 증가 → "짧음" 요구와 상충</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 함정 — 가장 많이 틀리는 3가지</div>
+      <strong>1. "auto-increment id를 그냥 base62 인코딩하면 됩니다"</strong> → id가 순차라 키도 순차 → 경쟁사가 <code>aaaab, aaaac…</code> 로 전체 URL을 enumeration. <strong>예측 가능성</strong>을 지적해야 통과.<br>
+      <strong>2. 해시 truncate에서 충돌 처리를 안 함</strong> → "MD5 앞 7자 자르면 끝"은 비둘기집 원리상 반드시 충돌. 재해시·salt 루프를 말해야 함.<br>
+      <strong>3. Snowflake로 "짧게" 한다는 모순</strong> → Snowflake는 64bit라 base62로도 11자 내외. "짧은 URL" 요구와 충돌함을 인지해야 함.
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 실전 권장 — KGS 하이브리드</div>
+      대규모(bit.ly급)에서는 <strong>③ KGS</strong>가 정석. 키를 미리 생성해 두므로 쓰기 경로가 단순 pop+INSERT가 되어 latency가 평탄하고, 무작위라 예측도 불가. 커스텀 별칭만 별도 UNIQUE 충돌 검사로 처리한다.
+    </div>
+  </section>
+
+  <!-- ── Section 5: Deep-dive ── -->
+  <section id="deep">
+    <h2>5. Deep-dive <span class="deep">🔥 Deep-dive</span></h2>
+
+    <h3>5-1. 캐싱 — 80/20 인기 URL</h3>
+    <ul>
+      <li>리다이렉트는 멱법칙(power-law) 분포 — 소수 URL(이벤트·바이럴 링크)이 트래픽 대부분. <strong>LRU(Least Recently Used) 캐시</strong>로 핫셋만 보관.</li>
+      <li>캐시 전략은 <strong>Cache-aside(읽기 시 채움)</strong> + 생성 시 <strong>Write-through</strong> 병행. 새 링크는 만들자마자 캐시에 있어 첫 클릭도 빠름.</li>
+      <li>TTL은 짧게(예: 1시간) 잡되, 만료·삭제는 <strong>능동 무효화(invalidation)</strong>로 즉시 반영.</li>
+    </ul>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ Cache Stampede (쇄도)</div>
+      바이럴 링크의 캐시 TTL이 만료되는 순간 수천 요청이 동시에 DB로 몰림(Thundering herd). 대응: <strong>TTL 지터(jitter)</strong>, <strong>분산 락 기반 단일 재계산</strong>, 혹은 인기 키는 만료 안 시키는 <strong>핀 고정(pinning)</strong>.
+    </div>
+
+    <h3>5-2. 301 vs 302 — 통계 영향 <span class="deep">🔥</span></h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    subgraph S301["301 Permanent"]
+      A1["첫 클릭"] --> B1["서버 응답"]
+      B1 --> C1["브라우저/프록시\n영구 캐시"]
+      C1 --> D1["이후 클릭\n서버 안 옴 ❌"]
+      D1 --> E1["통계 누락 / 부하 최소"]
+    end
+    subgraph S302["302 Temporary"]
+      A2["모든 클릭"] --> B2["매번 서버 거침"]
+      B2 --> C2["통계 정확 ✅"]
+      B2 --> D2["만료·차단 즉시 반영 ✅"]
+      D2 --> E2["트래픽 100% 흡수"]
+    end
+    style S301 fill:#fff7ed,stroke:#ea580c
+    style S302 fill:#f0fdf4,stroke:#16a34a
+      </div>
+      <div class="cap">301 vs 302 — 통계가 제품 핵심이면 302. 순수 성능·통계 불필요면 301. 이 선택은 비즈니스 요구가 결정.</div>
+    </div>
+
+    <h3>5-3. 분석 비동기 수집 (Kafka)</h3>
+    <ul>
+      <li>리다이렉트 응답 경로에서 통계를 <strong>동기 INSERT 하면 안 된다</strong> — 클릭마다 DB 쓰기가 붙어 read latency·DB 부하 폭증.</li>
+      <li>리다이렉트는 즉시 302 반환 후, click 이벤트를 <strong>Kafka에 비동기 발행</strong> → 컨슈머가 배치 집계 → OLAP(ClickHouse 등) 적재.</li>
+      <li>통계는 <strong>최종 일관성</strong> 허용 — "클릭 수가 몇 초 늦게 반영"은 비즈니스상 문제없음.</li>
+    </ul>
+
+    <h3>5-4. 충돌 & Hot Key</h3>
+    <ul>
+      <li><strong>충돌</strong>: 해시 방식이면 INSERT 시 <code>UNIQUE</code> 위반 → salt 추가 재시도. KGS면 사전 제거로 충돌 0.</li>
+      <li><strong>Hot Key</strong>: 단일 바이럴 키가 Redis 한 샤드에 집중 → 핫스팟. 대응: <strong>로컬 캐시(앱 인메모리) 추가 레이어</strong>, 또는 키 복제(같은 값 N벌). 리다이렉트는 read-only라 복제가 안전.</li>
+    </ul>
+
+    <div class="callout tip">
+      <div class="c-title">💡 물류 도메인 연결 — 운송장 단축 링크</div>
+      "<code>nav.to/track/xxx</code> 형태의 <strong>배송 추적 단축 URL</strong>"도 같은 구조. 단 추적 링크는 <strong>302 필수</strong>(배송 상태가 바뀌므로 매번 최신 페이지로). 풀필먼트 알림 SMS에 들어가는 링크는 hot key + 만료(배송 완료 후 7일) 설계가 그대로 적용된다.
+    </div>
+  </section>
+
+  <!-- ── Section 6: Trade-off ── -->
+  <section id="tradeoff">
+    <h2>6. Trade-off & Alternatives</h2>
+
+    <h3>6-1. 키 생성: 해시 vs 카운터 vs KGS</h3>
+    <ul>
+      <li><strong>해시</strong>: 같은 URL 중복 제거에 유리하나 충돌 처리 부담. 통계·예측불가 모두 보통.</li>
+      <li><strong>카운터(auto-inc base62)</strong>: 구현 최단·충돌 0이나 <strong>예측 가능성</strong>이 치명적 약점. 내부용·비공개 링크면 허용.</li>
+      <li><strong>KGS</strong>: 쓰기 경로 안정·예측불가. 키 풀 운영 복잡도가 비용. <strong>대규모 공개 서비스의 기본값.</strong></li>
+    </ul>
+
+    <h3>6-2. SQL vs NoSQL</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>RDBMS(MySQL/PostgreSQL)</th><th>NoSQL(DynamoDB/Cassandra)</th></tr></thead>
+        <tbody>
+          <tr><td>접근 패턴</td><td>PK point-lookup 위주 → 잘 맞음</td><td>key-value 단순 조회에 최적</td></tr>
+          <tr><td>스케일</td><td>읽기 복제로 수만 QPS, 그 이상은 샤딩 필요</td><td>수평 확장 자연스러움(파티션 키 = url key)</td></tr>
+          <tr><td>UNIQUE/트랜잭션</td><td>커스텀 별칭 UNIQUE·만료 일관성 처리 쉬움</td><td>조건부 쓰기(conditional put)로 가능하나 까다로움</td></tr>
+          <tr><td>결론</td><td>중규모·강한 일관성·복잡 쿼리</td><td>초대규모·단순 KV·전역 분산</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>→ <strong>접근 패턴이 단순 KV + 초대규모면 NoSQL</strong>(DynamoDB로 key=PK). 커스텀 별칭·통계 조인·중규모면 RDBMS + 읽기 복제가 운영이 단순. 정답 없음, 규모와 일관성 요구로 결정.</p>
+
+    <h3>6-3. 301 vs 302</h3>
+    <p>요약: <strong>통계·만료·차단이 제품 가치면 302</strong>, <strong>순수 성능·인프라 비용 최소화면 301</strong>. 절대 정답은 비즈니스 요구가 정한다 — 면접에선 "둘 다 말하고 조건을 제시"가 만점.</p>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 실제 사례</div>
+      <strong>네이버 단축 URL(me2.do)</strong>, <strong>카카오 단축 URL</strong>, 글로벌 <strong>bit.ly</strong> 모두 통계·관리 기능 때문에 사실상 302 계열 + 자체 키 풀/카운터 기반. bit.ly는 클릭 분석이 제품의 핵심 가치라 301로는 사업이 성립하지 않는다 — "통계 → 302" 인과를 보여주는 좋은 예시.
+    </div>
+  </section>
+
+  <!-- ── Section 7: 이해도 확인 ── -->
+  <section id="quiz">
+    <h2>7. 이해도 확인 질문</h2>
+
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>키 생성에서 <strong>auto-increment id를 base62 인코딩</strong>하는 방식의 치명적 약점은 무엇이며, 이를 보완하려면 어떤 전략(또는 변형)을 쓸 수 있는지 설명해보세요. KGS 방식과 비교해서.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>내 답변</span>
+          <span class="saved-badge" id="saved1">저장됨 ✓</span>
+        </div>
+        <textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>리다이렉트에 <strong>301 대신 302를 쓰는 이유</strong>를 클릭 통계 관점에서 설명하고, 반대로 301이 더 나은 상황은 언제인지 함께 제시해보세요. 각각 서버 부하/latency에 미치는 영향도 포함해서.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>내 답변</span>
+          <span class="saved-badge" id="saved2">저장됨 ✓</span>
+        </div>
+        <textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>읽기 QPS 2만을 받기 위한 <strong>캐싱 전략</strong>을 설명하고, 바이럴 링크에서 발생하는 <strong>Cache Stampede(쇄도)</strong>와 <strong>Hot Key</strong> 문제를 각각 어떻게 막을지 구체적 기법으로 답해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>내 답변</span>
+          <span class="saved-badge" id="saved3">저장됨 ✓</span>
+        </div>
+        <textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <!-- ── Section 8: 다음 학습 ── -->
+  <section id="next">
+    <h2>8. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card">
+        <div class="coach">system-design-coach</div>
+        <div class="topic">Rate Limiter 설계 (배차 요청 제한으로 재구성)</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">system-design-coach</div>
+        <div class="topic">Last-mile 실시간 배송 추적 시스템 설계</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">database-coach</div>
+        <div class="topic">Consistent Hashing & 샤딩 키 선택</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">backend-architecture-coach</div>
+        <div class="topic">Snowflake / 분산 ID 생성 패턴</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // ── Mermaid ──
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    themeVariables: {
+      primaryColor: '#dbeafe',
+      primaryTextColor: '#1e293b',
+      primaryBorderColor: '#3b82f6',
+      lineColor: '#64748b',
+      secondaryColor: '#fef3c7',
+      tertiaryColor: '#ede9fe',
+      fontSize: '13px'
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+
+  // ── Active sidebar link on scroll ──
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  // ── Q&A localStorage (key namespace per file) ──
+  const NS = 'jobStudy::system-design::09-case-url-shortener::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+
+  // Load saved answers on page load
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(NS + id);
+    if (saved) el.value = saved;
+
+    // Auto-save with debounce
+    let timer;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(NS + id, el.value);
+        const badge = document.getElementById('saved' + (i + 1));
+        if (badge) {
+          badge.classList.add('show');
+          setTimeout(() => badge.classList.remove('show'), 1800);
+        }
+      }, 400);
+    });
+  });
+
+  // ── Copy Q&A for feedback ──
+  function copyForFeedback() {
+    const questions = [
+      'Q1. 키 생성에서 auto-increment id를 base62 인코딩하는 방식의 치명적 약점은 무엇이며, KGS 방식과 비교해 어떻게 보완할 수 있나요?',
+      'Q2. 리다이렉트에 301 대신 302를 쓰는 이유를 클릭 통계 관점에서 설명하고, 반대로 301이 더 나은 상황과 각각의 서버 부하·latency 영향을 제시해보세요.',
+      'Q3. 읽기 QPS 2만을 받기 위한 캐싱 전략을 설명하고, Cache Stampede(쇄도)와 Hot Key 문제를 각각 어떻게 막을지 구체적 기법으로 답해보세요.'
+    ];
+
+    const lines = ['[URL 단축기 설계 — 이해도 확인 Q&A 피드백 요청]\n세션: system-design/09-case-url-shortener.html\n'];
+    ansIds.forEach((id, i) => {
+      const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)';
+      lines.push(questions[i]);
+      lines.push('A' + (i + 1) + '. ' + ans + '\n');
+    });
+
+    const text = lines.join('\n');
+    const resultEl = document.getElementById('copyResult');
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.';
+      }).catch(() => fallbackCopy(text, resultEl));
+    } else {
+      fallbackCopy(text, resultEl);
+    }
+  }
+
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try {
+      document.execCommand('copy');
+      el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.';
+    } catch {
+      el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.';
+    }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MVCC 내부 구조 — Undo Log·WAL과 InnoDB vs PostgreSQL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root{--bg:#f8fafc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--accent:#d97706}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14.5px;line-height:1.75}
+#sidebar{width:248px;min-height:100vh;background:var(--card);border-right:1px solid var(--border);padding:24px 0;position:fixed;left:0;top:0;overflow-y:auto;z-index:50}
+#sidebar .brand{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:16px}
+#sidebar .brand .tag{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+#sidebar .brand h2{font-size:14px;font-weight:700;line-height:1.4}
+#sidebar .group-label{padding:12px 20px 4px;font-size:10.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em}
+#sidebar a{display:block;padding:7px 20px;font-size:13px;color:var(--muted);text-decoration:none;border-left:3px solid transparent;transition:all .15s}
+#sidebar a:hover,#sidebar a.active{color:var(--accent);background:var(--bg);border-left-color:var(--accent)}
+main{margin-left:248px;flex:1;max-width:1080px;padding:48px 56px}
+.page-hdr{margin-bottom:48px;padding-bottom:32px;border-bottom:2px solid var(--border)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{font-size:12px;font-weight:500;padding:3px 11px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.accent{background:#fef3c7;border-color:var(--accent);color:#92400e}
+.page-hdr h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:10px}
+.page-hdr p{color:var(--muted)}
+section{margin-bottom:64px;scroll-margin-top:24px}
+section>h2{font-size:20px;font-weight:700;padding-bottom:12px;border-bottom:2px solid var(--border);margin-bottom:24px}
+h3{font-size:16px;font-weight:600;margin:28px 0 12px}
+h4{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:20px 0 8px}
+p{margin-bottom:10px}ul,ol{padding-left:22px;margin:8px 0 10px}li{margin-bottom:4px}
+.diagram-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px 24px 20px;margin:18px 0;overflow-x:auto;text-align:center}
+.diagram-wrap .cap{font-size:12px;color:var(--muted);margin-top:14px}
+.mermaid{display:inline-block}
+.tbl-wrap{overflow-x:auto;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+th{background:#f1f5f9;font-weight:600;font-size:12.5px;padding:9px 14px;border-bottom:1px solid var(--border);text-align:left}
+td{padding:9px 14px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+tr:last-child td{border-bottom:none}tr:hover td{background:#fafafa}
+.callout{border-radius:8px;padding:13px 16px;margin:14px 0;border-left:4px solid;font-size:13.5px}
+.callout .c-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.callout.interview{background:#fef2f2;border-color:#dc2626}.callout.interview .c-title{color:#dc2626}
+.callout.warn{background:#fff7ed;border-color:#ea580c}.callout.warn .c-title{color:#ea580c}
+.callout.tip{background:#f0fdf4;border-color:#16a34a}.callout.tip .c-title{color:#16a34a}
+.deep{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:4px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;margin-left:6px}
+code{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#be185d}
+pre{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#1e293b;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:14px 0;line-height:1.6}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:14px}
+.q-card .q-num{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px}
+.ans-area{margin-top:12px}
+.ans-label{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.saved-badge{font-size:11px;color:#16a34a;opacity:0;transition:opacity .4s}.saved-badge.show{opacity:1}
+.ans-area textarea{width:100%;min-height:110px;border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-family:'Noto Sans KR',sans-serif;font-size:14px;line-height:1.7;resize:vertical;background:#fafcff;color:var(--text);transition:border-color .15s}
+.ans-area textarea:focus{outline:none;border-color:var(--accent);background:#fff}
+.ans-area textarea::placeholder{color:#cbd5e1}
+.feedback-box{background:var(--card);border:1.5px dashed var(--border);border-radius:12px;padding:22px 24px;margin-top:28px;text-align:center}
+.feedback-box p{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+.btn-feedback{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:background .15s}
+.btn-feedback:hover{background:#b45309}
+.copy-result{margin-top:12px;font-size:13px;color:#16a34a;min-height:20px}
+.next-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:14px}
+.next-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;transition:box-shadow .15s}
+.next-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.next-card .coach{font-size:11px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:5px}
+.next-card .topic{font-size:13px;font-weight:500}
+@media(max-width:860px){#sidebar{display:none}main{margin-left:0;padding:24px 20px}}
+</style>
+</head>
+<body>
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🗄 database-coach</div>
+    <h2>MVCC 내부 구조<br>Undo·WAL</h2>
+  </div>
+  <div class="group-label">MVCC</div>
+  <a href="#mvcc">1. MVCC 개념·가시성</a>
+  <a href="#undo">2. Undo Log & Purge</a>
+  <a href="#wal">3. WAL & Redo</a>
+  <div class="group-label">비교</div>
+  <a href="#compare">4. InnoDB vs PostgreSQL</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#qa">이해도 확인 Q&amp;A</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+<main>
+  <div class="page-hdr">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">database-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip">MVCC 내부구조</span>
+    </div>
+    <h1>MVCC 내부 구조 — Undo Log·WAL과 InnoDB vs PostgreSQL</h1>
+    <p>"읽기는 락 없이 일관된 스냅샷"이라는 마법의 뒤에는 <strong>버전 관리(Undo log / dead tuple)와 선행기록로그(WAL)</strong>가 있다. 두 DB의 구현 차이까지 알아야 VACUUM·purge·bloat 같은 운영 이슈를 설명할 수 있다.</p>
+  </div>
+
+  <section id="mvcc">
+    <h2>1. MVCC 개념과 가시성 판단</h2>
+    <p><strong>MVCC(Multi-Version Concurrency Control, 다중 버전 동시성 제어)</strong>는 하나의 행에 대해 여러 버전을 유지해, <strong>읽기는 락 없이 자신의 스냅샷 버전</strong>을 읽게 한다. 그래서 "읽기는 쓰기를 막지 않고, 쓰기는 읽기를 막지 않는다."</p>
+    <p>InnoDB는 각 행에 숨은 시스템 컬럼을 둔다.</p>
+    <ul>
+      <li><code>DB_TRX_ID</code>: 이 버전을 마지막으로 쓴 트랜잭션 ID.</li>
+      <li><code>DB_ROLL_PTR</code>: Undo log에 있는 <strong>이전 버전</strong>으로의 롤백 포인터.</li>
+    </ul>
+    <p>트랜잭션은 시작 시 <strong>Read View(읽기 뷰)</strong>를 만들고, 각 행 버전의 <code>DB_TRX_ID</code>가 "내 스냅샷 기준 보이는가"를 판정한다. 안 보이면 <code>DB_ROLL_PTR</code>을 따라 과거 버전으로 거슬러 올라간다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant R as Reader (TRX 100, RR)
+    participant Row as 행 (qty)
+    participant W as Writer (TRX 105)
+    R->>Row: SELECT qty → 10 (버전 trx_id=90, 스냅샷에 보임)
+    W->>Row: UPDATE qty=5 (새 버전 trx_id=105, 이전 버전은 Undo로)
+    W->>Row: COMMIT
+    R->>Row: SELECT qty → 여전히 10
+    Note over R,Row: Read View 기준 105는 미래 → Undo 따라 과거(10) 읽음
+      </div>
+      <div class="cap">MVCC — Reader는 자신의 스냅샷 버전을 읽고, 최신 버전이 안 보이면 Undo로 과거를 재구성</div>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">REPEATABLE READ vs READ COMMITTED 차이도 Read View로</div>
+      InnoDB에서 <strong>RR은 트랜잭션 첫 읽기 시점 Read View를 끝까지 유지</strong>(반복 읽기 일관성), <strong>READ COMMITTED는 매 SELECT마다 새 Read View</strong>를 만든다(그래서 Non-repeatable read 발생). 같은 MVCC 엔진이 Read View 생성 시점만 바꿔 격리수준을 구현한다.
+    </div>
+  </section>
+
+  <section id="undo">
+    <h2>2. InnoDB Undo Log와 Purge</h2>
+    <p>InnoDB는 이전 버전을 <strong>Undo Log(언두 로그)</strong>에 별도로 보관한다. 같은 행을 여러 번 바꾸면 버전들이 <code>DB_ROLL_PTR</code>로 연결된 <strong>version chain(버전 체인)</strong>을 이룬다. Undo는 두 가지 역할을 한다.</p>
+    <ul>
+      <li><strong>롤백</strong>: 트랜잭션 ABORT 시 Undo로 원상복구.</li>
+      <li><strong>MVCC 읽기</strong>: 오래된 스냅샷이 필요로 하는 과거 버전 제공.</li>
+    </ul>
+    <p>더 이상 어떤 활성 스냅샷도 참조하지 않는 과거 버전은 백그라운드 <strong>Purge thread(퍼지 스레드)</strong>가 정리한다.</p>
+
+    <pre>
+version chain (행 하나)
+  최신: qty=5  (trx 105) --roll_ptr--> qty=10 (trx 90) --roll_ptr--> qty=12 (trx 70)
+  ↑ 활성 스냅샷이 trx 90을 봐야 하면 그 버전까지는 purge 불가
+</pre>
+
+    <div class="callout warn">
+      <div class="c-title">롱 트랜잭션이 Undo를 비대화시킨다</div>
+      오래 열려 있는 트랜잭션(예: 분석 쿼리, 커밋 안 한 세션)이 옛 스냅샷을 붙잡고 있으면 purge가 그 이전 버전을 못 지운다 → <strong>History list length</strong>가 폭증하고 Undo 테이블스페이스가 부풀며 읽기 시 version chain이 길어져 느려진다. <code>SHOW ENGINE INNODB STATUS</code>의 History list length, <code>information_schema.innodb_trx</code>로 롱 트랜잭션을 감시한다. 물류 배치(주문 이력 집계)를 거대한 단일 트랜잭션으로 돌리면 이 문제가 잘 터진다 — 청크로 쪼개 커밋.
+    </div>
+  </section>
+
+  <section id="wal">
+    <h2>3. WAL(Write-Ahead Log)과 Redo</h2>
+    <p><strong>WAL(Write-Ahead Log, 선행기록로그)</strong>의 원칙: <em>데이터 페이지를 디스크에 쓰기 전에, 변경 사실을 먼저 로그에 순차 기록</em>한다. 커밋은 데이터 파일이 아니라 <strong>로그가 디스크에 안전히 내려간 시점(fsync)</strong>에 보장된다. 이것이 <strong>Durability(영속성)</strong>와 <strong>crash recovery(장애 복구)</strong>의 핵심이다.</p>
+    <ul>
+      <li>InnoDB: <strong>redo log</strong>(ib_logfile / redo log file). 변경은 redo에 먼저, 더티 페이지는 나중에 비동기 flush.</li>
+      <li>PostgreSQL: <strong>WAL segment</strong>(pg_wal). 동일 원리. 스트리밍 복제도 이 WAL을 전송.</li>
+    </ul>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    Txn["트랜잭션 변경"] --> Buf["버퍼풀 더티 페이지\n(메모리)"]
+    Txn --> WAL["WAL/redo 순차 기록\n(append-only)"]
+    WAL -->|"fsync"| Disk1["로그 디스크\n→ COMMIT 보장"]
+    Buf -. "checkpoint\n비동기 flush" .-> Disk2["데이터 파일\n(랜덤 쓰기)"]
+    Crash["장애 발생"] -.-> Recover["재시작 시 WAL\nredo로 복구"]
+    style WAL fill:#fef3c7,stroke:#d97706
+    style Disk1 fill:#dcfce7,stroke:#16a34a
+    style Recover fill:#dbeafe,stroke:#3b82f6
+      </div>
+      <div class="cap">WAL — 랜덤 쓰기(데이터 파일)를 순차 쓰기(로그)로 바꿔 성능과 내구성을 동시에 확보</div>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">왜 빠른가 — 랜덤을 순차로</div>
+      데이터 페이지를 매번 디스크에 랜덤 쓰기하면 느리다. WAL은 <strong>append-only 순차 쓰기</strong>라 빠르고, 데이터 페이지는 모아서 <strong>checkpoint</strong> 때 flush한다. 커밋 폭주 시 <strong>group commit</strong>으로 여러 트랜잭션의 fsync를 묶어 처리한다. 트레이드오프: <code>innodb_flush_log_at_trx_commit=1</code>(매 커밋 fsync, 안전·느림) vs <code>2</code>(OS 캐시까지, 빠름·장애 시 일부 손실 위험). 결제·재고처럼 정합성이 중요한 곳은 1을 유지.
+    </div>
+  </section>
+
+  <section id="compare">
+    <h2>4. InnoDB vs PostgreSQL MVCC 구현 비교</h2>
+    <p>둘 다 MVCC지만 <strong>옛 버전을 어디에 두느냐</strong>가 결정적으로 다르다. InnoDB는 별도 Undo, PostgreSQL은 테이블 안에 죽은 튜플(dead tuple)을 그대로 둔다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>MySQL InnoDB</th><th>PostgreSQL</th></tr></thead>
+        <tbody>
+          <tr><td>옛 버전 저장 위치</td><td>Undo log (별도 영역)</td><td>같은 테이블에 dead tuple로 in-place 누적</td></tr>
+          <tr><td>UPDATE 동작</td><td>현재 버전 갱신 + 옛 버전 Undo로</td><td>새 튜플 INSERT + 옛 튜플 dead 표시</td></tr>
+          <tr><td>정리 방식</td><td>Purge thread (자동)</td><td>VACUUM / autovacuum 필요</td></tr>
+          <tr><td>인덱스</td><td>보조 인덱스는 PK 포인터 1세트</td><td>모든 튜플 버전이 heap에 → 인덱스가 버전마다 가리킴, HOT update로 완화</td></tr>
+          <tr><td>대표 운영 이슈</td><td>롱 트랜잭션 → Undo·History list 폭증</td><td>VACUUM 지연 → table/index <strong>bloat</strong></td></tr>
+          <tr><td>고유 위험</td><td>—</td><td>Transaction ID <strong>wraparound</strong> (32bit XID 소진) → autovacuum freeze 필수</td></tr>
+          <tr><td>읽기 비용</td><td>version chain 길면 재구성 비용</td><td>dead tuple 많으면 스캔 행 수 증가</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">면접 포인트 — "PostgreSQL은 왜 VACUUM이 필요하죠?"</div>
+      PostgreSQL은 UPDATE를 <strong>새 튜플 추가 + 옛 튜플 죽음 표시</strong>로 처리한다(append-style). 죽은 튜플은 즉시 지워지지 않으므로 <strong>VACUUM이 회수</strong>하지 않으면 테이블·인덱스가 부풀어(bloat) 스캔이 느려진다. 또 32비트 트랜잭션 ID가 한 바퀴 도는 <strong>wraparound</strong>를 막기 위해 주기적 freeze가 필요하다. 반면 InnoDB는 Undo를 별도로 두고 purge가 정리하므로 VACUUM 개념이 없지만, <strong>롱 트랜잭션이 purge를 막는</strong> 동일 계열의 문제가 있다. "둘 다 옛 버전을 누가·언제 청소하느냐의 문제"로 묶어 답하면 깊이가 산다.
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">운영 함정 — autovacuum 튜닝</div>
+      쓰기/업데이트가 많은 PostgreSQL 테이블(예: 운송장 상태 갱신)은 기본 autovacuum이 못 따라가 bloat가 쌓인다. <code>autovacuum_vacuum_scale_factor</code>를 테이블별로 낮추고, 대량 갱신 테이블은 <code>fillfactor</code>를 낮춰 HOT update 비율을 올린다.
+    </div>
+  </section>
+
+  <section id="qa">
+    <h2>이해도 확인 Q&amp;A</h2>
+    <p>아래 질문에 직접 답변을 작성하세요. 자동 저장되며, 버튼으로 복사해 코치에게 피드백을 요청할 수 있습니다.</p>
+
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>같은 MVCC 엔진(InnoDB)에서 REPEATABLE READ와 READ COMMITTED의 차이가 "Read View 생성 시점"으로 설명되는 이유를 서술하고, 각각에서 Non-repeatable read가 발생/방지되는 과정을 버전 체인 관점으로 설명하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved-ans1">저장됨 ✓</span></div>
+        <textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>WAL이 "랜덤 쓰기를 순차 쓰기로 바꿔 성능과 내구성을 동시에" 잡는다는 말을 checkpoint·fsync·group commit 개념을 써서 설명하세요. <code>innodb_flush_log_at_trx_commit</code>의 1과 2 차이는 결제/재고 시스템에서 어떤 의미인가요?</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved-ans2">저장됨 ✓</span></div>
+        <textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>운송장 상태가 초당 수천 번 UPDATE되는 PostgreSQL 테이블에서 조회가 점점 느려졌습니다. MVCC 구현 특성으로 원인을 진단하고, VACUUM·HOT update·fillfactor·wraparound 관점에서 대응책을 제시하세요. InnoDB였다면 어떤 다른 증상이 나타날까요?</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved-ans3">저장됨 ✓</span></div>
+        <textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 복사한 뒤, 채팅창에 붙여넣어 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">02. 락 & 격리수준 (선행 학습)</div></div>
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">06. 쿼리 튜닝 — 통계와 옵티마이저</div></div>
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">04. 복제 — WAL 기반 streaming replication</div></div>
+      <div class="next-card"><div class="coach">infra-coach</div><div class="topic">PostgreSQL autovacuum 모니터링</div></div>
+    </div>
+  </section>
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'neutral',securityLevel:'loose',flowchart:{htmlLabels:true,curve:'basis'}});
+const NS = 'jobStudy::database::03-mvcc-internals::';
+const ansIds = ['ans1','ans2','ans3'];
+function saveAns(id){
+  const el=document.getElementById(id);
+  localStorage.setItem(NS+id, el.value);
+  const b=document.getElementById('saved-'+id);
+  if(b){b.classList.add('show');setTimeout(()=>b.classList.remove('show'),1800);}
+}
+ansIds.forEach(id=>{
+  const el=document.getElementById(id);
+  if(!el)return;
+  const saved=localStorage.getItem(NS+id);
+  if(saved)el.value=saved;
+  let t;
+  el.addEventListener('input',()=>{clearTimeout(t);t=setTimeout(()=>saveAns(id),400);});
+});
+function copyForFeedback(){
+  const questions = [
+    'Q1. InnoDB에서 RR vs READ COMMITTED 차이가 Read View 생성 시점으로 설명되는 이유와, 각각의 Non-repeatable read 발생/방지를 버전 체인 관점으로 설명해보세요.',
+    'Q2. WAL이 랜덤 쓰기를 순차 쓰기로 바꾸는 원리를 checkpoint·fsync·group commit으로 설명하고, innodb_flush_log_at_trx_commit 1 vs 2의 결제/재고 시스템 의미를 설명해보세요.',
+    'Q3. 고빈도 UPDATE PostgreSQL 테이블의 조회 저하를 MVCC 특성으로 진단하고 VACUUM·HOT·fillfactor·wraparound 대응책을 제시, InnoDB였다면의 차이도 설명해보세요.'
+  ];
+  const lines=['[MVCC 내부 구조 — 이해도 확인 Q&A 피드백 요청]\n세션: database/03-mvcc-internals.html\n'];
+  ansIds.forEach((id,i)=>{
+    const ans=(document.getElementById(id)?.value||'').trim()||'(답변 없음)';
+    lines.push(questions[i]);
+    lines.push('A'+(i+1)+'. '+ans+'\n');
+  });
+  const text=lines.join('\n');
+  const resultEl=document.getElementById('copyResult');
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(text).then(()=>{resultEl.textContent='✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.';}).catch(()=>fb(text,resultEl));
+  } else fb(text,resultEl);
+}
+function fb(text,el){
+  const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');el.textContent='✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.';}catch{el.textContent='⚠️ 복사 실패 — 직접 선택해 복사하세요.';}
+  document.body.removeChild(ta);
+}
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      document.querySelectorAll('#sidebar a').forEach(a=>a.classList.remove('active'));
+      const link=document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+      if(link)link.classList.add('active');
+    }
+  });
+},{rootMargin:'-20% 0px -70% 0px'});
+document.querySelectorAll('section[id]').forEach(s=>observer.observe(s));
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

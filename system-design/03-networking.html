@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>네트워킹 빌딩블록 — DNS / CDN / LB / API Gateway / REST·gRPC·GraphQL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg); color: var(--text);
+      display: flex; min-height: 100vh;
+      font-size: 14.5px; line-height: 1.75;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 248px; min-height: 100vh;
+      background: var(--card); border-right: 1px solid var(--border);
+      padding: 24px 0; position: fixed; left: 0; top: 0;
+      overflow-y: auto; z-index: 50;
+    }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a {
+      display: block; padding: 7px 20px;
+      font-size: 13px; color: var(--muted);
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+
+    /* ── Main ── */
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+
+    /* ── Page header ── */
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip {
+      font-size: 12px; font-weight: 500;
+      padding: 3px 11px; border-radius: 20px;
+      background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+    }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+
+    /* ── Sections ── */
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 {
+      font-size: 20px; font-weight: 700;
+      padding-bottom: 12px; border-bottom: 2px solid var(--border);
+      margin-bottom: 24px; display: flex; align-items: center; gap: 8px;
+    }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+
+    /* ── Diagrams ── */
+    .diagram-wrap {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 28px 24px 20px;
+      margin: 18px 0; overflow-x: auto; text-align: center;
+    }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+
+    /* ── Tables ── */
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 13.5px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    /* ── System cards ── */
+    .sys-card {
+      border-radius: 10px; padding: 18px 22px;
+      margin-bottom: 20px; border-left: 4px solid;
+    }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .sys-card.lm  { background: var(--lm);  border-color: var(--lm-b);  color: var(--lm-t);  }
+    .sys-card.ret { background: var(--ret); border-color: var(--ret-b); color: var(--ret-t); }
+
+    /* ── Callouts ── */
+    .callout {
+      border-radius: 8px; padding: 13px 16px;
+      margin: 14px 0; border-left: 4px solid; font-size: 13.5px;
+    }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+
+    /* ── Badges ── */
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+
+    /* ── Q&A cards ── */
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+
+    /* ── Next steps ── */
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+
+    /* ── Q&A Input ── */
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea {
+      width: 100%; min-height: 110px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif;
+      font-size: 14px; line-height: 1.7; resize: vertical;
+      background: #fafcff; color: var(--text);
+      transition: border-color .15s, background .15s;
+    }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+
+    /* ── Feedback button section ── */
+    .feedback-box {
+      background: var(--card); border: 1.5px dashed var(--border);
+      border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center;
+    }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 8px; padding: 10px 22px;
+      font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════ SIDEBAR ══════════════════ -->
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🧩 system-design-coach</div>
+    <h2>네트워킹 빌딩블록<br/>DNS · CDN · LB · Gateway</h2>
+  </div>
+  <div class="group-label">요청 경로</div>
+  <a href="#path">0. 요청 경로 한눈에</a>
+  <a href="#dns">1. DNS</a>
+  <a href="#cdn">2. CDN</a>
+  <a href="#lb">3. Load Balancer</a>
+  <div class="group-label">엣지 계층</div>
+  <a href="#gateway">4. API Gateway</a>
+  <a href="#proxy">5. Reverse Proxy</a>
+  <div class="group-label">API 프로토콜</div>
+  <a href="#protocols">6. REST vs gRPC vs GraphQL</a>
+  <a href="#logistics">7. 물류 적용</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+
+<!-- ══════════════════ MAIN ══════════════════ -->
+<main>
+
+  <!-- Page Header -->
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">system-design-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">네트워킹 빌딩블록</span>
+    </div>
+    <h1>네트워킹 빌딩블록<br>DNS / CDN / Load Balancer / API Gateway / REST·gRPC·GraphQL</h1>
+    <p>클라이언트가 버튼을 누르고 응답을 받기까지, 패킷이 거치는 모든 계층을 한 줄로 그리고 각 컴포넌트의 책임·Trade-off를 정리한다. 심화 주제는 <span class="deep">🔥 Deep-dive</span> 로 표시.</p>
+  </header>
+
+  <!-- ── Section 0: 요청 경로 ── -->
+  <section id="path">
+    <h2>0. 요청 경로 한눈에</h2>
+
+    <p>시스템 디자인 면접에서 "사용자가 <code>coupang.com</code>을 입력하면 어떻게 되나요?"는 워밍업 단골이다. 아래 흐름을 머릿속에 그릴 수 있어야 모든 빌딩블록의 위치가 보인다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    Client(["📱 Client\n브라우저 / 앱"])
+    DNS["🧭 DNS\nDomain Name System\n도메인 → IP 변환\n(GeoDNS로 가장 가까운 엣지 반환)"]
+    CDN["🌐 CDN\nContent Delivery Network\n엣지 캐싱 (정적 자원·이미지)"]
+    LB["⚖️ Load Balancer\nL4/L7 부하 분산\nHealth check + 알고리즘"]
+    GW["🚪 API Gateway\n인증·라우팅·Rate limit·집계"]
+    SvcA["🟦 Order Service"]
+    SvcB["🟧 Inventory Service"]
+    SvcC["🟪 Delivery Service"]
+
+    Client -->|"① 도메인 조회"| DNS
+    DNS -->|"② IP 응답 (TTL 캐싱)"| Client
+    Client -->|"③ 정적 자원 요청"| CDN
+    CDN -.->|"Cache miss → Origin"| LB
+    Client -->|"④ 동적 API 요청"| LB
+    LB --> GW
+    GW --> SvcA
+    GW --> SvcB
+    GW --> SvcC
+
+    style Client fill:#f1f5f9,stroke:#94a3b8
+    style DNS fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a
+    style CDN fill:#dcfce7,stroke:#22c55e,color:#14532d
+    style LB  fill:#fef3c7,stroke:#f59e0b,color:#78350f
+    style GW  fill:#ede9fe,stroke:#8b5cf6,color:#3b0764
+    style SvcA fill:#dbeafe,stroke:#3b82f6
+    style SvcB fill:#fef3c7,stroke:#f59e0b
+    style SvcC fill:#ede9fe,stroke:#8b5cf6
+      </div>
+      <div class="cap">Client → DNS → CDN → LB → API Gateway → 서비스. 정적 트래픽은 CDN에서 끝나고, 동적 트래픽만 Origin까지 내려간다.</div>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 팁 — "정적 vs 동적" 분기를 먼저 말하라</div>
+      면접에서 이 경로를 설명할 때, <strong>정적 자원(이미지·JS·CSS)은 CDN에서 차단하고 동적 요청만 Origin으로 보낸다</strong>는 분기를 먼저 언급하면 트래픽 규모 감각이 있다는 인상을 준다. 쿠팡 상품 이미지가 매 요청마다 Origin을 때리면 대역폭 비용이 폭발한다.
+    </div>
+  </section>
+
+  <!-- ── Section 1: DNS ── -->
+  <section id="dns">
+    <h2>1. 🧭 DNS — Domain Name System</h2>
+
+    <div class="sys-card oms">
+      <div class="sys-label">핵심 책임</div>
+      <div class="sys-title">사람이 읽는 도메인(<code>coupang.com</code>)을 기계가 쓰는 IP(<code>23.x.x.x</code>)로 변환하는 분산 디렉터리.</div>
+    </div>
+
+    <h3>동작 흐름 — 재귀 질의(Recursive Query)</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant R as Recursive Resolver\n(통신사/8.8.8.8)
+    participant Root as Root NS
+    participant TLD as TLD NS (.com)
+    participant Auth as Authoritative NS
+
+    C->>R: coupang.com A 레코드?
+    Note over R: 로컬 캐시 확인 (TTL 유효 시 즉시 응답)
+    R->>Root: .com 은 어디?
+    Root-->>R: TLD NS 주소
+    R->>TLD: coupang.com 은 어디?
+    TLD-->>R: Authoritative NS 주소
+    R->>Auth: coupang.com A 레코드 주세요
+    Auth-->>R: 23.x.x.x (GeoDNS: 가장 가까운 엣지)
+    R-->>C: 23.x.x.x (TTL 동안 캐싱)
+      </div>
+      <div class="cap">DNS 재귀 질의 — 한 번 해석하면 TTL 동안 Resolver/OS/브라우저가 캐싱하므로 매 요청마다 전체 경로를 타지 않는다.</div>
+    </div>
+
+    <h3>트래픽 분산·라우팅 정책</h3>
+    <ul>
+      <li><strong>Round-robin DNS(라운드로빈)</strong>: 하나의 도메인에 여러 A 레코드를 등록해 순환 응답. 가장 단순한 분산이지만 <strong>서버 상태를 모른다</strong> — 죽은 서버 IP도 그대로 반환할 수 있다.</li>
+      <li><strong>GeoDNS(지리 기반 DNS)</strong>: 클라이언트의 Resolver IP 위치를 보고 가장 가까운 리전/엣지의 IP를 반환. 한국 사용자는 서울 엣지, 미국 사용자는 버지니아 엣지.</li>
+      <li><strong>Weighted / Latency-based(가중치·지연 기반)</strong>: AWS Route 53의 정책처럼 가중치나 실측 지연으로 트래픽 비율 조정 — 카나리 배포·재해 복구에 활용.</li>
+    </ul>
+
+    <h3>TTL(Time To Live) — 양날의 검</h3>
+    <p>TTL은 레코드를 얼마나 캐싱할지 정하는 초 단위 값이다.</p>
+    <ul>
+      <li><strong>긴 TTL(예: 86400s)</strong>: 질의 부하·지연 감소. 그러나 장애 시 트래픽을 죽은 IP에서 떼어내는 데 최대 TTL만큼 걸린다.</li>
+      <li><strong>짧은 TTL(예: 30~60s)</strong>: Failover(장애 전환)가 빠르지만 DNS 질의량 증가. 보통 Failover가 중요한 엔드포인트는 짧게 둔다.</li>
+    </ul>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — TTL은 "최댓값"일 뿐, 강제 만료가 안 된다</div>
+      배포 전환을 위해 TTL을 줄여도, <strong>이미 캐싱된 레코드는 남은 TTL이 지나야 만료</strong>된다. 그래서 IP 변경 전 며칠 전부터 TTL을 미리 낮춰두는 "TTL lowering" 사전작업이 표준이다. 또한 일부 Resolver/브라우저는 TTL을 무시하고 자체 정책으로 캐싱하므로 100% 통제는 불가능.
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 함정</div>
+      "DNS로 부하 분산하면 LB 필요 없지 않나요?" → <strong>오답.</strong> DNS Round-robin은 (1) 서버 헬스를 모르고, (2) 캐싱 때문에 분산이 고르지 않으며, (3) 세션 친화성(Sticky)을 제어 못 한다. DNS는 <em>리전 단위 거친 분산</em>, LB는 <em>리전 내 정밀 분산</em>으로 역할이 다르다고 답해야 한다.
+    </div>
+  </section>
+
+  <!-- ── Section 2: CDN ── -->
+  <section id="cdn">
+    <h2>2. 🌐 CDN — Content Delivery Network</h2>
+
+    <div class="sys-card lm">
+      <div class="sys-label">핵심 책임</div>
+      <div class="sys-title">사용자와 물리적으로 가까운 <em>엣지 서버(Edge / PoP)</em>에 콘텐츠를 캐싱해 지연과 Origin 부하를 동시에 줄인다.</div>
+    </div>
+
+    <h3>Pull vs Push</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>방식</th><th>동작</th><th>장점</th><th>단점·적합한 상황</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Pull CDN</strong><br>(Origin Pull)</td>
+            <td>첫 요청 때 Cache miss → CDN이 Origin에서 끌어와 캐싱. 이후 TTL 동안 엣지가 응답</td>
+            <td>운영 단순(자동 캐싱), 스토리지 절약</td>
+            <td>첫 요청은 느림(Cold), Origin 보호 위해 캐시 정책 튜닝 필요. <strong>대부분의 웹은 Pull.</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Push CDN</strong></td>
+            <td>운영자가 콘텐츠를 미리 엣지로 업로드(배포)</td>
+            <td>Cold miss 없음, 대용량 파일·트래픽 예측 가능 시 유리</td>
+            <td>업로드·동기화 관리 부담. 동영상 VOD, 게임 패치, 대규모 소프트웨어 배포에 적합</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>정적 가속 vs 동적 가속</h3>
+    <ul>
+      <li><strong>정적 가속</strong>: 이미지·JS·CSS·폰트·VOD처럼 변하지 않는 자원을 엣지에서 직접 응답. Cache-Control·ETag로 제어.</li>
+      <li><strong>동적 가속(Dynamic Acceleration)</strong>: API 같은 동적 응답은 캐싱이 어렵지만, CDN이 Origin까지 <strong>최적 경로(백본 네트워크)</strong>와 <strong>TLS 종료·연결 재사용</strong>으로 가속. AWS CloudFront, Cloudflare가 제공.</li>
+    </ul>
+
+    <h3>국내 사례</h3>
+    <ul>
+      <li><strong>네이버·카카오</strong>: 대용량 이미지·동영상 트래픽을 자체 CDN과 글로벌 CDN(Akamai/CloudFront) 하이브리드로 처리. 라이브 스트리밍은 엣지 트랜스코딩과 결합.</li>
+      <li><strong>쿠팡</strong>: 상품 썸네일·상세 이미지를 CDN에서 차단해 Origin 트래픽을 수십 분의 1로 줄인다. 가격·재고처럼 자주 바뀌는 데이터는 짧은 TTL 또는 캐시 우회.</li>
+    </ul>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 캐시 무효화(Invalidation)</div>
+      "상품 이미지를 교체했는데 옛날 이미지가 계속 보여요"는 전형적 CDN 사고다. 해결: (1) 파일명에 해시를 붙이는 <strong>버전드 URL</strong>(<code>logo.a1b2c3.png</code>) — 가장 안전, (2) CDN <strong>Purge API</strong>로 강제 무효화 — 전 엣지 전파에 수십 초~수 분. 가격 같은 실시간 데이터는 애초에 캐싱하지 말 것.
+    </div>
+  </section>
+
+  <!-- ── Section 3: Load Balancer ── -->
+  <section id="lb">
+    <h2>3. ⚖️ Load Balancer — 부하 분산기</h2>
+
+    <div class="sys-card wms">
+      <div class="sys-label">핵심 책임</div>
+      <div class="sys-title">들어오는 요청을 여러 백엔드 인스턴스에 나눠, 단일 인스턴스 과부하·SPOF(Single Point of Failure, 단일 장애점)를 방지한다.</div>
+    </div>
+
+    <h3>L4 vs L7 — OSI 계층이 다르다</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant L4 as L4 LB\n(Transport / TCP·UDP)
+    participant L7 as L7 LB\n(Application / HTTP)
+    participant S as Backend
+
+    Note over C,S: ── L4: 패킷의 IP·포트만 보고 전달 ──
+    C->>L4: TCP SYN (dst :443)
+    L4->>S: 그대로 포워딩 (4-tuple 해시로 서버 선택)
+    Note over L4: 페이로드를 열지 않음 → 빠름, 저지연
+
+    Note over C,S: ── L7: HTTP 내용을 파싱해 라우팅 ──
+    C->>L7: GET /api/orders Host: shop.com
+    Note over L7: TLS 종료 + 경로·헤더·쿠키 검사
+    L7->>S: /api/orders 는 Order 서비스로
+      </div>
+      <div class="cap">L4는 4-tuple(출발/도착 IP·포트)만 보고 포워딩, L7은 HTTP 페이로드를 파싱해 경로·호스트·쿠키 기반 라우팅. 대신 L7은 연결당 비용이 크다.</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>L4 (전송 계층)</th><th>L7 (애플리케이션 계층)</th></tr></thead>
+        <tbody>
+          <tr><td>판단 기준</td><td>IP·포트 (4-tuple)</td><td>URL·Host·Header·Cookie·HTTP method</td></tr>
+          <tr><td>성능</td><td>매우 빠름, 낮은 지연·높은 처리량</td><td>파싱 오버헤드로 상대적으로 느림</td></tr>
+          <tr><td>기능</td><td>단순 포워딩</td><td>경로 라우팅, TLS 종료, 헤더 조작, WAF, 압축</td></tr>
+          <tr><td>AWS 대응</td><td>NLB (Network Load Balancer)</td><td>ALB (Application Load Balancer)</td></tr>
+          <tr><td>적합</td><td>초저지연 게임·금융, gRPC/임의 TCP</td><td>마이크로서비스 경로 라우팅, 웹 트래픽</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 함정 — "L4/L7 차이 모름"은 즉시 감점</div>
+      "L4랑 L7 LB 차이가 뭔가요?"는 거의 모든 백엔드 면접에 나온다. 핵심 한 줄: <strong>L4는 패킷의 IP·포트만 보고 전달(내용 안 봄), L7은 HTTP 내용을 열어 경로·헤더로 라우팅한다.</strong> 그래서 "URL <code>/api/v2</code>만 새 버전으로 보내기" 같은 건 L7에서만 가능. gRPC를 L7 ALB 뒤에 둘 땐 HTTP/2 지원 여부를 반드시 확인.
+    </div>
+
+    <h3>분산 알고리즘</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>알고리즘</th><th>동작</th><th>장점</th><th>단점·적합</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Round-robin</strong><br>(라운드로빈)</td><td>순서대로 한 대씩 순환</td><td>단순, 균등 분배 가정 시 충분</td><td>요청 처리시간이 제각각이면 불균형 — 동질 서버에 적합</td></tr>
+          <tr><td><strong>Weighted RR</strong><br>(가중 라운드로빈)</td><td>서버 스펙에 비례한 가중치</td><td>이기종 서버 혼합 대응</td><td>가중치 수동 관리</td></tr>
+          <tr><td><strong>Least connections</strong><br>(최소 연결)</td><td>현재 활성 연결이 가장 적은 서버로</td><td>롱-커넥션·요청시간 편차 큰 워크로드에 강함</td><td>연결 수 추적 비용. WebSocket·스트리밍에 유리</td></tr>
+          <tr><td><strong>Consistent hashing</strong><br>(일관성 해시)</td><td>키(예: userId)를 해시해 같은 서버로 고정</td><td>캐시 지역성↑, 서버 증감 시 재배치 최소</td><td>키 분포 쏠리면 Hot. 세션·로컬 캐시 친화 라우팅에 적합</td></tr>
+          <tr><td><strong>IP hash</strong></td><td>클라이언트 IP 해시로 고정</td><td>간단한 Sticky 구현</td><td>NAT 뒤 다수 사용자가 한 서버로 몰림</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Health check & Sticky session</h3>
+    <ul>
+      <li><strong>Health check(헬스 체크)</strong>: LB가 주기적으로 <code>/healthz</code>를 호출해 비정상 인스턴스를 풀에서 자동 제외. <em>Shallow</em>(프로세스 살아있나) vs <em>Deep</em>(DB·의존성까지 확인) 트레이드오프 — Deep은 정확하지만 의존성 장애 시 전체 인스턴스를 죽은 것으로 오판해 연쇄 장애를 부를 수 있다.</li>
+      <li><strong>Sticky session(세션 고정)</strong>: 같은 클라이언트를 같은 서버로 보내 로컬 세션을 재사용. 단점은 <strong>확장성·재배포 시 세션 유실, 불균형</strong>. 권장: 세션을 Redis 같은 외부 저장소로 빼서 <strong>Stateless(무상태)</strong> 서버를 만들고 Sticky를 제거하는 방향.</li>
+    </ul>
+
+    <div class="callout tip">
+      <div class="c-title">💡 팁 — 쿠팡/배민 트래픽 경로 멘탈모델</div>
+      대규모 이커머스의 동적 트래픽은 보통 <strong>GeoDNS → 리전 진입 → L7 LB(ALB) → API Gateway → 서비스 메시</strong> 순. 정적 자원은 같은 도메인이라도 CDN 엣지에서 분기돼 Origin을 거치지 않는다. "트래픽 피크 시 어디가 먼저 터지나?"를 물으면 보통 <em>L7 LB 연결 수 한계</em>와 <em>DB 커넥션 풀</em>을 짚는다.
+    </div>
+  </section>
+
+  <!-- ── Section 4: API Gateway ── -->
+  <section id="gateway">
+    <h2>4. 🚪 API Gateway</h2>
+
+    <div class="sys-card tms">
+      <div class="sys-label">핵심 책임</div>
+      <div class="sys-title">클라이언트와 마이크로서비스 사이의 <em>단일 진입점(Single Entry Point)</em>. 횡단 관심사(인증·Rate limit·로깅)를 한곳에 모은다.</div>
+    </div>
+
+    <h3>주요 역할</h3>
+    <ul>
+      <li><strong>인증·인가(AuthN/AuthZ)</strong>: JWT(JSON Web Token) 검증, OAuth 토큰 확인을 게이트웨이에서 처리 → 각 서비스가 중복 구현하지 않음.</li>
+      <li><strong>라우팅(Routing)</strong>: <code>/orders</code>는 Order 서비스, <code>/delivery</code>는 Delivery 서비스로 — 경로·버전 기반.</li>
+      <li><strong>Rate limiting(요청 제한)</strong>: 사용자·API key 단위로 초당 요청 제한. Token bucket·Sliding window 알고리즘.</li>
+      <li><strong>집계(Aggregation / BFF)</strong>: 한 화면에 필요한 여러 서비스 호출을 게이트웨이가 모아서 한 응답으로 — 모바일 라운드트립 절감.</li>
+      <li><strong>기타</strong>: 요청/응답 변환, 캐싱, 회로 차단(Circuit breaker), 관측성(Tracing) 주입.</li>
+    </ul>
+
+    <h3>API Gateway vs Reverse Proxy — 무엇이 다른가</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>Reverse Proxy</th><th>API Gateway</th></tr></thead>
+        <tbody>
+          <tr><td>주 관심사</td><td>네트워크 레벨 중계·캐싱·TLS 종료</td><td>API 레벨 정책(인증·Rate limit·집계)</td></tr>
+          <tr><td>추상화 수준</td><td>HTTP 요청 전달</td><td>비즈니스 API·서비스 토폴로지 인지</td></tr>
+          <tr><td>대표 제품</td><td>Nginx, HAProxy, Envoy</td><td>Kong, AWS API Gateway, Spring Cloud Gateway</td></tr>
+          <tr><td>관계</td><td colspan="2">API Gateway는 사실상 <strong>"정책 기능이 풍부한 Reverse Proxy"</strong> — Kong은 Nginx 위에, AWS API GW도 프록시 위에 정책 계층을 얹은 형태. 둘은 배타적이 아니라 포함 관계에 가깝다.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 사례 — 토스 API Gateway</div>
+      금융 서비스 특성상 토스는 게이트웨이 계층에서 <strong>인증·트래픽 제어·감사 로깅·이상 탐지</strong>를 집중 처리하고, 내부 서비스는 비즈니스 로직에 집중하게 한다. 게이트웨이는 SPOF가 되기 쉬우므로 <strong>다중화 + 무상태 설계 + 빠른 Failover</strong>가 필수.
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — Gateway에 비즈니스 로직을 넣지 마라</div>
+      편하다고 게이트웨이에 도메인 분기·데이터 조합 로직을 쌓으면 "분산 모놀리스"가 되어 배포 병목과 SPOF를 만든다. 게이트웨이는 <strong>횡단 관심사만</strong>. 화면별 집계가 많으면 차라리 <strong>BFF(Backend For Frontend)</strong>를 별도로 두는 게 낫다.
+    </div>
+  </section>
+
+  <!-- ── Section 5: Reverse Proxy ── -->
+  <section id="proxy">
+    <h2>5. 🔁 Reverse Proxy (Nginx 등)</h2>
+
+    <p><strong>Forward Proxy</strong>는 클라이언트를 대신해 나가는 트래픽을 중계(사내 방화벽·필터링), <strong>Reverse Proxy(역방향 프록시)</strong>는 서버 앞에 서서 들어오는 트래픽을 받아 백엔드로 분배한다. 클라이언트는 진짜 서버를 모른다.</p>
+
+    <h4>Reverse Proxy의 전형적 역할</h4>
+    <ul>
+      <li><strong>TLS 종료(TLS termination)</strong>: HTTPS 복호화를 프록시에서 처리해 백엔드 부담 경감.</li>
+      <li><strong>정적 파일 서빙·캐싱</strong>: Nginx가 정적 자원을 직접 응답, 동적 요청만 앱으로.</li>
+      <li><strong>압축(gzip/brotli)·요청 버퍼링·연결 풀링</strong>.</li>
+      <li><strong>L7 부하 분산</strong>: 실은 Nginx는 Reverse Proxy이자 L7 LB. 그래서 LB·프록시·게이트웨이의 경계가 제품마다 겹친다.</li>
+    </ul>
+
+    <div class="callout tip">
+      <div class="c-title">💡 팁 — 세 컴포넌트의 관계 정리</div>
+      <strong>Reverse Proxy ⊂ (L7 LB) ⊂ (API Gateway)</strong> 로 기능이 점점 쌓인다고 보면 깔끔하다. Nginx 하나로 프록시+LB를, Envoy로 프록시+LB+관측성을, Kong으로 그 위에 API 정책까지 — 면접에선 "제품 이름"이 아니라 "어떤 책임을 어디서 처리하는가"로 답하라.
+    </div>
+  </section>
+
+  <!-- ── Section 6: REST vs gRPC vs GraphQL ── -->
+  <section id="protocols">
+    <h2>6. REST vs gRPC vs GraphQL</h2>
+
+    <p>세 가지는 "서비스끼리 또는 클라이언트와 서버가 어떻게 대화하나"를 정하는 API 스타일이다. 정답은 없고 <strong>용도에 따라 다르다.</strong></p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>관점</th><th>REST</th><th>gRPC</th><th>GraphQL</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>전송·포맷</td><td>HTTP/1.1 + JSON (텍스트)</td><td>HTTP/2 + Protobuf (바이너리)</td><td>HTTP/1.1 + JSON (단일 엔드포인트)</td></tr>
+          <tr><td>스키마·계약</td><td>느슨(OpenAPI 선택적)</td><td>엄격(<code>.proto</code> 강제)</td><td>엄격(GraphQL Schema)</td></tr>
+          <tr><td>성능·페이로드</td><td>JSON 파싱·중복 큼</td><td>Protobuf로 작고 빠름, 멀티플렉싱</td><td>필요한 필드만 받아 over-fetch 제거(서버 파싱은 비쌈)</td></tr>
+          <tr><td>스트리밍</td><td>기본 없음(SSE 등 별도)</td><td><strong>양방향 스트리밍 1급 지원</strong></td><td>Subscription(WebSocket)</td></tr>
+          <tr><td>Over/Under-fetching</td><td>흔함(고정 응답)</td><td>고정(메시지 정의)</td><td><strong>클라이언트가 필드 선택</strong> → 해결</td></tr>
+          <tr><td>브라우저·캐싱</td><td>최상(HTTP 캐시·CDN 친화)</td><td>브라우저 직접 불가(gRPC-Web 필요)</td><td>HTTP 캐싱 약함(POST 단일 URL)</td></tr>
+          <tr><td>대표 용도</td><td>공개 API, 웹·모바일 표준</td><td><strong>내부 MSA 서비스 간 통신</strong>, 저지연</td><td>복잡한 화면·다양한 클라이언트(앱·웹) 집계</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>gRPC 호출 흐름 — HTTP/2 멀티플렉싱·스트리밍</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant C as Client Stub
+    participant S as gRPC Server
+
+    Note over C,S: 단일 HTTP/2 연결에서 여러 RPC 멀티플렉싱
+    C->>S: Unary RPC GetOrder(orderId)
+    S-->>C: Order (Protobuf 바이너리)
+
+    Note over C,S: Server streaming — 추적 이벤트 푸시
+    C->>S: TrackShipment(trackingId)
+    S-->>C: Event1 InTransit
+    S-->>C: Event2 OutForDelivery
+    S-->>C: Event3 Delivered
+    Note over C,S: 한 연결, 하나의 요청, 여러 응답 스트림
+      </div>
+      <div class="cap">gRPC는 HTTP/2의 멀티플렉싱으로 한 TCP 연결에 여러 RPC를 흘리고, Server/Client/양방향 스트리밍을 1급으로 제공한다.</div>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 함정 — "gRPC는 무조건 빠르다"는 오해</div>
+      gRPC가 빠른 이유는 <strong>Protobuf 바이너리 + HTTP/2 멀티플렉싱</strong>이지 마법이 아니다. (1) <strong>브라우저에서 직접 못 쓴다</strong>(gRPC-Web 프록시 필요), (2) <strong>HTTP 캐싱·CDN과 안 맞는다</strong>, (3) 사람이 디버깅(curl)하기 불편, (4) 작은 페이로드·낮은 호출량이면 JSON 대비 이득이 미미. 그래서 실무 정석은 <strong>"외부=REST/GraphQL, 내부 서비스 간=gRPC"</strong>다.
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — GraphQL의 N+1과 캐싱</div>
+      GraphQL은 over-fetch를 없애지만 <strong>중첩 쿼리가 백엔드에서 N+1 쿼리 폭발</strong>을 일으킬 수 있어 DataLoader 배칭이 필수. 또 단일 POST 엔드포인트라 <strong>HTTP·CDN 캐싱이 어렵고</strong>, 클라이언트가 임의로 무거운 쿼리를 던질 수 있어 <strong>쿼리 복잡도 제한·depth 제한</strong>이 필요하다.
+    </div>
+  </section>
+
+  <!-- ── Section 7: 물류 적용 ── -->
+  <section id="logistics">
+    <h2>7. 물류 적용 — 라스트마일 추적 API: REST vs gRPC</h2>
+
+    <p>"운송장 추적(Tracking)" API를 어떤 프로토콜로 설계할까? 호출자가 누구냐에 따라 답이 갈린다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>경계</th><th>호출 주체</th><th>권장</th><th>이유</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong style="color:var(--lm-b)">고객 앱 ↔ 추적 API</strong></td>
+            <td>외부 모바일·웹</td>
+            <td><strong>REST</strong> (+ 실시간은 SSE/WebSocket)</td>
+            <td>브라우저·CDN 친화, 공개 계약 단순. 지도 위 위치 푸시는 WebSocket 보강</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--tms-b)">기사 앱 ↔ 위치 수집</strong></td>
+            <td>모바일 → 게이트웨이</td>
+            <td><strong>REST/gRPC + 배치 업로드</strong></td>
+            <td>오프라인 구간(지하·산간) 누적 후 재접속 시 배치 전송 + 멱등성(Idempotency) 필요</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--oms-b)">추적 서비스 ↔ OMS/알림 서비스</strong></td>
+            <td>내부 마이크로서비스</td>
+            <td><strong>gRPC (스트리밍)</strong></td>
+            <td>초당 수만 TrackingEvent를 저지연·고밀도로. Protobuf로 페이로드 최소화</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>정량 감각: DAU 1,000만, 1인당 추적 화면 5회 폴링이면 하루 5,000만 조회 ≈ 평균 <strong>580 QPS(Queries Per Second, 초당 쿼리 수)</strong>, 피크는 그 5~10배. 이걸 매번 Origin DB로 보내면 죽으니 <strong>최신 상태는 CDN/엣지 캐시 또는 Redis</strong>에 짧은 TTL로 두고, 변경 시 Push로 갱신하는 구조가 정석이다.</p>
+
+    <div class="callout tip">
+      <div class="c-title">💡 연결 — 이 빌딩블록이 어떻게 합쳐지나</div>
+      라스트마일 추적: <strong>GeoDNS</strong>로 가까운 리전 → 지도 타일·아이콘은 <strong>CDN</strong> → 추적 API는 <strong>L7 LB → API Gateway</strong>(인증·Rate limit) → 외부는 REST, 내부 이벤트 Fan-out은 <strong>gRPC 스트리밍 + Kafka</strong>. 한 시스템 안에서 모든 빌딩블록이 자기 자리를 갖는다.
+    </div>
+  </section>
+
+  <!-- ── Section: 이해도 확인 ── -->
+  <section id="quiz">
+    <h2>8. 이해도 확인 질문</h2>
+
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>DNS Round-robin만으로 부하 분산을 하면 안 되는 이유를 3가지 이상 들고, DNS 분산과 L4/L7 Load Balancer의 <strong>역할 차이</strong>를 설명해보세요. (힌트: 헬스 인지, 캐싱, Sticky, 분산 입도)</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>내 답변</span>
+          <span class="saved-badge" id="saved1">저장됨 ✓</span>
+        </div>
+        <textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>"내부 마이크로서비스 간 통신은 gRPC, 외부 공개 API는 REST/GraphQL"이 정석으로 통하는 이유를 <em>성능·브라우저 호환·캐싱·디버깅</em> 관점에서 정리하고, "gRPC가 무조건 빠르다"가 왜 틀린지 반박해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>내 답변</span>
+          <span class="saved-badge" id="saved2">저장됨 ✓</span>
+        </div>
+        <textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>라스트마일 실시간 추적 시스템에서 DNS·CDN·LB·API Gateway·프로토콜(REST/gRPC)을 각각 어디에 배치할지, 그리고 "추적 화면 조회 QPS 폭주"를 어떻게 Origin DB까지 내려가지 않게 흡수할지 경로를 그려 설명해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>내 답변</span>
+          <span class="saved-badge" id="saved3">저장됨 ✓</span>
+        </div>
+        <textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <!-- ── Section: 다음 학습 ── -->
+  <section id="next">
+    <h2>9. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card">
+        <div class="coach">system-design-coach</div>
+        <div class="topic">데이터 저장·확장 (SQL/NoSQL·복제·샤딩) — 04-data-storage</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">system-design-coach</div>
+        <div class="topic">캐싱 전략 심화 (Cache-aside·Stampede·무효화)</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">infra-coach</div>
+        <div class="topic">L7 LB·서비스 메시(Envoy/Istio) 실전 구성</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">system-design-coach + logistics-domain-coach</div>
+        <div class="topic">라스트마일 추적 시스템 설계 (Design 모드)</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // ── Mermaid ──
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    themeVariables: {
+      primaryColor: '#dbeafe',
+      primaryTextColor: '#1e293b',
+      primaryBorderColor: '#3b82f6',
+      lineColor: '#64748b',
+      secondaryColor: '#fef3c7',
+      tertiaryColor: '#ede9fe',
+      fontSize: '13px'
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+
+  // ── Active sidebar link on scroll ──
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  // ── Q&A localStorage (key namespace per file) ──
+  const NS = 'jobStudy::system-design::03-networking::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+
+  // Load saved answers on page load
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(NS + id);
+    if (saved) el.value = saved;
+
+    // Auto-save with debounce
+    let timer;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(NS + id, el.value);
+        const badge = document.getElementById('saved' + (i + 1));
+        if (badge) {
+          badge.classList.add('show');
+          setTimeout(() => badge.classList.remove('show'), 1800);
+        }
+      }, 400);
+    });
+  });
+
+  // ── Copy Q&A for feedback ──
+  function copyForFeedback() {
+    const questions = [
+      'Q1. DNS Round-robin만으로 부하 분산을 하면 안 되는 이유 3가지 이상과, DNS 분산 vs L4/L7 Load Balancer의 역할 차이를 설명해보세요.',
+      'Q2. "내부 MSA 간=gRPC, 외부 공개 API=REST/GraphQL"이 정석인 이유를 성능·브라우저 호환·캐싱·디버깅 관점에서 정리하고, "gRPC는 무조건 빠르다"를 반박해보세요.',
+      'Q3. 라스트마일 실시간 추적 시스템에서 DNS·CDN·LB·API Gateway·프로토콜(REST/gRPC)을 어디에 배치하고, 추적 조회 QPS 폭주를 Origin DB까지 내려가지 않게 흡수하는 경로를 설명해보세요.'
+    ];
+
+    const lines = ['[네트워킹 빌딩블록 — 이해도 확인 Q&A 피드백 요청]\n세션: system-design/03-networking.html\n'];
+    ansIds.forEach((id, i) => {
+      const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)';
+      lines.push(questions[i]);
+      lines.push('A' + (i + 1) + '. ' + ans + '\n');
+    });
+
+    const text = lines.join('\n');
+    const resultEl = document.getElementById('copyResult');
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.';
+      }).catch(() => fallbackCopy(text, resultEl));
+    } else {
+      fallbackCopy(text, resultEl);
+    }
+  }
+
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try {
+      document.execCommand('copy');
+      el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.';
+    } catch {
+      el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.';
+    }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

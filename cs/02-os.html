@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>운영체제(OS) — 프로세스·메모리·스케줄링·동기화</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root{--bg:#f8fafc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--accent:#059669}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14.5px;line-height:1.75}
+#sidebar{width:248px;min-height:100vh;background:var(--card);border-right:1px solid var(--border);padding:24px 0;position:fixed;left:0;top:0;overflow-y:auto;z-index:50}
+#sidebar .brand{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:16px}
+#sidebar .brand .tag{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+#sidebar .brand h2{font-size:14px;font-weight:700;line-height:1.4}
+#sidebar .group-label{padding:12px 20px 4px;font-size:10.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em}
+#sidebar a{display:block;padding:7px 20px;font-size:13px;color:var(--muted);text-decoration:none;border-left:3px solid transparent;transition:all .15s}
+#sidebar a:hover,#sidebar a.active{color:var(--accent);background:var(--bg);border-left-color:var(--accent)}
+main{margin-left:248px;flex:1;max-width:1080px;padding:48px 56px}
+.page-hdr{margin-bottom:48px;padding-bottom:32px;border-bottom:2px solid var(--border)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{font-size:12px;font-weight:500;padding:3px 11px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.accent{background:#d1fae5;border-color:var(--accent);color:#064e3b}
+.page-hdr h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:10px}
+.page-hdr p{color:var(--muted)}
+section{margin-bottom:64px;scroll-margin-top:24px}
+section>h2{font-size:20px;font-weight:700;padding-bottom:12px;border-bottom:2px solid var(--border);margin-bottom:24px}
+h3{font-size:16px;font-weight:600;margin:28px 0 12px}
+h4{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:20px 0 8px}
+p{margin-bottom:10px}ul,ol{padding-left:22px;margin:8px 0 10px}li{margin-bottom:4px}
+.diagram-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px 24px 20px;margin:18px 0;overflow-x:auto;text-align:center}
+.diagram-wrap .cap{font-size:12px;color:var(--muted);margin-top:14px}
+.mermaid{display:inline-block}
+.tbl-wrap{overflow-x:auto;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+th{background:#f1f5f9;font-weight:600;font-size:12.5px;padding:9px 14px;border-bottom:1px solid var(--border);text-align:left}
+td{padding:9px 14px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+tr:last-child td{border-bottom:none}tr:hover td{background:#fafafa}
+.callout{border-radius:8px;padding:13px 16px;margin:14px 0;border-left:4px solid;font-size:13.5px}
+.callout .c-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.callout.interview{background:#fef2f2;border-color:#dc2626}.callout.interview .c-title{color:#dc2626}
+.callout.warn{background:#fff7ed;border-color:#ea580c}.callout.warn .c-title{color:#ea580c}
+.callout.tip{background:#f0fdf4;border-color:#16a34a}.callout.tip .c-title{color:#16a34a}
+.deep{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:4px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;margin-left:6px}
+code{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#be185d}
+pre{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#1e293b;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:14px 0;line-height:1.6}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:14px}
+.q-card .q-num{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px}
+.ans-area{margin-top:12px}
+.ans-label{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.saved-badge{font-size:11px;color:#16a34a;opacity:0;transition:opacity .4s}.saved-badge.show{opacity:1}
+.ans-area textarea{width:100%;min-height:110px;border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-family:'Noto Sans KR',sans-serif;font-size:14px;line-height:1.7;resize:vertical;background:#fafcff;color:var(--text);transition:border-color .15s}
+.ans-area textarea:focus{outline:none;border-color:var(--accent);background:#fff}
+.ans-area textarea::placeholder{color:#cbd5e1}
+.feedback-box{background:var(--card);border:1.5px dashed var(--border);border-radius:12px;padding:22px 24px;margin-top:28px;text-align:center}
+.feedback-box p{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+.btn-feedback{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:background .15s}
+.btn-feedback:hover{background:#047857}
+.copy-result{margin-top:12px;font-size:13px;color:#16a34a;min-height:20px}
+.next-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:14px}
+.next-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;transition:box-shadow .15s}
+.next-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.next-card .coach{font-size:11px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:5px}
+.next-card .topic{font-size:13px;font-weight:500}
+@media(max-width:860px){#sidebar{display:none}main{margin-left:0;padding:24px 20px}}
+</style>
+</head>
+<body>
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🧮 cs-fundamentals-coach</div>
+    <h2>운영체제(OS)<br>핵심 정리</h2>
+  </div>
+  <div class="group-label">실행 단위</div>
+  <a href="#proc-thread">1. 프로세스 vs 스레드</a>
+  <a href="#ctx">2. 컨텍스트 스위칭</a>
+  <a href="#sched">3. CPU 스케줄링</a>
+  <div class="group-label">메모리</div>
+  <a href="#vm">4. 가상 메모리 · 페이징</a>
+  <a href="#mem-layout">5. 메모리 레이아웃</a>
+  <div class="group-label">동시성</div>
+  <a href="#sync">6. 동기화 프리미티브</a>
+  <a href="#deadlock">7. 데드락</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#qa">Q&amp;A 연습</a>
+  <a href="#next">다음 학습</a>
+</nav>
+<main>
+  <div class="page-hdr">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">cs-fundamentals-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip">운영체제(OS)</span>
+    </div>
+    <h1>운영체제(OS)<br>프로세스 · 메모리 · 스케줄링 · 동기화</h1>
+    <p>백엔드 서버는 결국 OS 위에서 돈다. 스레드 풀 크기, GC 정지, 컨텍스트 스위칭 폭증, OOM Kill — 운영 중 마주치는 모든 성능 문제는 OS 원리로 설명된다. 관찰 도구는 <code>top</code>, <code>vmstat</code>, <code>/proc</code>, <code>strace</code>로 연결한다.</p>
+  </div>
+
+  <!-- 1 -->
+  <section id="proc-thread">
+    <h2>1. 프로세스(Process) vs 스레드(Thread)</h2>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    subgraph P["프로세스 (독립 주소 공간)"]
+      direction TB
+      Code["Text / Data<br/>(공유)"]
+      Heap["Heap<br/>(스레드 간 공유)"]
+      subgraph T1["Thread 1"]
+        S1["Stack 1<br/>레지스터·PC"]
+      end
+      subgraph T2["Thread 2"]
+        S2["Stack 2<br/>레지스터·PC"]
+      end
+    end
+
+    style Heap fill:#fef3c7,stroke:#d97706
+    style S1 fill:#dbeafe,stroke:#3b82f6
+    style S2 fill:#dbeafe,stroke:#3b82f6
+      </div>
+      <div class="cap">스레드는 Heap·Code를 공유하고 Stack·레지스터만 독립 — 그래서 통신은 싸지만 동기화가 필요</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>구분</th><th>프로세스</th><th>스레드</th></tr></thead>
+        <tbody>
+          <tr><td><strong>주소 공간</strong></td><td>독립 가상 주소 공간</td><td>프로세스 내 공유(Heap·전역·FD)</td></tr>
+          <tr><td><strong>통신</strong></td><td>IPC(파이프·공유메모리·소켓)</td><td>공유 메모리 직접 접근 → 동기화 필요</td></tr>
+          <tr><td><strong>Context Switch</strong></td><td>비쌈(주소공간 전환 + TLB flush)</td><td>쌈(같은 주소공간 유지)</td></tr>
+          <tr><td><strong>장애 격리</strong></td><td>높음(크래시 격리)</td><td>낮음(한 스레드 크래시 → 전체)</td></tr>
+          <tr><td><strong>생성 비용</strong></td><td>높음(주소공간 복제)</td><td>낮음</td></tr>
+          <tr><td><strong>Linux 구현</strong></td><td><code>clone()</code> (CLONE_VM 없이)</td><td><code>clone()</code> + <code>CLONE_VM</code>|<code>CLONE_FILES</code>…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 리눅스 관점 — 프로세스와 스레드의 경계가 흐리다</div>
+      Linux에는 "프로세스 전용/스레드 전용" 시스템 콜이 따로 없다. 둘 다 <code>clone()</code> 한 줄로 만들어지며, <strong>어떤 자원을 공유할지(CLONE_VM 등 플래그)</strong>만 다르다. 커널 입장에선 모두 스케줄링 단위인 <strong>task_struct</strong>일 뿐이다. <code>cat /proc/&lt;pid&gt;/status</code>에서 <code>Threads:</code> 수를 직접 확인할 수 있다.
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 함정 — "스레드가 항상 빠르다"</div>
+      스레드 수 &gt; CPU 코어 수가 되면 컨텍스트 스위칭이 폭증한다. Lock 경합이 심하면 직렬화되어 단일 스레드보다 느려질 수도 있다(Amdahl's Law). fork+exec 패턴은 <strong>Copy-on-Write(COW)</strong>로 자식 생성을 가볍게 하지만, 자식이 큰 메모리를 쓰기 시작하면 페이지 복제가 일어나 Redis <code>BGSAVE</code> 시 메모리 스파이크의 원인이 된다.
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="ctx">
+    <h2>2. 컨텍스트 스위칭 (Context Switch, 문맥 교환)</h2>
+    <p>CPU가 실행 중인 task를 바꾸는 과정. PCB(Process Control Block, 프로세스 제어 블록)에 레지스터·PC(Program Counter)·스택 포인터를 저장하고 다음 task 상태를 복구한다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant T1 as Task A (Running)
+    participant K as 커널 스케줄러
+    participant T2 as Task B (Ready)
+    T1->>K: 타임슬라이스 만료 / I/O 대기 / 인터럽트
+    K->>K: A의 레지스터·PC를 PCB_A에 저장
+    Note over K: CPU 캐시(L1/L2) 무효화<br/>주소공간 다르면 TLB flush
+    K->>K: PCB_B에서 B의 상태 복구
+    K->>T2: B 실행 재개
+      </div>
+      <div class="cap">컨텍스트 스위치 — 직접 비용(저장/복구)보다 간접 비용(캐시·TLB 무효화)이 더 클 때가 많다</div>
+    </div>
+
+    <ul>
+      <li><strong>직접 비용</strong>: 레지스터 저장/복구, 커널 진입/복귀 (수 μs)</li>
+      <li><strong>간접 비용</strong>: L1/L2 캐시 무효화 → 캐시 미스 폭증 ("Cache Pollution")</li>
+      <li><strong>TLB flush</strong>: 프로세스 전환 시 페이지 테이블 캐시 초기화 (스레드 전환에선 회피)</li>
+    </ul>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 관찰 도구</div>
+      <code>vmstat 1</code>의 <code>cs</code> 컬럼이 초당 컨텍스트 스위치 수다. 평소 대비 급증했다면 스레드 과다 생성·Lock 경합·인터럽트 폭주를 의심하라. <code>pidstat -w</code>로 프로세스별 자발적(voluntary, I/O 대기)/비자발적(involuntary, 선점) 스위치를 구분할 수 있다 — 비자발적이 많으면 CPU 과부하 신호.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="sched">
+    <h2>3. CPU 스케줄링 (CPU Scheduling)</h2>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> New : fork() / clone()
+    New --> Ready : 메모리 할당 완료
+    Ready --> Running : 스케줄러 디스패치
+    Running --> Ready : 타임슬라이스 만료(선점)
+    Running --> Waiting : I/O 대기 / sleep()
+    Waiting --> Ready : I/O 완료 인터럽트
+    Running --> Terminated : exit()
+    Terminated --> [*]
+      </div>
+      <div class="cap">프로세스 상태 머신 — Running↔Ready 전이가 곧 컨텍스트 스위치</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>알고리즘</th><th>방식</th><th>장점</th><th>단점</th></tr></thead>
+        <tbody>
+          <tr><td><strong>FCFS</strong></td><td>도착 순(비선점)</td><td>단순·공정</td><td>Convoy Effect(긴 작업이 뒤를 막음)</td></tr>
+          <tr><td><strong>SJF / SRTF</strong></td><td>짧은 작업 우선</td><td>평균 대기시간 최소</td><td>긴 작업 기아(Starvation), 실행시간 예측 불가</td></tr>
+          <tr><td><strong>Round Robin</strong></td><td>타임퀀텀 순환(선점)</td><td>응답성 좋음</td><td>퀀텀 작으면 스위칭 오버헤드</td></tr>
+          <tr><td><strong>Priority</strong></td><td>우선순위 높은 것 먼저</td><td>중요 작업 우선</td><td>기아 → Aging으로 완화</td></tr>
+          <tr><td><strong>Linux CFS</strong></td><td>가상 실행시간(vruntime) 최소 선택</td><td>공정성, Red-Black Tree O(log n)</td><td>실시간 보장 아님(→ <code>SCHED_FIFO</code>)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 백엔드 연결 — nice / cgroup</div>
+      Linux <strong>CFS(Completely Fair Scheduler, 완전 공정 스케줄러)</strong>는 각 task의 <code>vruntime</code>이 가장 작은 것을 Red-Black Tree에서 골라 실행한다. <code>nice</code> 값으로 가중치를 조정하고, <strong>cgroup</strong>으로 CPU 점유를 그룹 단위로 제한한다 — 이것이 컨테이너(Docker/K8s) <code>cpu.limit</code>의 실체다. <code>cpu.cfs_quota_us</code>를 너무 낮게 잡으면 <strong>CFS Throttling</strong>으로 JVM이 멈칫거리는 지연 스파이크가 발생한다.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section id="vm">
+    <h2>4. 가상 메모리 &amp; 페이징 (Virtual Memory &amp; Paging)</h2>
+    <p>각 프로세스는 전체 메모리를 독점한다고 "착각"하는 가상 주소 공간을 갖는다. MMU(Memory Management Unit)가 페이지 테이블을 통해 가상 → 물리 주소로 변환하며, TLB(Translation Lookaside Buffer, 변환 참조 버퍼)가 최근 변환을 캐싱한다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    VA["가상 주소"] --> TLB{TLB Hit?}
+    TLB -- Hit --> PA["물리 주소"]
+    TLB -- Miss --> PT["페이지 테이블 조회"]
+    PT --> Present{페이지가<br/>메모리에?}
+    Present -- Yes --> PA
+    Present -- No --> PF["Page Fault<br/>디스크에서 로드(Swap-in)"]
+    PF --> PA
+
+    style TLB fill:#dbeafe,stroke:#3b82f6
+    style PF fill:#fef2f2,stroke:#dc2626
+      </div>
+      <div class="cap">주소 변환 경로 — TLB Miss → 페이지 테이블 → Page Fault 시 디스크 I/O(수만 배 느림)</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>개념</th><th>의미</th><th>비용 / 영향</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Page Fault</strong></td><td>접근 페이지가 물리 메모리에 없음</td><td>Minor(메모리 내 매핑)는 싸고, Major(디스크 로드)는 수 ms로 치명적</td></tr>
+          <tr><td><strong>Paging</strong></td><td>고정 크기(4KB) 페이지 단위 관리</td><td>외부 단편화 없음, 내부 단편화 소량</td></tr>
+          <tr><td><strong>Swapping</strong></td><td>메모리 부족 시 페이지를 디스크로 내림</td><td>과도하면 Thrashing(스래싱)으로 시스템 마비</td></tr>
+          <tr><td><strong>OOM Killer</strong></td><td>메모리 고갈 시 커널이 프로세스 강제 종료</td><td>JVM 컨테이너가 갑자기 죽는 단골 원인</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — Swap과 GC는 상극</div>
+      JVM Heap이 Swap으로 디스크에 내려가면, GC가 전체 Heap을 스캔할 때 Major Page Fault가 폭발해 stop-the-world가 초 단위로 늘어진다. 그래서 프로덕션 DB·JVM 서버는 흔히 <strong>Swap을 끄거나(<code>vm.swappiness=0~1</code>)</strong> 관리한다. 컨테이너에서 갑작스런 종료는 <code>dmesg | grep -i oom</code>으로 OOM Killer 흔적을 확인하라.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="mem-layout">
+    <h2>5. 메모리 레이아웃 (Memory Layout)</h2>
+
+    <pre>
+프로세스 가상 주소 공간 (높은 주소 → 낮은 주소)
+┌─────────────────────────────────────┐  높은 주소
+│            Kernel Space             │
+├─────────────────────────────────────┤
+│            Stack (스택)             │  ← 지역변수·리턴주소, 자동 관리
+│          ↓ (grows down)             │     크기 제한(~8MB) → Stack Overflow
+├─────────────────────────────────────┤
+│            (빈 공간)                │
+├─────────────────────────────────────┤
+│          ↑ (grows up)               │
+│            Heap (힙)                │  ← malloc/new, 수동/GC 관리, 단편화
+├─────────────────────────────────────┤
+│       BSS (초기화 안 된 전역)        │
+├─────────────────────────────────────┤
+│       Data (초기화된 전역)          │
+├─────────────────────────────────────┤
+│       Text (코드, read-only 공유)   │  낮은 주소
+└─────────────────────────────────────┘
+    </pre>
+
+    <h3>힙 할당자 (malloc 내부)</h3>
+    <p>유저 공간의 <code>malloc</code>은 OS에게 매번 요청하지 않고, <code>brk</code>/<code>mmap</code>으로 받은 큰 블록을 잘게 관리한다. 구현체에 따라 단편화·동시성 성능이 갈린다.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>할당자</th><th>특징</th><th>강점</th></tr></thead>
+        <tbody>
+          <tr><td><strong>glibc (ptmalloc)</strong></td><td>arena 기반, 범용 기본</td><td>호환성</td></tr>
+          <tr><td><strong>tcmalloc (Google)</strong></td><td>스레드 로컬 캐시</td><td>멀티스레드 할당 빠름</td></tr>
+          <tr><td><strong>jemalloc</strong></td><td>단편화 최소화 설계</td><td>긴 실행·고부하 서버(예전 Redis 권장)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 — "Java Heap과 OS Heap은 같은가?"</div>
+      다르다. JVM Heap은 OS Heap 위에 올라간 별도 풀이다. JVM이 시작 시 OS로부터 큰 블록(<code>-Xmx</code>)을 받아 객체를 배치하고 GC가 관리한다. 그래서 컨테이너 메모리 한도(<code>cpu/memory limit</code>)와 <code>-Xmx</code>를 함께 맞추지 않으면, JVM은 여유가 있다고 믿는데 cgroup이 OOM Kill하는 사고가 난다(JDK 10+ <code>-XX:+UseContainerSupport</code>로 완화).
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="sync">
+    <h2>6. 동기화 프리미티브 (Synchronization Primitives)</h2>
+    <p>공유 자원에 여러 스레드가 동시에 접근할 때 발생하는 <strong>Race Condition(경쟁 상태)</strong>을 막기 위해 <strong>Critical Section(임계 구역)</strong>을 보호한다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>메커니즘</th><th>특징</th><th>사용 상황</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Mutex(뮤텍스)</strong></td><td>상호 배제. 잠근 스레드만 해제 가능(소유권)</td><td>단일 자원 보호</td></tr>
+          <tr><td><strong>Semaphore(세마포어)</strong></td><td>계수형. N개 동시 접근 허용. 소유권 없음</td><td>연결 풀·동시 실행 수 제한</td></tr>
+          <tr><td><strong>Spinlock(스핀락)</strong></td><td>락 대기 중 CPU 점유(Busy-wait). 스위칭 없음</td><td>매우 짧은 임계구역, 멀티코어 커널</td></tr>
+          <tr><td><strong>RWLock</strong></td><td>읽기 동시 허용, 쓰기 배타</td><td>읽기 多 쓰기 少</td></tr>
+          <tr><td><strong>Condition Variable</strong></td><td>특정 조건까지 대기/통지(wait/notify)</td><td>Producer-Consumer</td></tr>
+          <tr><td><strong>CAS(Compare-And-Swap)</strong></td><td>원자적 비교-교환. Lock-free 기반</td><td><code>AtomicInteger</code>, 락 없는 큐</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 Mutex vs Spinlock — 언제 무엇을</div>
+      임계구역이 <strong>매우 짧고</strong> 멀티코어라면 Spinlock이 컨텍스트 스위치 비용을 아껴 유리하다. 임계구역이 <strong>길거나</strong> 싱글코어면 Spin은 CPU 낭비라 Mutex(블로킹)가 낫다. 락을 쥔 스레드가 선점되면 Spin하던 다른 스레드가 무의미하게 CPU를 태운다 — 그래서 유저 공간 락은 흔히 둘을 섞은 <strong>Adaptive Mutex</strong>를 쓴다.
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section id="deadlock">
+    <h2>7. 데드락 (Deadlock, 교착 상태)</h2>
+    <p>다음 4조건이 <strong>동시에</strong> 성립할 때 발생. 하나라도 깨면 예방된다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    A["1. 상호 배제<br/>한 번에 하나만 점유"] --> D
+    B["2. 점유 대기<br/>쥔 채 추가 자원 대기"] --> D
+    C["3. 비선점<br/>강제 회수 불가"] --> D
+    E["4. 순환 대기<br/>A→B→A 순환"] --> D
+    D(["⚠️ Deadlock"])
+
+    style D fill:#fef2f2,stroke:#dc2626
+    style A fill:#fef3c7,stroke:#d97706
+    style B fill:#fef3c7,stroke:#d97706
+    style C fill:#fef3c7,stroke:#d97706
+    style E fill:#fef3c7,stroke:#d97706
+      </div>
+      <div class="cap">데드락 4조건 — 가장 실용적인 깨기는 "순환 대기 제거"(락 획득 순서 통일)</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>대응</th><th>전략</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td><strong>예방(Prevention)</strong></td><td>4조건 중 하나를 구조적으로 제거</td><td>락 순서 통일이 가장 실용적</td></tr>
+          <tr><td><strong>회피(Avoidance)</strong></td><td>안전 상태 유지(Banker's Algorithm)</td><td>이론적, 실무 적용 드묾</td></tr>
+          <tr><td><strong>탐지(Detection)</strong></td><td>자원 할당 그래프 사이클 탐지 후 복구</td><td>DB가 락 그래프로 탐지 → victim rollback</td></tr>
+          <tr><td><strong>타임아웃</strong></td><td><code>tryLock(timeout)</code>으로 포기 후 재시도</td><td>가장 흔한 현실적 방어</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 + 실무 — DB 데드락</div>
+      재고 차감에서 주문 A가 SKU1→SKU2, 주문 B가 SKU2→SKU1 순으로 락을 잡으면 DB 데드락이 난다. MySQL InnoDB는 락 그래프에서 사이클을 탐지해 한쪽을 <code>victim</code>으로 롤백한다(<code>SHOW ENGINE INNODB STATUS</code>에서 LATEST DETECTED DEADLOCK 확인). 해결은 OS와 동일 — <strong>모든 트랜잭션이 동일한 순서(예: SKU id 오름차순)로 락을 잡게</strong> 강제하면 순환 대기가 사라진다.
+    </div>
+  </section>
+
+  <!-- Q&A -->
+  <section id="qa">
+    <h2>Q&amp;A 연습</h2>
+    <p>아래 질문에 직접 답변을 작성하세요. 자동 저장되며 피드백 요청 시 복사할 수 있습니다.</p>
+
+    <div class="q-card">
+      <div class="q-num">Q1 — 스레드 풀 크기</div>
+      <p>Java <code>ThreadPoolExecutor</code>의 크기를 결정하는 기준은? CPU-bound 작업과 I/O-bound 작업에서 각각 어떻게 다르게 잡아야 하며, 컨텍스트 스위칭과 어떤 관계가 있는지 설명하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>나의 답변</span><span class="saved-badge" id="badge-q1">저장됨 ✓</span></div>
+        <textarea id="ans-q1" placeholder="답변을 입력하세요..." oninput="saveAns('q1',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2 — 메모리 / OOM</div>
+      <p>컨테이너에서 JVM 서버가 <code>-Xmx2g</code>인데도 가끔 갑자기 죽습니다. <code>dmesg</code>에 OOM Killer 로그가 보입니다. 가능한 원인 3가지와 진단·해결 방향을 설명하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>나의 답변</span><span class="saved-badge" id="badge-q2">저장됨 ✓</span></div>
+        <textarea id="ans-q2" placeholder="답변을 입력하세요..." oninput="saveAns('q2',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3 — 데드락</div>
+      <p>재고 차감 로직에서 간헐적 DB 데드락이 발생합니다. OS의 데드락 4조건 관점으로 원인을 설명하고, 코드/스키마 레벨에서 가장 실용적인 해결책과 그 이유를 제시하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>나의 답변</span><span class="saved-badge" id="badge-q3">저장됨 ✓</span></div>
+        <textarea id="ans-q3" placeholder="답변을 입력하세요..." oninput="saveAns('q3',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>작성한 답변을 복사해서 Claude에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 복사</button>
+      <div class="copy-result" id="copy-result"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>다음 학습 주제</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">cs-fundamentals-coach</div><div class="topic">I/O 모델 (epoll, io_uring) 심화</div></div>
+      <div class="next-card"><div class="coach">cs-fundamentals-coach</div><div class="topic">파일시스템 · fsync · durability</div></div>
+      <div class="next-card"><div class="coach">cs-fundamentals-coach</div><div class="topic">Java GC (G1, ZGC) 내부 구조</div></div>
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">격리수준 · 락 · MVCC</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'neutral',securityLevel:'loose',flowchart:{htmlLabels:true,curve:'basis'}});
+
+const NS = 'jobStudy::cs::02-os::';
+
+function saveAns(id, val) {
+  localStorage.setItem(NS + id, val);
+  const b = document.getElementById('badge-' + id);
+  if (b) { b.classList.add('show'); setTimeout(() => b.classList.remove('show'), 1800); }
+}
+function loadAll() {
+  document.querySelectorAll('[id^="ans-"]').forEach(el => {
+    const saved = localStorage.getItem(NS + el.id.replace('ans-', ''));
+    if (saved) el.value = saved;
+  });
+}
+function copyForFeedback() {
+  const title = document.title;
+  const qs = document.querySelectorAll('.q-card');
+  let text = `[${title} — Q&A 피드백 요청]\n\n`;
+  qs.forEach((card, i) => {
+    const num = card.querySelector('.q-num')?.innerText || `Q${i+1}`;
+    const q = card.querySelector('p')?.innerText || '';
+    const ta = card.querySelector('textarea');
+    const ans = ta ? ta.value.trim() : '';
+    text += `${num}\n질문: ${q}\n내 답변: ${ans || '(미작성)'}\n\n`;
+  });
+  text += '위 답변들에 대해 시니어 CS 기초 코치 관점에서 피드백 부탁드립니다.';
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('copy-result').textContent = '✓ 클립보드에 복사되었습니다. Claude 채팅창에 붙여넣기 하세요.';
+    setTimeout(() => document.getElementById('copy-result').textContent = '', 4000);
+  });
+}
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      document.querySelectorAll('#sidebar a').forEach(a => a.classList.remove('active'));
+      const link = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, {rootMargin: '-20% 0px -70% 0px'});
+document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+loadAll();
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

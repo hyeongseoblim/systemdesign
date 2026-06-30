@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modular Monolith vs MSA — 분리 기준과 마이그레이션 전략</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg); color: var(--text);
+      display: flex; min-height: 100vh;
+      font-size: 14.5px; line-height: 1.75;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 248px; min-height: 100vh;
+      background: var(--card); border-right: 1px solid var(--border);
+      padding: 24px 0; position: fixed; left: 0; top: 0;
+      overflow-y: auto; z-index: 50;
+    }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a {
+      display: block; padding: 7px 20px;
+      font-size: 13px; color: var(--muted);
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+
+    /* ── Main ── */
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+
+    /* ── Page header ── */
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip {
+      font-size: 12px; font-weight: 500;
+      padding: 3px 11px; border-radius: 20px;
+      background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+    }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+
+    /* ── Sections ── */
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 {
+      font-size: 20px; font-weight: 700;
+      padding-bottom: 12px; border-bottom: 2px solid var(--border);
+      margin-bottom: 24px; display: flex; align-items: center; gap: 8px;
+    }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+
+    /* ── Diagrams ── */
+    .diagram-wrap {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 28px 24px 20px;
+      margin: 18px 0; overflow-x: auto; text-align: center;
+    }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+
+    /* ── Tables ── */
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 13.5px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    /* ── System cards ── */
+    .sys-card {
+      border-radius: 10px; padding: 18px 22px;
+      margin-bottom: 20px; border-left: 4px solid;
+    }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .sys-card.lm  { background: var(--lm);  border-color: var(--lm-b);  color: var(--lm-t);  }
+    .sys-card.ret { background: var(--ret); border-color: var(--ret-b); color: var(--ret-t); }
+
+    /* ── Callouts ── */
+    .callout {
+      border-radius: 8px; padding: 13px 16px;
+      margin: 14px 0; border-left: 4px solid; font-size: 13.5px;
+    }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+
+    /* ── Badges ── */
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+
+    /* ── Q&A cards ── */
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+
+    /* ── Next steps ── */
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+
+    /* ── Q&A Input ── */
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea {
+      width: 100%; min-height: 110px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif;
+      font-size: 14px; line-height: 1.7; resize: vertical;
+      background: #fafcff; color: var(--text);
+      transition: border-color .15s, background .15s;
+    }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+
+    /* ── Feedback button section ── */
+    .feedback-box {
+      background: var(--card); border: 1.5px dashed var(--border);
+      border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center;
+    }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 8px; padding: 10px 22px;
+      font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════ SIDEBAR ══════════════════ -->
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🏛 backend-architecture-coach</div>
+    <h2>Modular Monolith<br/>vs MSA</h2>
+  </div>
+  <div class="group-label">기본 개념</div>
+  <a href="#intro">1. 두 아키텍처의 본질</a>
+  <a href="#compare">2. 정면 비교</a>
+  <a href="#conway">3. Conway의 법칙</a>
+  <div class="group-label">분리와 비용</div>
+  <a href="#boundary">4. 분리 기준</a>
+  <a href="#cost">5. 분산 시스템 비용</a>
+  <a href="#trap">6. Distributed Monolith 함정</a>
+  <div class="group-label">전환</div>
+  <a href="#migration">7. 마이그레이션 전략</a>
+  <a href="#case">8. 실제 사례</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+
+<!-- ══════════════════ MAIN ══════════════════ -->
+<main>
+
+  <!-- Page Header -->
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">backend-architecture-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">Modular Monolith vs MSA</span>
+    </div>
+    <h1>Modular Monolith vs MSA<br>분리 기준 · 분산 비용 · 마이그레이션 전략</h1>
+    <p>"MSA가 좋다"는 단정은 면접에서 감점이다. <strong>언제 쪼개고, 언제 합쳐 두는가</strong>의 판단 기준과 Trade-off를 그림으로 정리한다. Deep-dive 주제는 <span class="deep">🔥 Deep-dive</span> 로 표시.</p>
+  </header>
+
+  <!-- ── Section 1 ── -->
+  <section id="intro">
+    <h2>1. 두 아키텍처의 본질</h2>
+
+    <p><strong>Monolith(모놀리스)</strong>는 하나의 배포 단위 안에 모든 도메인이 들어있는 구조다. 그중 <strong>Modular Monolith(모듈러 모놀리스)</strong>는 내부를 모듈 경계로 엄격히 나눈, "잘 정돈된 단일 배포물"이다. <strong>MSA(Microservices Architecture, 마이크로서비스 아키텍처)</strong>는 도메인별로 <em>독립 배포·독립 DB·독립 프로세스</em>로 쪼갠 구조다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    subgraph MM["Modular Monolith — 단일 배포물"]
+      direction LR
+      O1["Ordering\n모듈"]
+      P1["Payment\n모듈"]
+      I1["Inventory\n모듈"]
+      O1 -. "in-process 호출\n(컴파일 타임 경계)" .- P1
+      P1 -. "in-process 호출" .- I1
+    end
+    DB1[("단일 DB\n스키마 분리")]
+    MM --> DB1
+
+    subgraph MSA["MSA — 독립 배포물 N개"]
+      direction LR
+      O2["Ordering\nService"]
+      P2["Payment\nService"]
+      I2["Inventory\nService"]
+      O2 -->|"network\n(REST/이벤트)"| P2
+      P2 -->|"network"| I2
+    end
+    O2 --> DBO[("Order DB")]
+    P2 --> DBP[("Payment DB")]
+    I2 --> DBI[("Inventory DB")]
+
+    style MM fill:#dbeafe,stroke:#3b82f6
+    style MSA fill:#ede9fe,stroke:#8b5cf6
+    style O1 fill:#fff,stroke:#3b82f6
+    style P1 fill:#fff,stroke:#3b82f6
+    style I1 fill:#fff,stroke:#3b82f6
+      </div>
+      <div class="cap">핵심 차이는 "모듈 경계"가 아니라 <strong>배포 단위와 데이터 소유권</strong>이다. Modular Monolith도 경계는 있다.</div>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 핵심 통찰</div>
+      Modular Monolith와 MSA는 <strong>모듈성(modularity)</strong>이라는 같은 목표를 공유한다. 차이는 모듈을 <em>프로세스 경계와 네트워크로 분리하느냐</em>다. 좋은 MSA는 좋은 Modular Monolith에서 출발한다 — 경계가 엉망인 모놀리스를 쪼개면 <code>Distributed Monolith(분산 모놀리스)</code>가 된다.
+    </div>
+  </section>
+
+  <!-- ── Section 2 ── -->
+  <section id="compare">
+    <h2>2. 정면 비교</h2>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>Modular Monolith</th><th>MSA</th></tr></thead>
+        <tbody>
+          <tr><td>초기 개발 속도</td><td><strong>빠름</strong> — 단일 코드베이스, 로컬 호출</td><td>느림 — 인프라·계약·관측성 선투자</td></tr>
+          <tr><td>배포 독립성</td><td>없음 (전체 재배포)</td><td><strong>있음</strong> (서비스별 배포)</td></tr>
+          <tr><td>데이터 정합성</td><td><strong>쉬움</strong> — 단일 DB 트랜잭션</td><td>어려움 — Saga/Outbox 등 분산 정합성 필요</td></tr>
+          <tr><td>장애 격리</td><td>부분적 (한 모듈 OOM → 전체 다운)</td><td><strong>좋음</strong> (설계 시 — Bulkhead·Circuit Breaker)</td></tr>
+          <tr><td>지연(Latency)</td><td><strong>낮음</strong> — in-process 호출 ns 단위</td><td>높음 — 네트워크 hop마다 ms 누적</td></tr>
+          <tr><td>운영 복잡도</td><td>낮음 (1개 배포·1개 DB)</td><td><strong>높음</strong> — 관측성·서비스 디스커버리·배포 N배</td></tr>
+          <tr><td>기술 스택 다양성</td><td>제한적 (단일 런타임)</td><td><strong>높음</strong> (서비스별 언어/DB 선택)</td></tr>
+          <tr><td>적합 팀 규모</td><td>소~중 (1~3팀)</td><td>중~대 (Conway 정렬 다수 팀)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트</div>
+      "MSA로 가시겠어요?"에 무조건 "네"는 감점. <strong>"팀 규모·도메인 성숙도·운영 역량을 보고, 대부분은 Modular Monolith로 시작해 경계가 안정된 뒤 쪼갠다"</strong>가 시니어 답변. 정량 근거: MSA 전환 시 P99 지연이 네트워크 hop 누적으로 보통 2~5배 증가, 운영 인력은 관측성·SRE 포함 1.5~2배 필요. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- ── Section 3 ── -->
+  <section id="conway">
+    <h2>3. Conway의 법칙 (Conway's Law)</h2>
+
+    <p><strong>"시스템 구조는 그것을 만든 조직의 커뮤니케이션 구조를 복제한다."</strong> 4개 팀이 만들면 자연히 4덩어리 시스템이 나온다. 따라서 <em>원하는 아키텍처를 먼저 정하고, 거기에 맞춰 팀을 정렬</em>하는 <strong>Inverse Conway Maneuver(역 콘웨이 전략)</strong>가 실무 전략이다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    subgraph ORG["조직 구조"]
+      TA["주문팀"]
+      TB["결제팀"]
+      TC["재고/풀필먼트팀"]
+    end
+    subgraph SYS["시스템 구조 (복제됨)"]
+      SA["Ordering\nService"]
+      SB["Payment\nService"]
+      SC["Inventory\nService"]
+    end
+    TA ==> SA
+    TB ==> SB
+    TC ==> SC
+
+    style ORG fill:#dbeafe,stroke:#3b82f6
+    style SYS fill:#dcfce7,stroke:#22c55e
+      </div>
+      <div class="cap">팀 경계 = 서비스 경계. Team Topologies의 <strong>Stream-aligned team(스트림 정렬 팀)</strong>이 한 Bounded Context를 소유하는 것이 이상적.</div>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정</div>
+      조직은 모놀리식 한 팀인데 시스템만 10개 서비스로 쪼개면 → 모든 변경이 팀 내 여러 서비스를 동시에 건드려 배포 독립성이 사라진다. <strong>팀이 안 쪼개졌으면 서비스도 쪼개지 마라.</strong>
+    </div>
+  </section>
+
+  <!-- ── Section 4 ── -->
+  <section id="boundary">
+    <h2>4. 서비스 분리 기준</h2>
+
+    <p>"기능이 크니까"가 아니라 다음 축으로 자른다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>분리 기준</th><th>설명</th><th>물류 예시</th></tr></thead>
+        <tbody>
+          <tr><td><strong>비즈니스 capability</strong></td><td>독립적 가치를 내는 능력 단위</td><td>주문수집 / 결제 / 재고할당 / 배차 / 운송추적</td></tr>
+          <tr><td><strong>변경의 축</strong></td><td>함께 변하는 것은 함께 둔다 (응집)</td><td>쿠폰·프로모션 로직은 주문과 함께 자주 변경</td></tr>
+          <tr><td><strong>데이터 소유권(SSOT)</strong></td><td>한 데이터의 단일 진실 원천이 한 서비스</td><td>재고 수량은 Inventory만 쓴다 — 남이 직접 못 씀</td></tr>
+          <tr><td><strong>팀 구조</strong></td><td>한 팀이 한 서비스를 온전히 소유</td><td>라스트마일팀이 배송추적 서비스 전담</td></tr>
+          <tr><td><strong>통신 빈도</strong></td><td>채터링(Chattering) 많으면 경계 의심</td><td>주문↔재고가 초당 수십 번 호출 → 합칠 신호</td></tr>
+          <tr><td><strong>확장 특성</strong></td><td>부하 패턴이 다르면 분리해 독립 확장</td><td>운송추적(읽기 폭주) vs 정산(배치)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 응집도·결합도 한 줄 판단</div>
+      한 변경 요청(Change request)이 <strong>여러 서비스를 동시에</strong> 수정해야 한다면 경계가 틀린 것. 이상적으로는 "주문 화면에 필드 추가" → 주문 서비스 하나만 배포하면 끝나야 한다.
+    </div>
+  </section>
+
+  <!-- ── Section 5 ── -->
+  <section id="cost">
+    <h2>5. 분산 시스템의 진짜 비용</h2>
+
+    <p>MSA는 공짜가 아니다. 로컬 메서드 호출을 네트워크로 바꾸는 순간 다음이 전부 "내 문제"가 된다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    A["로컬 메서드 호출\n(Modular Monolith)"] -->|"프로세스 분리"| B["네트워크 호출\n(MSA)"]
+    B --> C1["부분 실패\nPartial failure"]
+    B --> C2["지연 누적\nLatency tax"]
+    B --> C3["분산 정합성\nSaga / Outbox"]
+    B --> C4["관측성\nDistributed Tracing"]
+    B --> C5["버전·계약\nAPI Contract 진화"]
+    B --> C6["네트워크 보안\nmTLS / 인증"]
+
+    style A fill:#dcfce7,stroke:#22c55e
+    style B fill:#fee2e2,stroke:#ef4444
+      </div>
+      <div class="cap">"8 Fallacies of Distributed Computing"의 현대판 — 네트워크는 신뢰할 수 없고 공짜가 아니다.</div>
+    </div>
+
+    <h3>정량 근거 — 동기 HTTP 체인의 지연·가용성 붕괴</h3>
+    <ul>
+      <li><strong>지연 누적</strong>: 한 hop이 P99 20ms라면, 5개 서비스 직렬 체인은 P99가 단순 합이 아니라 꼬리 지연 곱셈으로 <strong>100ms 이상</strong>으로 악화.</li>
+      <li><strong>가용성 곱셈</strong>: 각 서비스 가용성 99.9%여도 5개 직렬 의존이면 0.999⁵ ≈ <strong>99.5%</strong> — 연 43시간 장애로 급락.</li>
+      <li>→ 대응: 동기 체인을 줄이고 <code>비동기 이벤트</code>·<code>Circuit Breaker(서킷 브레이커)</code>·<code>Bulkhead(격벽)</code>·<code>Timeout/Retry + Idempotency(멱등성)</code>로 격리.</li>
+    </ul>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 (단골)</div>
+      "서비스 A가 다운되면 어떻게 되나요?" → <strong>연쇄 장애(Cascading failure)</strong> 시나리오를 그리고, Timeout·Circuit Breaker·Fallback·격벽으로 전파를 끊는 설계를 답해야 한다. "그냥 재시도하면 된다"는 오히려 <strong>Retry storm(재시도 폭주)</strong>으로 장애를 키운다. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- ── Section 6 ── -->
+  <section id="trap">
+    <h2>6. 최악의 결과 — Distributed Monolith</h2>
+
+    <p>네트워크로 쪼갰는데 결합도는 그대로인 상태. 모놀리스의 단점(강결합)과 MSA의 단점(네트워크·운영 복잡도)을 <em>동시에</em> 가진다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>증상</th><th>왜 분산 모놀리스인가</th></tr></thead>
+        <tbody>
+          <tr><td><strong>DB 공유</strong></td><td>여러 서비스가 같은 테이블을 직접 읽고 씀 → 스키마 변경이 전 서비스 동시 배포를 강제</td></tr>
+          <tr><td><strong>동기 호출 체인</strong></td><td>A→B→C→D 직렬 호출 → 하나만 죽어도 전부 실패</td></tr>
+          <tr><td><strong>강한 시간 결합</strong></td><td>B가 살아있어야 A가 응답 가능 (Temporal coupling)</td></tr>
+          <tr><td><strong>공유 라이브러리 강제</strong></td><td>공통 도메인 모델 jar를 모두 의존 → 버전 올리면 동시 재배포</td></tr>
+          <tr><td><strong>함께 배포</strong></td><td>"A를 배포하려면 B도 같이 배포"가 일상이면 이미 실패</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — DB 공유</div>
+      MSA 전환 1순위 안티패턴. "일단 서비스만 나누고 DB는 같이 쓰자"는 즉시 분산 모놀리스로 직행한다. <strong>데이터 소유권 분리가 진짜 분리</strong>다. 남의 데이터는 API/이벤트로만 접근.
+    </div>
+  </section>
+
+  <!-- ── Section 7 ── -->
+  <section id="migration">
+    <h2>7. 마이그레이션 전략 — Strangler Fig</h2>
+
+    <p>빅뱅 재작성은 거의 실패한다. <strong>Strangler Fig Pattern(교살자 무화과 패턴)</strong>으로 기존 모놀리스를 감싼 프록시 뒤에서 기능을 한 조각씩 새 서비스로 떼어낸다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant G as API Gateway / Proxy
+    participant M as 기존 Monolith
+    participant S as 신규 Inventory Service
+
+    Note over G: 1단계 — 모든 요청 모놀리스로
+    C->>G: GET /inventory
+    G->>M: 라우팅
+    M-->>C: 응답
+
+    Note over G,S: 2단계 — Inventory만 신규로 라우팅 전환
+    C->>G: GET /inventory
+    G->>S: 라우팅 (떼어낸 기능)
+    S-->>C: 응답
+    C->>G: POST /order
+    G->>M: 아직 모놀리스
+    M-->>C: 응답
+
+    Note over M: 3단계 — 모든 기능 이전 후 모놀리스 폐기
+      </div>
+      <div class="cap">Strangler Fig — 프록시 뒤에서 점진 전환. 롤백이 라우팅 스위치 한 번이라 리스크가 작다.</div>
+    </div>
+
+    <h3>전환 순서 — 무엇부터 떼는가</h3>
+    <ol>
+      <li><strong>경계가 가장 뚜렷하고 결합이 약한 모듈</strong>부터 (예: 알림, 검색, 정산 배치).</li>
+      <li><strong>독립 확장 요구가 큰 모듈</strong> (운송추적 읽기 폭주 등).</li>
+      <li>데이터 분리: 먼저 읽기 복제 → 이중 쓰기(Dual-write) 회피 위해 <code>Outbox(아웃박스)</code> 도입 → SSOT 이전 → 옛 컬럼 제거. <span class="deep">🔥 Deep-dive</span></li>
+      <li>핵심 트랜잭션(주문-결제-재고)은 <strong>가장 마지막</strong>에 — 분산 정합성 비용이 가장 크다.</li>
+    </ol>
+
+    <div class="callout tip">
+      <div class="c-title">💡 Trade-off 정리</div>
+      "지금 쪼개야 하나?"의 판단: ① 팀이 서로 배포를 막고 있다 ② 모듈별 확장 특성이 명확히 다르다 ③ 경계가 코드에서 이미 안정적이다 — 셋 다 ✓면 분리. 하나라도 모호하면 <strong>Modular Monolith로 더 버티는 게 정답</strong>. 조기 MSA는 재앙이다.
+    </div>
+  </section>
+
+  <!-- ── Section 8 ── -->
+  <section id="case">
+    <h2>8. 실제 사례</h2>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>회사</th><th>선택</th><th>맥락</th></tr></thead>
+        <tbody>
+          <tr><td><strong>우아한형제들(배민)</strong></td><td>모놀리스 → MSA 점진 전환</td><td>주문 폭증으로 결제·주문·정산 분리. 이벤트 기반 + Outbox로 정합성 확보, 가게/메뉴/주문 도메인 단위로 분해</td></tr>
+          <tr><td><strong>토스</strong></td><td>도메인별 MSA</td><td>금융 규제·장애 격리가 중요 → 송금/결제/인증 강하게 분리, 각 서비스 독립 SLA</td></tr>
+          <tr><td><strong>쿠팡</strong></td><td>대규모 MSA</td><td>주문·풀필먼트·물류(WMS/TMS) 도메인 다수 팀 → Conway 정렬된 서비스망</td></tr>
+          <tr><td><strong>Amazon</strong></td><td>Two-Pizza Team + 서비스</td><td>팀 크기를 먼저 제한해 서비스 경계 유도 (Inverse Conway)</td></tr>
+          <tr><td><strong>Shopify / Stripe</strong></td><td>의도적 Modular Monolith 유지</td><td>핵심 도메인은 모놀리스로 두되 모듈 경계를 엄격히 강제 (조기 분리 거부)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트</div>
+      "쿠팡/배민은 MSA니까 우리도"는 함정. 그 회사들은 <strong>수십~수백 팀</strong> 규모에서 운영 역량(관측성·플랫폼팀·SRE)을 갖췄기에 가능. Shopify가 대규모인데도 모놀리스를 유지하는 이유를 설명할 수 있으면 시니어 신호다.
+    </div>
+  </section>
+
+  <!-- ── Section 9: 이해도 확인 ── -->
+  <section id="quiz">
+    <h2>9. 이해도 확인 질문</h2>
+
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>"DB를 공유하는 MSA"가 왜 <strong>Distributed Monolith</strong>인지, 그리고 데이터 소유권(SSOT)을 분리하면 어떤 문제(이중 쓰기 등)가 새로 생기고 어떻게 푸는지 설명해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div>
+        <textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>각 서비스 가용성이 99.9%인 5개 서비스를 <strong>동기 직렬 체인</strong>으로 호출하면 전체 가용성은? 이 수치를 어떻게 개선할지 구체 패턴 3가지를 제시해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div>
+        <textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>물류 모놀리스를 MSA로 전환한다면, <strong>Strangler Fig</strong>로 어떤 순서로 어떤 모듈부터 떼어낼지 정하고 그 근거(경계·결합·확장 특성)를 설명해보세요. 주문-결제-재고 핵심 트랜잭션을 마지막에 두는 이유도.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div>
+        <textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <!-- ── Section 10: 다음 학습 ── -->
+  <section id="next">
+    <h2>10. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card">
+        <div class="coach">backend-architecture-coach</div>
+        <div class="topic">DDD · Bounded Context · Context Map (02)</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">backend-architecture-coach</div>
+        <div class="topic">Event-Driven Architecture (03)</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">backend-architecture-coach</div>
+        <div class="topic">Saga · 분산 트랜잭션 (04)</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">infra-coach</div>
+        <div class="topic">서비스 메시 · 관측성 · Circuit Breaker</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // ── Mermaid ──
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    themeVariables: {
+      primaryColor: '#dbeafe',
+      primaryTextColor: '#1e293b',
+      primaryBorderColor: '#3b82f6',
+      lineColor: '#64748b',
+      secondaryColor: '#fef3c7',
+      tertiaryColor: '#ede9fe',
+      fontSize: '13px'
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+
+  // ── Active sidebar link on scroll ──
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  // ── Q&A localStorage (key namespace per file) ──
+  const NS = 'jobStudy::backend::architecture::01-msa-vs-monolith::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(NS + id);
+    if (saved) el.value = saved;
+
+    let timer;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(NS + id, el.value);
+        const badge = document.getElementById('saved' + (i + 1));
+        if (badge) {
+          badge.classList.add('show');
+          setTimeout(() => badge.classList.remove('show'), 1800);
+        }
+      }, 400);
+    });
+  });
+
+  // ── Copy Q&A for feedback ──
+  function copyForFeedback() {
+    const questions = [
+      'Q1. "DB를 공유하는 MSA"가 왜 Distributed Monolith인지, SSOT를 분리하면 새로 생기는 문제(이중 쓰기 등)와 해법을 설명해보세요.',
+      'Q2. 각 99.9% 가용성 5개 서비스를 동기 직렬 체인으로 호출 시 전체 가용성은? 개선 패턴 3가지를 제시해보세요.',
+      'Q3. 물류 모놀리스를 Strangler Fig로 전환할 때 어떤 모듈부터 어떤 순서로 떼어낼지와 근거, 핵심 트랜잭션을 마지막에 두는 이유를 설명해보세요.'
+    ];
+
+    const lines = ['[Modular Monolith vs MSA — 이해도 확인 Q&A 피드백 요청]\n세션: backend/architecture/01-msa-vs-monolith.html\n'];
+    ansIds.forEach((id, i) => {
+      const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)';
+      lines.push(questions[i]);
+      lines.push('A' + (i + 1) + '. ' + ans + '\n');
+    });
+
+    const text = lines.join('\n');
+    const resultEl = document.getElementById('copyResult');
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.';
+      }).catch(() => fallbackCopy(text, resultEl));
+    } else {
+      fallbackCopy(text, resultEl);
+    }
+  }
+
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try {
+      document.execCommand('copy');
+      el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.';
+    } catch {
+      el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.';
+    }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

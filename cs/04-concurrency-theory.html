@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>동시성 이론 — 병렬성·락·메모리 모델·Amdahl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root{--bg:#f8fafc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--accent:#059669}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14.5px;line-height:1.75}
+#sidebar{width:248px;min-height:100vh;background:var(--card);border-right:1px solid var(--border);padding:24px 0;position:fixed;left:0;top:0;overflow-y:auto;z-index:50}
+#sidebar .brand{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:16px}
+#sidebar .brand .tag{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+#sidebar .brand h2{font-size:14px;font-weight:700;line-height:1.4}
+#sidebar .group-label{padding:12px 20px 4px;font-size:10.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em}
+#sidebar a{display:block;padding:7px 20px;font-size:13px;color:var(--muted);text-decoration:none;border-left:3px solid transparent;transition:all .15s}
+#sidebar a:hover,#sidebar a.active{color:var(--accent);background:var(--bg);border-left-color:var(--accent)}
+main{margin-left:248px;flex:1;max-width:1080px;padding:48px 56px}
+.page-hdr{margin-bottom:48px;padding-bottom:32px;border-bottom:2px solid var(--border)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{font-size:12px;font-weight:500;padding:3px 11px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.accent{background:#d1fae5;border-color:var(--accent);color:#064e3b}
+.page-hdr h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:10px}
+.page-hdr p{color:var(--muted)}
+section{margin-bottom:64px;scroll-margin-top:24px}
+section>h2{font-size:20px;font-weight:700;padding-bottom:12px;border-bottom:2px solid var(--border);margin-bottom:24px}
+h3{font-size:16px;font-weight:600;margin:28px 0 12px}
+h4{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:20px 0 8px}
+p{margin-bottom:10px}ul,ol{padding-left:22px;margin:8px 0 10px}li{margin-bottom:4px}
+.diagram-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px 24px 20px;margin:18px 0;overflow-x:auto;text-align:center}
+.diagram-wrap .cap{font-size:12px;color:var(--muted);margin-top:14px}
+.mermaid{display:inline-block}
+.tbl-wrap{overflow-x:auto;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+th{background:#f1f5f9;font-weight:600;font-size:12.5px;padding:9px 14px;border-bottom:1px solid var(--border);text-align:left}
+td{padding:9px 14px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+tr:last-child td{border-bottom:none}tr:hover td{background:#fafafa}
+.callout{border-radius:8px;padding:13px 16px;margin:14px 0;border-left:4px solid;font-size:13.5px}
+.callout .c-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.callout.interview{background:#fef2f2;border-color:#dc2626}.callout.interview .c-title{color:#dc2626}
+.callout.warn{background:#fff7ed;border-color:#ea580c}.callout.warn .c-title{color:#ea580c}
+.callout.tip{background:#f0fdf4;border-color:#16a34a}.callout.tip .c-title{color:#16a34a}
+.deep{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:4px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;margin-left:6px}
+code{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#be185d}
+pre{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#1e293b;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:14px 0;line-height:1.6}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:14px}
+.q-card .q-num{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px}
+.ans-area{margin-top:12px}
+.ans-label{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.saved-badge{font-size:11px;color:#16a34a;opacity:0;transition:opacity .4s}.saved-badge.show{opacity:1}
+.ans-area textarea{width:100%;min-height:110px;border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-family:'Noto Sans KR',sans-serif;font-size:14px;line-height:1.7;resize:vertical;background:#fafcff;color:var(--text);transition:border-color .15s}
+.ans-area textarea:focus{outline:none;border-color:var(--accent);background:#fff}
+.ans-area textarea::placeholder{color:#cbd5e1}
+.feedback-box{background:var(--card);border:1.5px dashed var(--border);border-radius:12px;padding:22px 24px;margin-top:28px;text-align:center}
+.feedback-box p{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+.btn-feedback{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:background .15s}
+.btn-feedback:hover{background:#047857}
+.copy-result{margin-top:12px;font-size:13px;color:#16a34a;min-height:20px}
+.next-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:14px}
+.next-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;transition:box-shadow .15s}
+.next-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.next-card .coach{font-size:11px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:5px}
+.next-card .topic{font-size:13px;font-weight:500}
+@media(max-width:860px){#sidebar{display:none}main{margin-left:0;padding:24px 20px}}
+</style>
+</head>
+<body>
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🧮 cs-fundamentals-coach</div>
+    <h2>동시성 이론<br>Concurrency</h2>
+  </div>
+  <div class="group-label">기초 개념</div>
+  <a href="#vs">1. 동시성 vs 병렬성</a>
+  <a href="#critical">2. 임계 구역 · Race</a>
+  <div class="group-label">동기화 메커니즘</div>
+  <a href="#lock-cas">3. 락 vs CAS</a>
+  <a href="#memory-model">4. 메모리 모델 · 가시성</a>
+  <div class="group-label">모델 · 법칙</div>
+  <a href="#models">5. 액터 / CSP 모델</a>
+  <a href="#amdahl">6. Amdahl 법칙</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#qa">Q&amp;A 연습</a>
+  <a href="#next">다음 학습</a>
+</nav>
+<main>
+  <div class="page-hdr">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">cs-fundamentals-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip">동시성 이론</span>
+    </div>
+    <h1>동시성 이론<br>병렬성 · 락 · 메모리 모델 · Amdahl</h1>
+    <p>멀티코어 시대의 백엔드는 동시성을 모르면 미묘한 버그(가시성·재정렬·ABA)와 성능 천장(Lock 경합)을 만난다. "스레드를 늘리면 빨라진다"가 왜 거짓인지 <strong>Amdahl's Law</strong>로, "왜 가끔 값이 안 보이는가"를 <strong>happens-before</strong>로 설명할 수 있어야 한다.</p>
+  </div>
+
+  <!-- 1 -->
+  <section id="vs">
+    <h2>1. 동시성(Concurrency) vs 병렬성(Parallelism)</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    subgraph CC["동시성 — 1코어, 번갈아 진행 (구조)"]
+      direction LR
+      c1["Task A"] -.시분할.-> c2["Task B"] -.-> c3["Task A"]
+    end
+    subgraph PP["병렬성 — 2코어, 동시에 실행 (실행)"]
+      direction LR
+      p1["Core1: Task A"]
+      p2["Core2: Task B"]
+    end
+
+    style CC fill:#dbeafe,stroke:#3b82f6
+    style PP fill:#dcfce7,stroke:#059669
+      </div>
+      <div class="cap">동시성은 "여러 일을 다루는 구조", 병렬성은 "여러 일을 같은 순간 실행" — Rob Pike의 구분</div>
+    </div>
+    <ul>
+      <li><strong>동시성</strong>: 작업을 잘게 나눠 번갈아 진행. 단일 코어로도 가능(I/O 대기 중 다른 작업). <em>구조</em>의 문제.</li>
+      <li><strong>병렬성</strong>: 실제로 동시에 여러 코어에서 실행. 멀티코어 필요. <em>실행</em>의 문제.</li>
+    </ul>
+    <div class="callout tip">
+      <div class="c-title">💡 백엔드 연결</div>
+      I/O-bound 서버(DB·API 호출 대기 多)는 <strong>동시성</strong>만으로 처리량이 크게 오른다 — Node.js 이벤트 루프, 코루틴, Virtual Thread(JDK 21+)가 그 예다. CPU-bound 작업(인코딩·연산)이라야 <strong>병렬성</strong>(코어 수만큼 스레드)이 의미 있다. 이 구분이 스레드 풀 사이징의 출발점.
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="critical">
+    <h2>2. 임계 구역(Critical Section) &amp; Race Condition</h2>
+    <p><strong>Race Condition(경쟁 상태)</strong>은 둘 이상 스레드가 공유 자원을 동시에 갱신할 때, 실행 순서에 따라 결과가 달라지는 버그다. 보호되지 않은 공유 자원 접근 구간이 <strong>임계 구역</strong>.</p>
+    <pre>
+// 비원자적 read-modify-write — Race Condition
+count++  실제로는 3단계:
+  1) tmp = count      (read)
+  2) tmp = tmp + 1    (modify)
+  3) count = tmp      (write)
+스레드 A,B가 1을 동시에 읽으면 → 둘 다 +1 → 결과가 +1 (Lost Update)
+    </pre>
+    <p>해결: ① 상호 배제(Mutex/synchronized)로 임계 구역 직렬화, ② 원자적 연산(CAS), ③ 애초에 공유 상태를 없애기(불변 객체·메시지 패싱).</p>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 재고 차감</div>
+      <code>SELECT 재고; if(재고&gt;0) UPDATE 재고-1;</code>는 전형적 Check-then-Act 경쟁 상태로 <strong>Oversell(초과판매)</strong>을 낳는다. 해결은 원자적 조건부 UPDATE(<code>UPDATE ... SET qty=qty-1 WHERE qty&gt;0</code>)·낙관적 락(version)·비관적 락(<code>SELECT ... FOR UPDATE</code>)·Redis 원자 감소 중 부하 특성에 맞게 선택.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="lock-cas">
+    <h2>3. 락(Lock) vs CAS — 두 가지 동기화 철학</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    subgraph L["Lock 기반 (Pessimistic)"]
+      direction TB
+      l1["lock 획득"] --> l2["임계 구역"] --> l3["unlock"]
+      l4["대기 스레드: 블로킹"]
+    end
+    subgraph C["CAS 기반 (Optimistic, Lock-free)"]
+      direction TB
+      c1["현재값 읽기(expected)"] --> c2["새 값 계산"]
+      c2 --> c3{"CAS(addr, expected, new)<br/>성공?"}
+      c3 -- 성공 --> c4["완료"]
+      c3 -- 실패 --> c1
+    end
+
+    style L fill:#fef3c7,stroke:#d97706
+    style C fill:#dcfce7,stroke:#059669
+      </div>
+      <div class="cap">Lock은 충돌을 막고(블로킹), CAS는 충돌을 감지하고 재시도(논블로킹)</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>Lock (Blocking)</th><th>CAS / Lock-free</th></tr></thead>
+        <tbody>
+          <tr><td>충돌 처리</td><td>대기(블로킹)</td><td>재시도(스핀)</td></tr>
+          <tr><td>경합 낮을 때</td><td>락 오버헤드</td><td>매우 빠름</td></tr>
+          <tr><td>경합 높을 때</td><td>안정적</td><td>재시도 폭증으로 비효율 가능</td></tr>
+          <tr><td>위험</td><td>데드락·우선순위 역전</td><td>ABA 문제·라이브락</td></tr>
+          <tr><td>예</td><td><code>synchronized</code>, <code>ReentrantLock</code></td><td><code>AtomicInteger</code>, <code>ConcurrentLinkedQueue</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 — ABA 문제</div>
+      CAS는 "값이 expected와 같으면 교체"인데, 값이 A→B→A로 돌아오면 CAS는 변화를 <strong>감지하지 못한다</strong>. 그 사이 자료구조가 바뀌었을 수 있어 위험하다. 해결: 값에 <strong>버전/스탬프</strong>를 붙이는 <code>AtomicStampedReference</code>. Lock-free 자료구조 설계에서 반드시 짚는 포인트.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section id="memory-model">
+    <h2>4. 메모리 모델 &amp; 가시성 (Memory Model &amp; Visibility)</h2>
+    <p>현대 CPU·컴파일러는 성능을 위해 <strong>명령 재정렬(Reordering)</strong>을 하고, 각 코어는 자기 캐시에 값을 들고 있다. 그래서 한 스레드의 쓰기가 다른 스레드에 <strong>즉시 보이지 않을 수</strong> 있다 — 이것이 <strong>가시성(Visibility)</strong> 문제.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant TA as Thread A (Core1)
+    participant CA as L1 Cache A
+    participant M as Main Memory
+    participant CB as L1 Cache B
+    participant TB as Thread B (Core2)
+    TA->>CA: flag = true (캐시에만 기록)
+    Note over CB: B의 캐시엔 아직 flag=false
+    TB->>CB: while(!flag) ... 무한 루프 가능!
+    Note over TA,TB: volatile/배리어 없으면 영원히 안 보일 수 있음
+      </div>
+      <div class="cap">가시성 문제 — 쓰기가 메인 메모리로 flush되고 읽기가 무효화되어야 보인다</div>
+    </div>
+
+    <h3>happens-before 관계</h3>
+    <p>A happens-before B이면, A의 결과가 B에 <strong>반드시 보임</strong>이 보장된다(JMM, Java Memory Model). 주요 규칙:</p>
+    <ul>
+      <li>동일 스레드 내 프로그램 순서</li>
+      <li><code>volatile</code> 쓰기 → 같은 변수 읽기 (Memory Barrier 삽입)</li>
+      <li>모니터 unlock → 같은 모니터 lock</li>
+      <li><code>Thread.start()</code> → 시작된 스레드 내부 / 스레드 종료 → <code>join()</code> 반환</li>
+    </ul>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>키워드</th><th>보장</th><th>주의</th></tr></thead>
+        <tbody>
+          <tr><td><code>volatile</code></td><td>가시성 + 재정렬 방지</td><td>원자성은 보장 안 함(<code>i++</code> 여전히 위험)</td></tr>
+          <tr><td><code>synchronized</code></td><td>상호 배제 + 가시성</td><td>락 비용·경합</td></tr>
+          <tr><td><code>Atomic*</code></td><td>원자성 + 가시성(CAS)</td><td>복합 연산은 별도 설계 필요</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 — "double-checked locking" 함정</div>
+      싱글톤 지연 초기화에서 <code>volatile</code> 없이 double-checked locking을 쓰면, 객체 생성(할당→초기화→참조대입)이 재정렬되어 <strong>초기화 덜 된 객체를 다른 스레드가 볼 수</strong> 있다. 인스턴스 필드를 <code>volatile</code>로 선언해 배리어를 강제해야 안전. 더 간단한 답은 <strong>Holder Idiom</strong>(클래스 로딩의 happens-before 활용)이나 <strong>enum 싱글톤</strong>.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="models">
+    <h2>5. 액터(Actor) / CSP 모델 — 공유 상태를 피하는 길</h2>
+    <p>"공유 메모리 + 락"의 복잡성을 피하는 대안은 <strong>상태를 공유하지 않고 메시지로 통신</strong>하는 것이다. "Don't communicate by sharing memory; share memory by communicating."</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>모델</th><th>핵심</th><th>통신</th><th>대표</th></tr></thead>
+        <tbody>
+          <tr><td><strong>공유 메모리 + 락</strong></td><td>공유 상태를 락으로 보호</td><td>직접 메모리 접근</td><td>Java <code>synchronized</code>, pthread</td></tr>
+          <tr><td><strong>Actor 모델</strong></td><td>각 액터가 자기 상태 소유, 메일박스로 메시지 수신</td><td>비동기 메시지</td><td>Erlang/Elixir, Akka</td></tr>
+          <tr><td><strong>CSP</strong></td><td>채널을 통한 동기 통신, 프로세스는 상태 비공유</td><td>채널(channel)</td><td>Go goroutine + channel</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 실무 연결</div>
+      Go의 <code>goroutine + channel</code>은 CSP의 구현이다 — 워커들이 채널로 작업을 주고받으면 락 없이 안전한 파이프라인이 된다. Akka/Erlang의 액터는 통신사·메신저처럼 <strong>장애 격리(let it crash)</strong>가 중요한 시스템에 강하다. 결국 동시성 버그를 줄이는 가장 좋은 방법은 <strong>공유 가변 상태를 줄이는 것</strong>이다.
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="amdahl">
+    <h2>6. Amdahl's Law (암달의 법칙)</h2>
+    <p>병렬화로 얻는 속도 향상에는 <strong>상한</strong>이 있다. 직렬(순차) 부분의 비율 <code>s</code>가 전체 속도 향상을 제한한다.</p>
+    <pre>
+Speedup(N) = 1 / ( s + (1 - s) / N )
+
+s   = 직렬 부분 비율 (병렬화 불가)
+1-s = 병렬 가능 부분
+N   = 코어(스레드) 수
+
+예) 직렬 부분 s = 5% (0.05), N → ∞
+    Speedup 최대 = 1 / 0.05 = 20배 (코어 무한대여도!)
+    즉, 5%의 순차 코드가 20배에서 천장을 만든다.
+    </pre>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    A["코어 1개<br/>Speedup 1×"] --> B["코어 8개<br/>s=5% → 5.9×"]
+    B --> C["코어 32개<br/>s=5% → 12.5×"]
+    C --> D["코어 ∞<br/>s=5% → 20× (천장)"]
+
+    style D fill:#fef2f2,stroke:#dc2626
+    style A fill:#dcfce7,stroke:#059669
+      </div>
+      <div class="cap">직렬 5%만 있어도 코어를 무한히 늘려도 20배가 한계 — 수확 체감</div>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 — "스레드 늘리면 빨라지죠?"는 함정</div>
+      Amdahl's Law로 반박하라: ① 직렬 부분(락 구간·순차 I/O)이 천장을 만들고, ② 스레드가 코어 수를 넘으면 컨텍스트 스위칭·Lock Contention(락 경합)으로 오히려 느려진다. 진짜 최적화는 스레드 추가가 아니라 <strong>직렬 구간 축소</strong>(락 범위 최소화·샤딩·lock-free·불변 객체)다. 참고로 입력 크기를 함께 키우면 더 낙관적인 <strong>Gustafson's Law</strong>가 적용된다.
+    </div>
+  </section>
+
+  <!-- Q&A -->
+  <section id="qa">
+    <h2>Q&amp;A 연습</h2>
+    <p>아래 질문에 직접 답변을 작성하세요. 자동 저장되며 피드백 요청 시 복사할 수 있습니다.</p>
+
+    <div class="q-card">
+      <div class="q-num">Q1 — 가시성 / 메모리 모델</div>
+      <p>한 스레드가 <code>boolean running</code> 플래그를 false로 바꿔 다른 스레드의 루프를 멈추려 하는데, 가끔 멈추지 않습니다. 원인을 메모리 모델·가시성·재정렬 관점에서 설명하고, <code>volatile</code>이 어떻게 happens-before로 이를 해결하는지 서술하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>나의 답변</span><span class="saved-badge" id="badge-q1">저장됨 ✓</span></div>
+        <textarea id="ans-q1" placeholder="답변을 입력하세요..." oninput="saveAns('q1',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2 — Lock vs CAS</div>
+      <p>높은 경합 환경의 카운터 증가에 <code>AtomicLong</code>(CAS)과 <code>synchronized</code>(Lock) 중 무엇이 유리할지, 그리고 CAS의 ABA 문제와 라이브락 위험을 함께 설명하세요. <code>LongAdder</code>는 왜 더 빠른가요?</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>나의 답변</span><span class="saved-badge" id="badge-q2">저장됨 ✓</span></div>
+        <textarea id="ans-q2" placeholder="답변을 입력하세요..." oninput="saveAns('q2',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3 — Amdahl</div>
+      <p>어떤 배치 작업의 90%는 병렬화 가능하고 10%는 순차입니다. 코어를 4개 → 16개로 늘렸을 때 이론적 속도 향상을 Amdahl's Law로 계산하고, "코어를 더 늘리면 된다"는 접근의 한계와 실무적 대안을 제시하세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>나의 답변</span><span class="saved-badge" id="badge-q3">저장됨 ✓</span></div>
+        <textarea id="ans-q3" placeholder="답변을 입력하세요..." oninput="saveAns('q3',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>작성한 답변을 복사해서 Claude에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 복사</button>
+      <div class="copy-result" id="copy-result"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>다음 학습 주제</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">cs-fundamentals-coach</div><div class="topic">Lock-free 자료구조 설계 심화</div></div>
+      <div class="next-card"><div class="coach">cs-fundamentals-coach</div><div class="topic">분산 일관성(CAP·Linearizability)</div></div>
+      <div class="next-card"><div class="coach">backend-dev-coach</div><div class="topic">Virtual Thread vs 스레드 풀</div></div>
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">낙관 락 vs 비관 락 동시성</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'neutral',securityLevel:'loose',flowchart:{htmlLabels:true,curve:'basis'}});
+
+const NS = 'jobStudy::cs::04-concurrency-theory::';
+
+function saveAns(id, val) {
+  localStorage.setItem(NS + id, val);
+  const b = document.getElementById('badge-' + id);
+  if (b) { b.classList.add('show'); setTimeout(() => b.classList.remove('show'), 1800); }
+}
+function loadAll() {
+  document.querySelectorAll('[id^="ans-"]').forEach(el => {
+    const saved = localStorage.getItem(NS + el.id.replace('ans-', ''));
+    if (saved) el.value = saved;
+  });
+}
+function copyForFeedback() {
+  const title = document.title;
+  const qs = document.querySelectorAll('.q-card');
+  let text = `[${title} — Q&A 피드백 요청]\n\n`;
+  qs.forEach((card, i) => {
+    const num = card.querySelector('.q-num')?.innerText || `Q${i+1}`;
+    const q = card.querySelector('p')?.innerText || '';
+    const ta = card.querySelector('textarea');
+    const ans = ta ? ta.value.trim() : '';
+    text += `${num}\n질문: ${q}\n내 답변: ${ans || '(미작성)'}\n\n`;
+  });
+  text += '위 답변들에 대해 시니어 CS 기초 코치 관점에서 피드백 부탁드립니다.';
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('copy-result').textContent = '✓ 클립보드에 복사되었습니다. Claude 채팅창에 붙여넣기 하세요.';
+    setTimeout(() => document.getElementById('copy-result').textContent = '', 4000);
+  });
+}
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      document.querySelectorAll('#sidebar a').forEach(a => a.classList.remove('active'));
+      const link = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, {rootMargin: '-20% 0px -70% 0px'});
+document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+loadAll();
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

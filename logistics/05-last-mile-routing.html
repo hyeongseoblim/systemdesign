@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>라스트마일 심화 — 배차 · 라우팅 · 실시간 재최적화 · POD</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; font-size: 14.5px; line-height: 1.75; }
+    #sidebar { width: 248px; min-height: 100vh; background: var(--card); border-right: 1px solid var(--border); padding: 24px 0; position: fixed; left: 0; top: 0; overflow-y: auto; z-index: 50; }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a { display: block; padding: 7px 20px; font-size: 13px; color: var(--muted); text-decoration: none; border-left: 3px solid transparent; transition: all .15s; }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip { font-size: 12px; font-weight: 500; padding: 3px 11px; border-radius: 20px; background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 { font-size: 20px; font-weight: 700; padding-bottom: 12px; border-bottom: 2px solid var(--border); margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+    .diagram-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px 20px; margin: 18px 0; overflow-x: auto; text-align: center; }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    .sys-card { border-radius: 10px; padding: 18px 22px; margin-bottom: 20px; border-left: 4px solid; }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .sys-card.lm  { background: var(--lm);  border-color: var(--lm-b);  color: var(--lm-t);  }
+    .sys-card.ret { background: var(--ret); border-color: var(--ret-b); color: var(--ret-t); }
+    .callout { border-radius: 8px; padding: 13px 16px; margin: 14px 0; border-left: 4px solid; font-size: 13.5px; }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea { width: 100%; min-height: 110px; border: 1.5px solid var(--border); border-radius: 8px; padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif; font-size: 14px; line-height: 1.7; resize: vertical; background: #fafcff; color: var(--text); transition: border-color .15s, background .15s; }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+    .feedback-box { background: var(--card); border: 1.5px dashed var(--border); border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center; }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; transition: background .15s; }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🚚 logistics-domain-coach</div>
+    <h2>라스트마일<br/>배차 · 라우팅</h2>
+  </div>
+  <div class="group-label">핵심 개념</div>
+  <a href="#intro">1. 라스트마일이란</a>
+  <a href="#dispatch">2. 배차 (Dispatch)</a>
+  <a href="#routing">3. 라우팅 (VRP/TSP)</a>
+  <a href="#reoptimize">4. 실시간 재최적화</a>
+  <a href="#pod-scenario">5. POD · 배송 시나리오</a>
+  <div class="group-label">사례 & 연결</div>
+  <a href="#cases">6. 사례 비교</a>
+  <a href="#design">7. 시스템 디자인 연결</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">8. 이해도 확인 질문</a>
+  <a href="#next">9. 다음 학습 후보</a>
+</nav>
+
+<main>
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">logistics-domain-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">Last-mile 심화</span>
+    </div>
+    <h1>라스트마일 심화<br>배차 · 라우팅 · 실시간 재최적화 · POD</h1>
+    <p>허브/캠프에서 최종 수령자까지의 마지막 구간(Last-mile)을 배차(Dispatch)·라우팅(VRP/TSP)·실시간 재최적화·배송 증빙(POD) 관점에서 분해하고, 수천만 건의 위치 이벤트를 다루는 백엔드 설계로 연결한다.</p>
+  </header>
+
+  <!-- 1 -->
+  <section id="intro">
+    <h2>1. 라스트마일(Last-mile)이란 — 가장 비싸고 가장 눈에 띄는 구간</h2>
+    <div class="sys-card lm">
+      <div class="sys-label">정의</div>
+      <div class="sys-title">라스트마일(Last-mile, 최종 배송 구간)은 <em>물류 허브·배송 캠프에서 최종 수령자(문 앞)까지</em>의 마지막 구간이다. 거리는 짧지만 전체 물류비의 <em>40~60%</em>를 차지하며, 고객 만족을 좌우하는 결정적 단계다.</div>
+    </div>
+    <p>장거리 간선(Line-haul)은 트럭 한 대에 수천 개 박스를 실어 규모의 경제가 나오지만, 라스트마일은 <strong>한 정거장(stop)당 1~2개 화물</strong>을 사람이 직접 배달해야 한다. 분모가 작아 단가가 폭증하는 구조다.</p>
+    <h3>왜 라스트마일이 비싼가 — 정량 감각</h3>
+    <ul>
+      <li><strong>비용 집중</strong>: 전체 배송 원가의 <strong>40~60%</strong>가 마지막 구간에 몰린다. 거리는 전체의 1%인데 비용은 절반.</li>
+      <li><strong>저밀도·고노동</strong>: 도심 외곽·농어촌은 정거장 간 거리가 멀어 스톱당 주행 거리(km/stop)가 커지고, 정거장당 처리 시간(분/stop)도 길다.</li>
+      <li><strong>최초 배송 성공률(First-Attempt Delivery Rate)</strong>: 부재·주소 오류로 1회차 배송이 실패하면 재방문 비용이 발생한다. 업계 미흡 지역은 1차 성공률이 <strong>80~90%</strong> 수준이며, 5%p 개선이 곧 비용 절감으로 직결된다.</li>
+    </ul>
+    <div class="callout tip">
+      <div class="c-title">💡 정량 감각 — 밀도가 전부</div>
+      라스트마일의 효율은 <strong>배송 밀도(stops/km²)</strong>에 좌우된다. 한 권역에 정거장이 촘촘하면 차량 1대가 하루 150~250 스톱을 처리하지만, 농어촌은 50~80 스톱에 그친다. 그래서 라스트마일 최적화의 본질은 "어떻게 밀도를 높이고 동선을 줄이느냐"다.
+    </div>
+    <h3>라스트마일의 4대 의사결정</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>단계</th><th>질문</th><th>핵심 기법</th></tr></thead>
+        <tbody>
+          <tr><td>배차(Dispatch)</td><td>"누가 이 화물을 맡나?"</td><td>권역(zone) 배정, 적재량·시간창 매칭</td></tr>
+          <tr><td>라우팅(Routing)</td><td>"어떤 순서로 도나?"</td><td>VRP/TSP 최적화 (휴리스틱)</td></tr>
+          <tr><td>재최적화(Re-opt)</td><td>"상황이 바뀌면?"</td><td>증분 삽입, 동적 재계산</td></tr>
+          <tr><td>증빙(POD)</td><td>"진짜 전달됐나?"</td><td>서명·사진·OTP, 시나리오 분기</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="dispatch">
+    <h2>2. 배차 (Dispatch) — 화물과 기사를 잇기</h2>
+    <p>배차(Dispatch, 배송 기사 배정)는 "어떤 화물 묶음을 어떤 기사·차량에 할당할지" 결정하는 단계다. 라우팅(순서 최적화)의 앞단으로, 여기서 권역·적재량·시간창이 잘못 잡히면 아무리 좋은 라우팅도 무의미하다.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    Start(["배송 캠프 입고 완료\n(당일 배송 물량 확정)"]) --> Zone["권역(zone) 분할\n행정동·격자(geohash) 기준"]
+    Zone --> Cap{"기사별 적재량\n· 시간창 가용?"}
+    Cap -->|"여유 있음"| Assign["권역 → 기사 배정\n(고정 권역 우선)"]
+    Cap -->|"물량 초과"| Spill["인접 권역 분산\n또는 추가 기사 투입"]
+    Cap -->|"신선/지정시간"| Window["시간창(VRPTW) 기사\n별도 배정"]
+    Assign --> Route["라우팅 단계로 전달"]
+    Spill --> Route
+    Window --> Route
+    Route --> Done(["배차 확정 → 동선 생성"])
+
+    style Zone fill:#dcfce7,stroke:#22c55e
+    style Assign fill:#dcfce7,stroke:#22c55e
+    style Window fill:#fef3c7,stroke:#f59e0b
+    style Spill fill:#fee2e2,stroke:#ef4444
+      </div>
+      <div class="cap">배차 흐름 — 권역 분할 → 용량·시간창 검사 → 기사 배정. 라우팅의 전제 조건</div>
+    </div>
+    <h3>배차의 제약 변수</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>변수</th><th>설명</th><th>Trade-off</th></tr></thead>
+        <tbody>
+          <tr><td>권역(Zone)</td><td>기사에게 할당되는 지리적 구역</td><td>고정 권역은 숙련도↑(주소 학습)지만 물량 변동 흡수 어려움</td></tr>
+          <tr><td>적재량(Capacity)</td><td>차량 적재 부피·무게 한계</td><td>꽉 채우면 효율↑이나 추가 주문 삽입 여지↓</td></tr>
+          <tr><td>시간창(Time Window)</td><td>고객 지정 시간·신선 SLA</td><td>시간창 좁히면 만족↑이나 동선 자유도↓ → 비용↑</td></tr>
+          <tr><td>기사 가용성</td><td>근무 시간·휴식·숙련도</td><td>긱(gig) 기사는 유연하나 이탈·노쇼 리스크</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 고정 권역 vs 동적 배차</div>
+      "권역을 기사에게 고정할까, 매일 동적으로 배차할까?" → <strong>고정 권역</strong>은 기사가 골목·수령자를 학습해 1차 성공률·속도가 오른다(CJ대한통운 택배기사 모델). <strong>동적 배차</strong>는 물량 변동·피크에 유연하나 매번 낯선 동선이라 효율이 떨어진다. 실무는 <strong>고정 권역을 베이스로 하되 피크에 동적 분산</strong>하는 하이브리드가 표준. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="routing">
+    <h2>3. 라우팅 — TSP · VRP 그리고 NP-hard</h2>
+    <p>라우팅(Routing, 경로 최적화)은 배차된 정거장들을 <strong>어떤 순서로 방문해 총 비용(거리·시간)을 최소화</strong>하는 문제다. 이 문제는 학문적으로 잘 정의된 최적화 문제 계층 위에 있다.</p>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    TSP["TSP\n(Traveling Salesman Problem,\n외판원 문제)\n차량 1대 · 모든 정거장 1회 방문"] --> VRP["VRP\n(Vehicle Routing Problem,\n차량 경로 문제)\n차량 N대로 확장"]
+    VRP --> CVRP["CVRP\n(Capacitated VRP,\n용량 제약 VRP)\n+ 차량 적재 한계"]
+    VRP --> VRPTW["VRPTW\n(VRP with Time Windows,\n시간창 제약 VRP)\n+ 고객 지정 시간창"]
+    CVRP --> Real["현실 라스트마일\n= CVRP + VRPTW + 픽업/배송 혼합"]
+    VRPTW --> Real
+
+    style TSP fill:#dbeafe,stroke:#3b82f6
+    style VRP fill:#ede9fe,stroke:#8b5cf6
+    style CVRP fill:#fef3c7,stroke:#f59e0b
+    style VRPTW fill:#fef3c7,stroke:#f59e0b
+    style Real fill:#dcfce7,stroke:#22c55e
+      </div>
+      <div class="cap">라우팅 문제 계층 — TSP(차량 1대)에서 출발해 현실은 CVRP+VRPTW 복합</div>
+    </div>
+    <h3>왜 정답을 못 구하나 — NP-hard</h3>
+    <p>TSP·VRP는 모두 <strong>NP-hard</strong> 문제다. 정거장 n개의 가능한 순서는 <code>(n-1)!/2</code>로 폭증해, 20개만 돼도 완전 탐색(brute-force)으로는 우주의 수명 안에 못 푼다. 따라서 현실은 <strong>최적해 대신 "충분히 좋은 해"를 빠르게</strong> 찾는다.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>접근</th><th>방법</th><th>특징 · 도구</th></tr></thead>
+        <tbody>
+          <tr><td>정확해(Exact)</td><td>분기한정(B&amp;B), 정수계획법(MILP)</td><td>최적 보장. 수십 노드까지만 현실적. <code>CPLEX</code>, <code>Gurobi</code></td></tr>
+          <tr><td>휴리스틱(Heuristic)</td><td>최근접 이웃(Nearest Neighbor), Savings, 삽입법</td><td>빠르고 단순. 해 품질은 중간. 초기해 생성에 활용</td></tr>
+          <tr><td>메타휴리스틱(Metaheuristic)</td><td>지역탐색(2-opt/Or-opt), 타부서치, 유전알고리즘, 담금질</td><td>품질↑ 시간↑. <code>OR-Tools</code>(구글), <code>LKH</code>(TSP 최강)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 직선거리 ≠ 실제 거리</div>
+      두 정거장 사이 비용을 <strong>유클리드 직선거리</strong>로 계산하면 일방통행·강·고가도로를 무시해 엉뚱한 동선이 나온다. 반드시 <strong>도로망 기반 거리/시간 행렬(distance/time matrix)</strong>을 OSRM·구글 Distance Matrix 등으로 미리 계산해 넣어야 한다. n개 정거장이면 <code>n²</code> 행렬이라 캐싱이 필수.
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 목적함수가 비용을 정한다</div>
+      "라우팅의 목적함수를 무엇으로 둘 것인가?" → 총 주행거리 최소화, 총 소요시간 최소화, 차량 수 최소화, 시간창 위반 페널티 최소화는 서로 충돌한다. 신선/새벽배송은 <strong>시간창 준수</strong>가 우선이고, 일반 택배는 <strong>총거리/차량수</strong>가 우선이다. 단일 목적이 아니라 <strong>가중 다목적(weighted multi-objective)</strong>으로 푸는 게 현실. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section id="reoptimize">
+    <h2>4. 실시간 재최적화 (Dynamic Re-optimization)</h2>
+    <p>배차·라우팅이 끝났다고 동선이 고정되지 않는다. 라스트마일은 <strong>실행 중에 상황이 끊임없이 변한다</strong>. 신규 주문이 들어오고, 교통·기상이 바뀌고, 기사가 이탈한다. 이를 반영해 동선을 다시 푸는 것이 실시간 재최적화다.</p>
+    <h3>재최적화 트리거</h3>
+    <ul>
+      <li><strong>신규 주문 삽입</strong>: 즉시배송·퀵커머스는 배달 중에도 새 주문이 붙는다(주문 삽입, dynamic insertion).</li>
+      <li><strong>교통·기상 변화</strong>: 사고·정체·폭우로 ETA(Estimated Time of Arrival, 도착 예정 시각)가 흔들린다.</li>
+      <li><strong>기사 이탈·지연</strong>: 노쇼·차량 고장 → 남은 정거장을 인접 기사에게 재배차.</li>
+      <li><strong>배송 실패</strong>: 부재로 스킵 → 재방문 슬롯을 동선 뒤에 삽입.</li>
+    </ul>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant C as 고객/주문
+    participant DS as 배차 서비스
+    participant OPT as 최적화 엔진
+    participant R as 기사 앱
+    participant ETA as ETA 서비스
+
+    Note over R,ETA: 기사 위치 10초마다 스트리밍
+    R->>ETA: GPS 위치 업데이트
+    ETA-->>C: ETA 갱신 (실시간 트래킹)
+    C->>DS: 신규 즉시배송 주문
+    DS->>OPT: 현재 동선에 삽입 요청
+    OPT->>OPT: 증분 삽입(cheapest insertion)\n+ 국소 2-opt
+    OPT-->>DS: 갱신된 동선
+    DS->>R: 다음 정거장 재지시(push)
+    Note over OPT: 전체 재계산은 비용 큼 →\n증분 우선, 임계 초과 시 전체 재계산
+      </div>
+      <div class="cap">실시간 재최적화 흐름 — 위치 스트리밍 + 신규 주문 증분 삽입 + 기사 앱 푸시</div>
+    </div>
+    <h3>전체 재계산 vs 증분 재최적화 Trade-off</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>전체 재계산 (Full re-solve)</th><th>증분 재최적화 (Incremental)</th></tr></thead>
+        <tbody>
+          <tr><td>해 품질</td><td>높음 (전역 최적에 근접)</td><td>중간 (국소 개선 위주)</td></tr>
+          <tr><td>응답 지연</td><td>큼 (수백 ms~초, 정거장 많을수록↑)</td><td>작음 (수~수십 ms, 즉시 반영)</td></tr>
+          <tr><td>안정성(동선 흔들림)</td><td>낮음 — 기사 동선이 매번 출렁여 혼란</td><td>높음 — 기존 동선 유지 + 끼워넣기</td></tr>
+          <tr><td>적합 상황</td><td>일배치 사전 계획, 대량 변경</td><td>운행 중 실시간 주문 삽입</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 실무 팁 — 안정성도 목적함수다</div>
+      매번 전체 재계산하면 이론상 최적이지만 <strong>기사 동선이 계속 바뀌어</strong> 현장 혼란과 신뢰 하락을 부른다. 그래서 "기존 동선과의 변경 최소화(solution stability)"를 페널티로 목적함수에 넣는다. 증분 삽입을 기본으로 하고, 누적 열화가 임계치를 넘으면 그때 전체 재계산하는 하이브리드가 표준.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="pod-scenario">
+    <h2>5. POD(배송 증빙) · 배송 시나리오 처리</h2>
+    <p>POD(Proof of Delivery, 배송 증빙)는 "이 화물이 정말 수령자에게 전달됐다"를 증명하는 데이터다. 분쟁·정산·CS의 근거가 되며, 비대면 시대에는 <strong>문 앞 사진 + 위치 좌표</strong>가 사실상 표준이 됐다.</p>
+    <h3>POD 증빙 수단</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>수단</th><th>설명</th><th>적합 상황</th></tr></thead>
+        <tbody>
+          <tr><td>전자서명</td><td>수령자 서명 캡처</td><td>대면 수령, B2B 인수</td></tr>
+          <tr><td>배송 사진</td><td>문 앞 놓고 위치 포함 촬영</td><td>비대면 문 앞 배송(쿠팡친구 표준)</td></tr>
+          <tr><td>OTP/인증번호</td><td>수령자 본인 확인</td><td>고가품·주류·본인인증 필수 품목</td></tr>
+          <tr><td>GPS 좌표·타임스탬프</td><td>완료 시점 위치·시각 기록</td><td>모든 배송 공통 메타데이터</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>배송 시나리오 상태 전이</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> OUT_FOR_DELIVERY : 배송 출발
+    OUT_FOR_DELIVERY --> DELIVERED : 정상 수령 (POD 캡처)
+    OUT_FOR_DELIVERY --> ABSENT : 부재 (수령자 없음)
+    OUT_FOR_DELIVERY --> REFUSED : 수령 거부
+    OUT_FOR_DELIVERY --> MISDELIVERED : 오배송 감지
+    ABSENT --> RE_ATTEMPT : 재방문 슬롯 삽입
+    RE_ATTEMPT --> DELIVERED : 재방문 성공
+    RE_ATTEMPT --> RETURN_TO_HUB : N회 실패 → 반송
+    REFUSED --> RETURN_TO_HUB : 캠프 회수
+    MISDELIVERED --> RECOVERY : 회수 후 재배송
+    RECOVERY --> DELIVERED
+    DELIVERED --> [*]
+    RETURN_TO_HUB --> [*]
+      </div>
+      <div class="cap">배송 시나리오 상태 머신 — 정상/부재/수령거부/오배송 분기와 보상 흐름</div>
+    </div>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 시나리오별 후속 처리</div>
+      <strong>부재(ABSENT)</strong>는 재방문 또는 무인보관함(택배함)·경비실 위탁으로 분기되고, <strong>수령 거부(REFUSED)</strong>는 즉시 반품(Returns) 프로세스로 넘어가며, <strong>오배송(MISDELIVERED)</strong>은 회수+재배송 보상 트랜잭션과 CS 보상이 따른다. "DELIVERED 하나로 끝"이라고 모델링하면 분쟁·정산이 무너진다. POD는 단순 플래그가 아니라 <strong>각 시나리오의 증거 패키지</strong>다.
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — POD의 신뢰성</div>
+      "문 앞 배송 사진을 POD로 쓸 때 위변조·분쟁은?" → 사진에 <strong>서버 타임스탬프 + GPS 좌표 + 주문ID 워터마크</strong>를 박고, 원본은 변경 불가 저장소(WORM, append-only)에 보관한다. 기사 앱에서 임의 갤러리 업로드를 막고 <strong>인앱 카메라만 허용</strong>해야 신뢰성이 선다. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="cases">
+    <h2>6. 사례 비교 — 라스트마일 운영 모델</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>사례</th><th>운영 모델</th><th>라스트마일 특징</th></tr></thead>
+        <tbody>
+          <tr><td><strong>쿠팡 쿠팡친구</strong></td><td>직고용 배송기사 + 자체 캠프</td><td>실시간 위치 트래킹·ETA 노출, 문 앞 배송 사진 POD 표준, 고정 권역 기반 고밀도 배송</td></tr>
+          <tr><td><strong>배민 B마트</strong></td><td>긱(gig) 라이더 + 도심 MFC(마이크로 풀필먼트)</td><td>즉시배송(30분~1시간), 주문 즉시 동적 배차·실시간 삽입, 시간창이 매우 좁음</td></tr>
+          <tr><td><strong>Amazon</strong></td><td>DSP(배송 파트너) + Amazon Flex 긱</td><td>라우팅 SW로 사전 동선 최적화, Rufus/지도 앱 연동, 사진 POD + 배송 위치 안내</td></tr>
+          <tr><td><strong>CJ대한통운</strong></td><td>택배기사 위탁 + 서브터미널</td><td>고정 권역·구역 책임제, 기사 주소 학습으로 1차 성공률↑, 무인택배함 연계</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip">
+      <div class="c-title">💡 정량 감각 — 모델별 밀도/속도</div>
+      쿠팡친구·CJ 택배 같은 <strong>고밀도 일배송</strong>은 차량 1대가 하루 150~250 스톱을 도는 반면, 배민 B마트 같은 <strong>즉시배송</strong>은 라이더 1명이 동시에 1~3건만 묶어(번들) 30분 내 완료를 목표로 한다. 전자는 <em>총거리 최소화</em>, 후자는 <em>건당 시간(시간창) 최소화</em>가 목적함수다.
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section id="design">
+    <h2>7. 백엔드 시스템 디자인 연결</h2>
+    <p>라스트마일은 <strong>수천만 건/일의 위치·상태 이벤트</strong>가 발생하는 고처리량 도메인이다. 기사 위치를 10초마다 받으면 <strong>10만 명 × (86,400초 / 10초) ≈ 8.6억 건/일</strong>, 초당으로는 <strong>약 1만 QPS(Queries Per Second, 초당 쿼리 수)</strong> 수준의 쓰기가 상시 발생한다. 여기에 배송 상태(TrackingEvent) 이벤트가 더해져 팬아웃(fan-out)이 폭증한다.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>라스트마일 이슈</th><th>설계 패턴</th><th>이유 · 정량</th></tr></thead>
+        <tbody>
+          <tr><td>위치·상태 이벤트 수천만/일</td><td><strong>Kafka 이벤트 스트림 + Fan-out</strong></td><td>트래킹·ETA·정산 컨슈머로 분배. ~1만 QPS 쓰기 흡수, 백프레셔 완충</td></tr>
+          <tr><td>DB 변경의 이벤트 발행 신뢰성</td><td><strong>CDC(Change Data Capture) / Outbox</strong></td><td>배송 상태 커밋과 이벤트 발행의 원자성, 유실 방지</td></tr>
+          <tr><td>실시간 위치 트래킹 노출</td><td><strong>위치 스트리밍(WebSocket/SSE) + 인메모리 캐시</strong></td><td>10초 위치 업데이트를 Redis/지리 인덱스에 적재, 조회는 캐시에서</td></tr>
+          <tr><td>트래킹 화면 조회 폭주</td><td><strong>최종 일관성(Eventual Consistency) 읽기 모델</strong></td><td>위치/ETA는 강한 일관성 불필요 → 약간의 지연 허용으로 처리량 확보</td></tr>
+          <tr><td>ETA 예측 정확도</td><td><strong>ETA ML 모델 (교통·과거 배송 기반)</strong></td><td>직선거리 ETA 대신 학습 기반 예측으로 정확도↑, 1차 성공률 개선</td></tr>
+          <tr><td>운행 중 동적 재배차</td><td><strong>비동기 최적화 워커 + 증분 재계산</strong></td><td>전체 재계산은 무거움 → 증분 우선, 동선 안정성 페널티 포함</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 정리 — 한 문장</div>
+      "라스트마일은 <strong>배차(권역·용량·시간창)</strong>로 화물을 기사에 잇고, <strong>NP-hard 라우팅을 휴리스틱(OR-Tools/LKH)</strong>으로 풀며, <strong>증분 재최적화</strong>로 실시간 변화를 흡수하고, <strong>POD(사진+GPS)</strong>로 증빙하는데, 백엔드는 약 <strong>1만 QPS의 위치 이벤트를 Kafka·CDC·최종 일관성 읽기 모델</strong>로 처리한다."
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section id="quiz">
+    <h2>8. 이해도 확인 질문</h2>
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>라스트마일이 전체 물류비의 40~60%를 차지하는 이유를 <code>배송 밀도(stops/km²)</code>·<code>1차 배송 성공률</code> 개념과 함께 설명하고, 비용을 낮추기 위해 무엇을 최적화해야 하는지 서술해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div><textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>라스트마일 라우팅이 왜 NP-hard인지 설명하고, TSP / VRP / CVRP / VRPTW가 각각 어떤 제약을 추가하는지, 그리고 현실에서 <code>OR-Tools</code>·<code>LKH</code> 같은 휴리스틱·메타휴리스틱을 쓰는 이유를 서술해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div><textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>운행 중 신규 즉시배송 주문이 들어왔을 때 <strong>전체 재계산</strong>과 <strong>증분 재최적화</strong>의 Trade-off를 응답 지연·해 품질·동선 안정성 관점에서 비교하고, 약 1만 QPS의 위치 이벤트를 처리하는 백엔드를 어떤 패턴(Kafka/CDC/최종 일관성)으로 설계할지 설명해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div><textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section id="next">
+    <h2>9. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">system-design-coach</div><div class="topic">쿠팡친구 실시간 위치 트래킹 시스템 설계 (Design 모드)</div></div>
+      <div class="next-card"><div class="coach">backend-architecture-coach</div><div class="topic">위치 이벤트 파이프라인 — Kafka Fan-out + CDC 설계</div></div>
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">지리 인덱스(Geohash/R-tree)와 근접 기사 검색</div></div>
+      <div class="next-card"><div class="coach">cs-fundamentals-coach</div><div class="topic">TSP/VRP 알고리즘 — 휴리스틱과 복잡도 분석</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'default',
+    themeVariables: { primaryColor: '#dbeafe', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#fef3c7', tertiaryColor: '#ede9fe', fontSize: '13px' },
+    flowchart: { curve: 'basis', padding: 20 }, sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  const NS = 'jobStudy::logistics::05-last-mile-routing::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(NS + id);
+    if (saved) el.value = saved;
+    let timer;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(NS + id, el.value);
+        const badge = document.getElementById('saved' + (i + 1));
+        if (badge) { badge.classList.add('show'); setTimeout(() => badge.classList.remove('show'), 1800); }
+      }, 400);
+    });
+  });
+
+  function copyForFeedback() {
+    const questions = [
+      'Q1. 라스트마일이 전체 물류비의 40~60%를 차지하는 이유를 배송 밀도(stops/km²)·1차 배송 성공률과 함께 설명하고, 무엇을 최적화해야 하는지 설명해보세요.',
+      'Q2. 라우팅이 왜 NP-hard인지, TSP/VRP/CVRP/VRPTW가 각각 추가하는 제약, 그리고 OR-Tools·LKH 같은 휴리스틱·메타휴리스틱을 쓰는 이유를 설명해보세요.',
+      'Q3. 운행 중 신규 주문 삽입 시 전체 재계산 vs 증분 재최적화 Trade-off(지연·품질·안정성)와, 약 1만 QPS 위치 이벤트를 처리하는 백엔드 설계(Kafka/CDC/최종 일관성)를 설명해보세요.'
+    ];
+    const lines = ['[라스트마일 · 배차/라우팅 심화 — 이해도 확인 Q&A 피드백 요청]\n세션: logistics/05-last-mile-routing.html\n'];
+    ansIds.forEach((id, i) => {
+      const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)';
+      lines.push(questions[i]); lines.push('A' + (i + 1) + '. ' + ans + '\n');
+    });
+    const text = lines.join('\n');
+    const resultEl = document.getElementById('copyResult');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.';
+      }).catch(() => fallbackCopy(text, resultEl));
+    } else { fallbackCopy(text, resultEl); }
+  }
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.'; }
+    catch { el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.'; }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

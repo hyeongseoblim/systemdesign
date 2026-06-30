@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>동시성 — 스레드·락·메모리 가시성·재고 차감</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; font-size: 14.5px; line-height: 1.75; }
+    #sidebar { width: 248px; min-height: 100vh; background: var(--card); border-right: 1px solid var(--border); padding: 24px 0; position: fixed; left: 0; top: 0; overflow-y: auto; z-index: 50; }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a { display: block; padding: 7px 20px; font-size: 13px; color: var(--muted); text-decoration: none; border-left: 3px solid transparent; transition: all .15s; }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip { font-size: 12px; font-weight: 500; padding: 3px 11px; border-radius: 20px; background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 { font-size: 20px; font-weight: 700; padding-bottom: 12px; border-bottom: 2px solid var(--border); margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+    .diagram-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px 20px; margin: 18px 0; overflow-x: auto; text-align: center; }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    .sys-card { border-radius: 10px; padding: 18px 22px; margin-bottom: 20px; border-left: 4px solid; }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .callout { border-radius: 8px; padding: 13px 16px; margin: 14px 0; border-left: 4px solid; font-size: 13.5px; }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+    pre { background: #0f172a; border-radius: 10px; padding: 18px 20px; margin: 14px 0; overflow-x: auto; }
+    pre code { background: none; color: #e2e8f0; padding: 0; font-size: 12.5px; line-height: 1.7; }
+    pre .cmt { color: #64748b; } pre .kw { color: #c084fc; } pre .str { color: #86efac; } pre .fn { color: #93c5fd; } pre .err { color: #fca5a5; }
+    .code-cap { font-size: 11.5px; color: var(--muted); margin: -6px 0 16px; padding-left: 4px; }
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea { width: 100%; min-height: 110px; border: 1.5px solid var(--border); border-radius: 8px; padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif; font-size: 14px; line-height: 1.7; resize: vertical; background: #fafcff; color: var(--text); transition: border-color .15s, background .15s; }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+    .feedback-box { background: var(--card); border: 1.5px dashed var(--border); border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center; }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; transition: background .15s; }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">⚙️ backend-dev-coach</div>
+    <h2>동시성<br/>스레드 · 락 · 가시성</h2>
+  </div>
+  <div class="group-label">기초</div>
+  <a href="#thread">1. 스레드 · 스레드풀</a>
+  <a href="#race">2. Race Condition</a>
+  <a href="#jmm">3. JMM · 메모리 가시성</a>
+  <div class="group-label">동기화 도구</div>
+  <a href="#lock">4. 락 — 비관적/낙관적</a>
+  <a href="#async">5. Async · Non-blocking</a>
+  <div class="group-label">실전</div>
+  <a href="#stock">6. 재고 차감 동시성 ⭐</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+
+<main>
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">backend-dev-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">동시성</span>
+    </div>
+    <h1>동시성(Concurrency)<br>스레드 · 락 · 메모리 가시성 · 재고 차감</h1>
+    <p>동시성은 "코드가 동작하는가"와 "동시에 1만 건이 들어와도 동작하는가"를 가르는 영역이다. 6년차 면접에서는 <strong>재고 차감 Race Condition을 코드로 풀 수 있느냐</strong>가 합격선이다.</p>
+  </header>
+
+  <!-- 1 -->
+  <section id="thread">
+    <h2>1. 스레드 · 스레드풀</h2>
+    <p>JVM에서 요청 1건은 보통 스레드 1개가 처리한다(Servlet의 thread-per-request 모델). 스레드는 비싸므로 <strong>스레드풀(Thread Pool)</strong>로 재사용한다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    Q["요청 큐\n(Queue)"]
+    subgraph Pool["Thread Pool (core=10, max=50)"]
+      T1[Thread-1]
+      T2[Thread-2]
+      T3[Thread-N]
+    end
+    DB[("DB Conn Pool\nHikariCP")]
+    Q --> T1 & T2 & T3
+    T1 & T2 & T3 --> DB
+    style Pool fill:#fef3c7,stroke:#f59e0b
+    style DB fill:#dbeafe,stroke:#3b82f6
+      </div>
+      <div class="cap">스레드풀 ↔ 커넥션풀은 함께 사이징해야 함. 스레드 200개가 커넥션 10개를 두고 경쟁하면 대기 폭증</div>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — 풀 사이징 불균형</div>
+      Tomcat 스레드 200개인데 HikariCP 커넥션 10개면, 190개 스레드가 커넥션을 기다리며 블로킹된다. 커넥션풀 권장 공식: <code>connections ≈ (core_count × 2) + effective_spindle_count</code>. 무작정 키우면 DB가 죽는다. 스레드풀과 커넥션풀, 다운스트림 타임아웃을 <strong>한 세트로</strong> 설계해야 함.
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="race">
+    <h2>2. Race Condition — 경쟁 상태</h2>
+    <p><code>Race Condition(경쟁 상태)</code>은 둘 이상의 스레드가 공유 자원에 접근할 때, <strong>실행 순서(interleaving)</strong>에 따라 결과가 달라지는 버그다. 대표는 <code>read-modify-write</code>가 원자적이지 않을 때.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant T1 as Thread-1
+    participant M as 공유 변수 stock=1
+    participant T2 as Thread-2
+    T1->>M: read stock (=1)
+    T2->>M: read stock (=1)
+    Note over T1,T2: 둘 다 1을 읽음 (lost update 시작)
+    T1->>M: write stock = 0
+    T2->>M: write stock = 0
+    Note over M: 2건 팔렸는데 stock=0 (−1 되어야 정상)<br/>→ Oversell 발생
+      </div>
+      <div class="cap">Lost Update — 두 스레드가 같은 값을 읽고 각자 덮어쓰면 한 번의 갱신이 사라짐</div>
+    </div>
+
+    <pre><code><span class="cmt">// 동시성 버그가 있는 코드 — 절대 이렇게 하지 말 것</span>
+<span class="kw">fun</span> <span class="fn">decreaseStock</span>(productId: Long) {
+    <span class="kw">val</span> product = repository.findById(productId)   <span class="err">// read</span>
+    product.stock = product.stock - 1               <span class="err">// modify</span>
+    repository.save(product)                         <span class="err">// write</span>
+    <span class="cmt">// 두 스레드가 동시에 read 하면 둘 다 같은 stock 으로 -1 → lost update</span>
+}</code></pre>
+  </section>
+
+  <!-- 3 -->
+  <section id="jmm">
+    <h2>3. JMM · 메모리 가시성</h2>
+    <p><code>JMM(Java Memory Model, 자바 메모리 모델)</code>은 "한 스레드의 쓰기가 다른 스레드에 언제 보이는가"를 정의한다. 각 스레드는 변수를 <strong>CPU 캐시/레지스터에 복사</strong>해서 쓰기 때문에, 동기화 없이는 다른 스레드의 변경이 영원히 안 보일 수 있다(가시성 문제).</p>
+
+    <pre><code><span class="cmt">// volatile 없으면 worker가 stop 변경을 영영 못 볼 수 있음 (무한루프)</span>
+<span class="kw">private</span> <span class="kw">volatile</span> <span class="kw">boolean</span> stop = <span class="kw">false</span>;   <span class="cmt">// 가시성 보장</span>
+
+<span class="kw">void</span> <span class="fn">worker</span>() { <span class="kw">while</span> (!stop) { doWork(); } }   <span class="cmt">// 다른 스레드</span>
+<span class="kw">void</span> <span class="fn">shutdown</span>() { stop = <span class="kw">true</span>; }              <span class="cmt">// 메인 스레드</span></code></pre>
+    <div class="code-cap"><code>volatile</code>은 <strong>가시성</strong>과 <strong>순서(happens-before)</strong>는 보장하지만 <strong>원자성</strong>은 보장하지 않음 — <code>count++</code> 에는 부족</div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>도구</th><th>가시성</th><th>원자성</th><th>용도</th></tr></thead>
+        <tbody>
+          <tr><td><code>volatile</code></td><td>✅</td><td>❌</td><td>플래그·상태 신호 (단일 쓰기)</td></tr>
+          <tr><td><code>AtomicLong</code> / CAS</td><td>✅</td><td>✅</td><td>카운터·증감 (lock-free)</td></tr>
+          <tr><td><code>synchronized</code> / Lock</td><td>✅</td><td>✅ (구간)</td><td>복합 연산 보호</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 happens-before</div>
+      <code>synchronized</code> unlock → 다음 lock, <code>volatile</code> write → 다음 read 사이에 <strong>happens-before 관계</strong>가 성립해, 그 이전의 모든 쓰기가 보이도록 보장된다. 동시성 코드의 정합성은 이 관계를 만족시키느냐로 판단.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section id="lock">
+    <h2>4. 락 — 비관적 락 vs 낙관적 락</h2>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>관점</th><th>Pessimistic Lock (비관적 락)</th><th>Optimistic Lock (낙관적 락)</th></tr></thead>
+        <tbody>
+          <tr><td>가정</td><td>충돌이 자주 난다</td><td>충돌이 드물다</td></tr>
+          <tr><td>구현</td><td><code>SELECT ... FOR UPDATE</code> (DB 행 잠금)</td><td><code>@Version</code> 컬럼 비교 후 UPDATE</td></tr>
+          <tr><td>충돌 시</td><td>대기 (블로킹)</td><td>실패 → 재시도 (<code>OptimisticLockException</code>)</td></tr>
+          <tr><td>장점</td><td>확실·재시도 불필요</td><td>락 대기 없음·읽기 성능 좋음</td></tr>
+          <tr><td>단점</td><td>락 경합·데드락·처리량 저하</td><td>경합 심하면 재시도 폭증</td></tr>
+          <tr><td>적합</td><td>인기 상품 한정 수량 (경합 심함)</td><td>일반 상품 재고 (경합 낮음)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant T1 as Tx-1
+    participant DB as DB (stock=1, version=5)
+    participant T2 as Tx-2
+    Note over T1,T2: 낙관적 락 — version 비교
+    T1->>DB: SELECT stock, version (=1, v5)
+    T2->>DB: SELECT stock, version (=1, v5)
+    T1->>DB: UPDATE ... SET stock=0, version=6 WHERE version=5
+    DB-->>T1: 1 row updated ✅
+    T2->>DB: UPDATE ... SET stock=0, version=6 WHERE version=5
+    DB-->>T2: 0 row updated ❌ (version 이미 6)
+    Note over T2: OptimisticLockException → 재시도
+      </div>
+      <div class="cap">낙관적 락 — version이 안 맞으면 0 row 갱신 → 예외 → 애플리케이션이 재시도</div>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — synchronized로는 왜 안 되나</div>
+      "재고 차감을 <code>synchronized</code>로 막으면 되지 않나요?" → <strong>서버가 2대 이상이면 JVM 락은 무력</strong>하다(프로세스 경계를 못 넘음). 분산 환경에선 <strong>DB 락 / Redis 분산락 / DB 원자 연산</strong> 중 하나여야 한다. 단일 인스턴스 가정을 깨는 후속 질문이 반드시 온다. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="async">
+    <h2>5. Async · Non-blocking · 코루틴</h2>
+    <p>블로킹 I/O는 스레드를 점유한 채 대기한다. 다운스트림 호출이 느리면 스레드풀이 고갈된다. 해법은 <strong>Non-blocking I/O</strong> 또는 <strong>경량 동시성</strong>이다.</p>
+
+    <ul>
+      <li><strong>CompletableFuture</strong> — 콜백 체이닝, 블로킹 스레드 절약(별도 풀 필요)</li>
+      <li><strong>WebFlux / Reactor</strong> — 이벤트 루프 기반 Non-blocking, 적은 스레드로 높은 동시성. 단 학습·디버깅 비용 큼</li>
+      <li><strong>Kotlin Coroutine</strong> — <code>suspend</code> 함수로 동기 코드처럼 작성, 구조적 동시성. <strong>코루틴 안에서 블로킹 호출 금지</strong>(이벤트 루프 막힘)</li>
+      <li><strong>Java 21 Virtual Thread</strong> — 블로킹 코드 그대로 두고 경량 스레드로 확장(Project Loom)</li>
+    </ul>
+
+    <pre><code><span class="cmt">// Kotlin Coroutine — 구조적 동시성. 두 호출을 병렬로</span>
+<span class="kw">suspend fun</span> <span class="fn">getOrderDetail</span>(id: Long): OrderDetail = coroutineScope {
+    <span class="kw">val</span> order   = <span class="kw">async</span> { orderClient.fetch(id) }      <span class="cmt">// 병렬 시작</span>
+    <span class="kw">val</span> payment = <span class="kw">async</span> { paymentClient.fetch(id) }
+    OrderDetail(order.await(), payment.await())          <span class="cmt">// 둘 다 완료 대기</span>
+    <span class="cmt">// scope 안에서 하나라도 실패하면 나머지도 자동 취소 (구조적 동시성)</span>
+}</code></pre>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — suspend에서 블로킹</div>
+      코루틴 <code>suspend</code> 함수 안에서 JDBC·RestTemplate 같은 블로킹 호출을 그대로 부르면, 한정된 디스패처 스레드를 막아 전체 처리량이 붕괴한다. 블로킹이 불가피하면 <code>withContext(Dispatchers.IO)</code>로 격리해야 한다.
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="stock">
+    <h2>6. ⭐ 재고 차감 동시성 — 실전 4가지 해법</h2>
+
+    <div class="sys-card wms">
+      <div class="sys-label">WMS / OMS 핵심 문제</div>
+      <div class="sys-title">동시에 1만 명이 한정 수량 상품을 주문할 때, <em>Oversell(초과판매)</em> 없이 정확히 차감하기</div>
+    </div>
+
+    <h3>해법 1 — DB 원자적 조건부 UPDATE (1순위 추천)</h3>
+    <pre><code><span class="cmt">// 가장 단순·강력. 락을 DB에 위임하고 race 자체를 제거</span>
+<span class="kw">@Modifying</span>
+<span class="kw">@Query</span>(<span class="str">"""
+    UPDATE product
+    SET stock = stock - :qty
+    WHERE id = :id AND stock >= :qty
+"""</span>)
+<span class="kw">fun</span> <span class="fn">decreaseStock</span>(id: Long, qty: Int): Int   <span class="cmt">// 영향받은 행 수 반환</span>
+
+<span class="cmt">// 호출부 — 0이면 재고 부족</span>
+<span class="kw">val</span> updated = repository.decreaseStock(id, qty)
+<span class="kw">if</span> (updated == 0) <span class="kw">throw</span> InsufficientStockException(id)</code></pre>
+    <div class="code-cap"><code>stock >= qty</code> 조건이 원자적으로 평가·갱신되어 Lost Update·Oversell 불가. 단일 SKU 경합에 가장 효율적</div>
+
+    <h3>해법 2 — 낙관적 락 (@Version)</h3>
+    <pre><code><span class="kw">@Entity</span>
+<span class="kw">class</span> Product(
+    <span class="kw">@Id</span> <span class="kw">val</span> id: Long,
+    <span class="kw">var</span> stock: Int,
+    <span class="kw">@Version</span> <span class="kw">var</span> version: Long = 0   <span class="cmt">// JPA가 UPDATE 시 자동 비교</span>
+)
+
+<span class="kw">@Retryable</span>(value = [OptimisticLockException::<span class="kw">class</span>], maxAttempts = 3,
+           backoff = Backoff(delay = 50, multiplier = 2.0))   <span class="cmt">// 재시도 + backoff</span>
+<span class="kw">@Transactional</span>
+<span class="kw">fun</span> <span class="fn">decrease</span>(id: Long, qty: Int) {
+    <span class="kw">val</span> p = repository.findById(id).orElseThrow()
+    <span class="kw">if</span> (p.stock &lt; qty) <span class="kw">throw</span> InsufficientStockException(id)
+    p.stock -= qty   <span class="cmt">// 커밋 시 version 안 맞으면 예외 → 재시도</span>
+}</code></pre>
+    <div class="code-cap">경합 낮을 때 좋음. 경합 심하면 재시도 폭증하므로 인기상품엔 부적합</div>
+
+    <h3>해법 3 — 비관적 락 (SELECT … FOR UPDATE)</h3>
+    <pre><code><span class="kw">@Lock</span>(LockModeType.PESSIMISTIC_WRITE)
+<span class="kw">@Query</span>(<span class="str">"SELECT p FROM Product p WHERE p.id = :id"</span>)
+<span class="kw">fun</span> <span class="fn">findByIdForUpdate</span>(id: Long): Product
+<span class="cmt">// 락 타임아웃 필수 — 안 걸면 데드락/대기 폭주로 스레드풀 고갈</span></code></pre>
+
+    <h3>해법 4 — Redis 원자 연산 (분산락 대안, 초고경합)</h3>
+    <pre><code><span class="cmt">// 플래시세일처럼 DB가 못 버틸 때 — Redis DECRBY로 선차감 후 비동기 정산</span>
+<span class="kw">val</span> remain = redisTemplate.opsForValue().decrement(<span class="str">"stock:$id"</span>, qty.toLong())
+<span class="kw">if</span> (remain != <span class="kw">null</span> &amp;&amp; remain &lt; 0) {
+    redisTemplate.opsForValue().increment(<span class="str">"stock:$id"</span>, qty.toLong())  <span class="cmt">// 보상</span>
+    <span class="kw">throw</span> InsufficientStockException(id)
+}
+<span class="cmt">// 차감 성공 → 주문 이벤트 발행 → DB는 비동기로 최종 정산 (eventual consistency)</span></code></pre>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    Q{"경합 수준?"}
+    Q -->|"낮음"| OPT["낙관적 락\n@Version + 재시도"]
+    Q -->|"보통~높음\n단일 SKU"| ATOM["원자적 조건부\nUPDATE (1순위)"]
+    Q -->|"복합 연산\n다중 행"| PESS["비관적 락\nFOR UPDATE"]
+    Q -->|"플래시세일\n초당 수만"| REDIS["Redis DECRBY\n+ 비동기 정산"]
+    style ATOM fill:#dcfce7,stroke:#22c55e
+    style REDIS fill:#fee2e2,stroke:#ef4444
+      </div>
+      <div class="cap">경합 수준에 따른 선택 트리 — 면접에서는 "상황에 따라 다르다"를 이 트리로 구체화</div>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 정답은 하나가 아니다</div>
+      "재고 차감 어떻게 하시겠어요?"의 만점 답: <strong>(1) 단일 SKU·일반 경합 → 원자적 조건부 UPDATE, (2) 멀티 라인 복합 → 비관적 락, (3) 플래시세일 → Redis 선차감 + 최종 일관성</strong>. 그리고 "예약(Reserve)·만료(TTL)·확정(Commit) 3단계로 Oversell을 막는다"까지 연결하면 도메인 깊이가 드러난다. <span class="deep">🔥 Deep-dive</span>
+    </div>
+  </section>
+
+  <!-- Quiz -->
+  <section id="quiz">
+    <h2>7. 이해도 확인 질문</h2>
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p><code>volatile</code>만으로 <code>count++</code> 동시성 버그를 못 막는 이유를 <strong>가시성·원자성</strong> 개념으로 설명하고, 올바른 대안 2가지를 제시해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved1">저장됨 ✓</span></div><textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>인기 상품 한정 수량(경합 매우 높음) vs 일반 상품(경합 낮음)에서 각각 <strong>낙관적/비관적/원자적 UPDATE</strong> 중 무엇을 택할지, 그 근거를 처리량·재시도 관점에서 비교해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved2">저장됨 ✓</span></div><textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>서버를 2대로 스케일아웃했더니 <code>synchronized</code>로 막던 재고 차감이 다시 Oversell이 났습니다. 왜 그런지 설명하고, 분산 환경에서의 해결책 2가지를 Trade-off와 함께 제시해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved3">저장됨 ✓</span></div><textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea></div>
+    </div>
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>8. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">backend-dev-coach</div><div class="topic">03. 트랜잭션 격리수준 · 전파</div></div>
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">락 · 격리수준 · 데드락 심화</div></div>
+      <div class="next-card"><div class="coach">backend-architecture-coach</div><div class="topic">재고 예약(Reserve)·TTL·Commit 설계</div></div>
+      <div class="next-card"><div class="coach">cs-fundamentals-coach</div><div class="topic">Java Memory Model · happens-before</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'default',
+    themeVariables: { primaryColor: '#dbeafe', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#fef3c7', tertiaryColor: '#ede9fe', fontSize: '13px' },
+    flowchart: { curve: 'basis', padding: 20 }, sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { navLinks.forEach(a => a.classList.remove('active')); const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`); if (active) active.classList.add('active'); } });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  const NS = 'jobStudy::backend::02-concurrency::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id); if (!el) return;
+    const saved = localStorage.getItem(NS + id); if (saved) el.value = saved;
+    let timer;
+    el.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { localStorage.setItem(NS + id, el.value); const badge = document.getElementById('saved' + (i + 1)); if (badge) { badge.classList.add('show'); setTimeout(() => badge.classList.remove('show'), 1800); } }, 400); });
+  });
+  function copyForFeedback() {
+    const questions = [
+      'Q1. volatile만으로 count++ 동시성 버그를 못 막는 이유를 가시성·원자성으로 설명하고, 올바른 대안 2가지를 제시해보세요.',
+      'Q2. 인기 상품(경합 높음) vs 일반 상품(경합 낮음)에서 낙관적/비관적/원자적 UPDATE 중 무엇을 택할지 처리량·재시도 관점에서 비교해보세요.',
+      'Q3. 서버 2대로 스케일아웃하니 synchronized 재고 차감이 다시 Oversell이 났습니다. 이유와 분산 환경 해결책 2가지를 Trade-off와 함께 제시해보세요.'
+    ];
+    const lines = ['[동시성 — 이해도 확인 Q&A 피드백 요청]\n세션: backend/02-concurrency.html\n'];
+    ansIds.forEach((id, i) => { const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)'; lines.push(questions[i]); lines.push('A' + (i + 1) + '. ' + ans + '\n'); });
+    const text = lines.join('\n'); const resultEl = document.getElementById('copyResult');
+    if (navigator.clipboard) { navigator.clipboard.writeText(text).then(() => { resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.'; }).catch(() => fallbackCopy(text, resultEl)); } else { fallbackCopy(text, resultEl); }
+  }
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.'; } catch { el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.'; }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

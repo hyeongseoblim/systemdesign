@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B-Tree 인덱스와 EXPLAIN 실행계획 읽기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root{--bg:#f8fafc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--accent:#d97706}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14.5px;line-height:1.75}
+#sidebar{width:248px;min-height:100vh;background:var(--card);border-right:1px solid var(--border);padding:24px 0;position:fixed;left:0;top:0;overflow-y:auto;z-index:50}
+#sidebar .brand{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:16px}
+#sidebar .brand .tag{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+#sidebar .brand h2{font-size:14px;font-weight:700;line-height:1.4}
+#sidebar .group-label{padding:12px 20px 4px;font-size:10.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em}
+#sidebar a{display:block;padding:7px 20px;font-size:13px;color:var(--muted);text-decoration:none;border-left:3px solid transparent;transition:all .15s}
+#sidebar a:hover,#sidebar a.active{color:var(--accent);background:var(--bg);border-left-color:var(--accent)}
+main{margin-left:248px;flex:1;max-width:1080px;padding:48px 56px}
+.page-hdr{margin-bottom:48px;padding-bottom:32px;border-bottom:2px solid var(--border)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{font-size:12px;font-weight:500;padding:3px 11px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.accent{background:#fef3c7;border-color:var(--accent);color:#92400e}
+.page-hdr h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:10px}
+.page-hdr p{color:var(--muted)}
+section{margin-bottom:64px;scroll-margin-top:24px}
+section>h2{font-size:20px;font-weight:700;padding-bottom:12px;border-bottom:2px solid var(--border);margin-bottom:24px}
+h3{font-size:16px;font-weight:600;margin:28px 0 12px}
+h4{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:20px 0 8px}
+p{margin-bottom:10px}ul,ol{padding-left:22px;margin:8px 0 10px}li{margin-bottom:4px}
+.diagram-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px 24px 20px;margin:18px 0;overflow-x:auto;text-align:center}
+.diagram-wrap .cap{font-size:12px;color:var(--muted);margin-top:14px}
+.mermaid{display:inline-block}
+.tbl-wrap{overflow-x:auto;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+th{background:#f1f5f9;font-weight:600;font-size:12.5px;padding:9px 14px;border-bottom:1px solid var(--border);text-align:left}
+td{padding:9px 14px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+tr:last-child td{border-bottom:none}tr:hover td{background:#fafafa}
+.callout{border-radius:8px;padding:13px 16px;margin:14px 0;border-left:4px solid;font-size:13.5px}
+.callout .c-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.callout.interview{background:#fef2f2;border-color:#dc2626}.callout.interview .c-title{color:#dc2626}
+.callout.warn{background:#fff7ed;border-color:#ea580c}.callout.warn .c-title{color:#ea580c}
+.callout.tip{background:#f0fdf4;border-color:#16a34a}.callout.tip .c-title{color:#16a34a}
+.deep{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:4px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;margin-left:6px}
+code{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#be185d}
+pre{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#1e293b;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:14px 0;line-height:1.6}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:14px}
+.q-card .q-num{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px}
+.ans-area{margin-top:12px}
+.ans-label{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.saved-badge{font-size:11px;color:#16a34a;opacity:0;transition:opacity .4s}.saved-badge.show{opacity:1}
+.ans-area textarea{width:100%;min-height:110px;border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-family:'Noto Sans KR',sans-serif;font-size:14px;line-height:1.7;resize:vertical;background:#fafcff;color:var(--text);transition:border-color .15s}
+.ans-area textarea:focus{outline:none;border-color:var(--accent);background:#fff}
+.ans-area textarea::placeholder{color:#cbd5e1}
+.feedback-box{background:var(--card);border:1.5px dashed var(--border);border-radius:12px;padding:22px 24px;margin-top:28px;text-align:center}
+.feedback-box p{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+.btn-feedback{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:background .15s}
+.btn-feedback:hover{background:#b45309}
+.copy-result{margin-top:12px;font-size:13px;color:#16a34a;min-height:20px}
+.next-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:14px}
+.next-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;transition:box-shadow .15s}
+.next-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.next-card .coach{font-size:11px;font-weight:600;color:var(--accent);font-family:'JetBrains Mono',monospace;margin-bottom:5px}
+.next-card .topic{font-size:13px;font-weight:500}
+@media(max-width:860px){#sidebar{display:none}main{margin-left:0;padding:24px 20px}}
+</style>
+</head>
+<body>
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🗄 database-coach</div>
+    <h2>B-Tree 인덱스<br>& EXPLAIN 읽기</h2>
+  </div>
+  <div class="group-label">인덱스 구조</div>
+  <a href="#btree">1. B+Tree & Clustered</a>
+  <a href="#composite">2. 복합 인덱스 선두 컬럼</a>
+  <a href="#covering">3. 커버링 인덱스</a>
+  <a href="#cardinality">4. 카디널리티 & 선택도</a>
+  <div class="group-label">실행계획</div>
+  <a href="#explain">5. EXPLAIN 읽기</a>
+  <a href="#no-index">6. 인덱스 안 타는 경우</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#qa">이해도 확인 Q&amp;A</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+<main>
+  <div class="page-hdr">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">database-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip">인덱스 &amp; EXPLAIN</span>
+    </div>
+    <h1>B-Tree 인덱스와 EXPLAIN 실행계획 읽기</h1>
+    <p>인덱스는 "추가하세요"로 끝나지 않는다. <strong>구조(B+Tree) · 선택도(Selectivity) · 커버링 여부 · 운영 비용</strong>까지 한 번에 판단할 수 있어야 시니어다. 모든 튜닝의 출발점은 <code>EXPLAIN</code> 해석이다.</p>
+  </div>
+
+  <section id="btree">
+    <h2>1. B+Tree 인덱스 구조와 Clustered vs Secondary</h2>
+    <p>MySQL InnoDB와 PostgreSQL의 기본 인덱스는 <strong>B+Tree(밸런스드 트리)</strong>다. Hash 인덱스와 달리 <strong>범위 검색(Range Scan)과 정렬(ORDER BY)</strong>에 강하다. 핵심은 두 가지다.</p>
+    <ul>
+      <li><strong>Internal node(내부 노드)</strong>는 탐색 키만, <strong>Leaf node(리프 노드)</strong>는 실제 데이터(또는 행 포인터)를 보관한다.</li>
+      <li>리프 노드끼리 <strong>이중 연결 리스트(Doubly Linked List)</strong>로 묶여 있어, 한 지점을 찾은 뒤 옆으로 순차 스캔하면 범위 검색이 O(log n + k)로 끝난다.</li>
+    </ul>
+
+    <pre>
+                 [Root]
+              [ 50 | 100 ]              내부 노드: 탐색 키만
+             /     |      \
+       [20|35]  [60|80]  [120|160]      내부 노드
+       /  |  \   ...        ...
+  [10,15,20][25,30,35] ...              리프 노드: 실제 row(clustered) 또는 PK 포인터
+     |          |            |
+  (리프끼리 Linked List 연결 → BETWEEN / ORDER BY / 범위 스캔이 빠른 이유)
+    </pre>
+
+    <div class="callout tip">
+      <div class="c-title">정량 감각 — 트리는 생각보다 낮다</div>
+      InnoDB 페이지는 16KB. PK가 BIGINT(8B)면 내부 노드 한 페이지의 fan-out(분기 수)이 약 1,000개. 따라서 <strong>약 1,000³ ≈ 10억 행도 트리 높이 3~4 레벨</strong>이면 도달한다. 인덱스 탐색이 디스크 I/O 3~4번에 끝난다는 의미이며, 상위 레벨은 버퍼풀에 상주하므로 실제 디스크 I/O는 1~2번 수준.
+    </div>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    R["루트 노드\n50 | 100"]
+    I1["내부 노드\n20 | 35"]
+    I2["내부 노드\n60 | 80"]
+    I3["내부 노드\n120 | 160"]
+    L1["리프\n10,15,20"]
+    L2["리프\n25,30,35"]
+    L3["리프\n60,70,80"]
+    L4["리프\n120,140,160"]
+    R --> I1 & I2 & I3
+    I1 --> L1 & L2
+    I2 --> L3
+    I3 --> L4
+    L1 -. next .-> L2 -. next .-> L3 -. next .-> L4
+    style R fill:#fef3c7,stroke:#d97706
+    style I1 fill:#fff7ed,stroke:#d97706
+    style I2 fill:#fff7ed,stroke:#d97706
+    style I3 fill:#fff7ed,stroke:#d97706
+      </div>
+      <div class="cap">B+Tree — 리프 노드는 Linked List로 연결되어 Range Scan에 최적</div>
+    </div>
+
+    <h3>Clustered Index vs Secondary Index</h3>
+    <p>InnoDB는 <strong>PK가 곧 Clustered Index(클러스터드 인덱스)</strong>다. 리프 노드에 행 전체가 PK 순으로 정렬 저장된다. 반면 <strong>Secondary Index(보조 인덱스)</strong>의 리프는 인덱스 키 + <strong>PK 값</strong>만 가진다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    subgraph SEC["Secondary Index: email"]
+        S1["email a@x.com\n→ PK 1024"]
+        S2["email b@x.com\n→ PK 2048"]
+    end
+    subgraph CLU["Clustered Index: PK"]
+        C1["PK 1024\n행 전체 데이터"]
+        C2["PK 2048\n행 전체 데이터"]
+    end
+    S1 -->|"Bookmark Lookup\nPK로 재탐색"| C1
+    S2 -->|"Bookmark Lookup"| C2
+    style SEC fill:#dbeafe,stroke:#3b82f6
+    style CLU fill:#fef3c7,stroke:#d97706
+      </div>
+      <div class="cap">Secondary Index 조회는 PK를 들고 Clustered Index를 한 번 더 탐색(Bookmark Lookup)한다</div>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">PK가 크면 모든 보조 인덱스가 비대해진다</div>
+      Secondary Index 리프는 PK 값을 포인터로 들고 있다. PK가 <code>UUID(16B)</code>나 긴 문자열이면 <strong>모든 보조 인덱스가 그만큼 커진다</strong>. PK는 짧고 단조 증가하는 값(<code>BIGINT AUTO_INCREMENT</code>)이 유리하며, 분산 환경이면 <strong>UUIDv7/ULID</strong>처럼 시간 정렬성이 있는 ID를 권장한다(랜덤 UUID는 페이지 분할·단편화 유발).
+    </div>
+  </section>
+
+  <section id="composite">
+    <h2>2. 복합 인덱스와 선두 컬럼 원칙(Leftmost Prefix)</h2>
+    <p>복합 인덱스 <code>(a, b, c)</code>는 사전순으로 정렬된 한 그루의 트리다. <strong>왼쪽 컬럼부터 연속으로</strong> 조건이 주어져야 인덱스를 탄다. 이를 <strong>Leftmost Prefix(선두 컬럼 원칙)</strong>라 한다.</p>
+
+    <pre>
+-- 물류 주문 테이블
+CREATE INDEX idx_ws_status_date
+  ON orders (warehouse_id, status, created_at);
+</pre>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>WHERE / ORDER BY</th><th>인덱스 사용</th><th>이유</th></tr></thead>
+        <tbody>
+          <tr><td><code>warehouse_id=1</code></td><td>✅ 선두 1컬럼</td><td>선두 컬럼부터 일치</td></tr>
+          <tr><td><code>warehouse_id=1 AND status='PAID'</code></td><td>✅ 2컬럼</td><td>연속 선두</td></tr>
+          <tr><td><code>warehouse_id=1 AND status='PAID' AND created_at&gt;?</code></td><td>✅ 풀 활용</td><td>마지막에 범위 1개</td></tr>
+          <tr><td><code>status='PAID'</code> 단독</td><td>❌ 미사용</td><td>선두(warehouse_id) 누락</td></tr>
+          <tr><td><code>warehouse_id=1 AND created_at&gt;?</code></td><td>⚠️ 부분(warehouse_id만)</td><td>중간 status 건너뜀 → 이후 컬럼 활용 불가</td></tr>
+          <tr><td><code>warehouse_id&gt;1 AND status='PAID'</code></td><td>⚠️ 부분(warehouse_id만)</td><td>선두가 <strong>범위 조건</strong>이면 그 뒤 컬럼은 정렬 보장이 깨져 활용 불가</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">면접 포인트 — 범위 조건은 인덱스의 끝에</div>
+      복합 인덱스에서 <strong>등치(=) 조건은 앞으로, 범위(&gt;, BETWEEN, LIKE 'x%') 조건은 맨 뒤로</strong> 배치한다. 범위 조건을 만나는 순간 그 뒤 컬럼은 정렬이 보장되지 않아 인덱스로 필터링되지 못하고 <em>range scan 후 필터링</em>으로 떨어진다. 정렬(ORDER BY) 컬럼이 범위 컬럼과 다르면 <code>Using filesort</code>가 붙는다.
+    </div>
+
+    <pre>
+EXPLAIN SELECT * FROM orders
+WHERE warehouse_id=1 AND status='PAID' AND created_at > '2026-07-01';
+
++----+--------+-------+--------------------+--------------------+---------+------+------+----------+-----------------------+
+| id | table  | type  | possible_keys      | key                | key_len | ref  | rows | filtered | Extra                 |
++----+--------+-------+--------------------+--------------------+---------+------+------+----------+-----------------------+
+|  1 | orders | range | idx_ws_status_date | idx_ws_status_date | 13      | NULL |  812 |   100.00 | Using index condition |
++----+--------+-------+--------------------+--------------------+---------+------+------+----------+-----------------------+
+</pre>
+  </section>
+
+  <section id="covering">
+    <h2>3. 커버링 인덱스(Covering Index)와 Index-Only Scan</h2>
+    <p><strong>Covering Index(커버링 인덱스)</strong>는 쿼리가 필요로 하는 <strong>모든 컬럼이 인덱스 안에서 해결</strong>되는 경우다. Clustered Index를 다시 찾아가는 Bookmark Lookup(테이블 랜덤 I/O)이 사라진다. MySQL EXPLAIN의 <code>Extra: Using index</code>, PostgreSQL의 <code>Index Only Scan</code>이 그 신호다.</p>
+
+    <pre>
+-- 운송장 상태 조회: 매우 빈번한 읽기 (수천만 건/일)
+SELECT status, updated_at
+FROM waybill
+WHERE tracking_no = '6012345678';
+
+-- 커버링 인덱스: SELECT 대상 컬럼까지 포함
+CREATE INDEX idx_tracking_cover
+  ON waybill (tracking_no, status, updated_at);
+</pre>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant App as 애플리케이션
+    participant Sec as 보조 인덱스
+    participant Clu as 클러스터드 테이블
+    Note over App,Clu: 일반 보조 인덱스 (커버링 아님)
+    App->>Sec: tracking_no 탐색
+    Sec-->>App: PK 반환
+    App->>Clu: PK로 행 전체 재탐색 (랜덤 I/O)
+    Clu-->>App: status, updated_at
+    Note over App,Sec: 커버링 인덱스
+    App->>Sec: tracking_no 탐색
+    Sec-->>App: status, updated_at 즉시 반환 (테이블 접근 0회)
+      </div>
+      <div class="cap">커버링 인덱스는 테이블(Clustered) 재방문을 제거 → 랜덤 I/O 0회</div>
+    </div>
+
+    <pre>
+EXPLAIN SELECT status, updated_at FROM waybill WHERE tracking_no='6012345678';
+
+| table   | type | key                | Extra       |
+| waybill | ref  | idx_tracking_cover | Using index |   <- Using index = 커버링 성공
+</pre>
+
+    <div class="callout tip">
+      <div class="c-title">실무 — 운송장 추적 API에 강력</div>
+      쿠팡·CJ대한통운식 운송장 추적 API는 <code>tracking_no</code>로 상태/시각만 반복 조회한다. 이 핫 패스에 커버링 인덱스를 걸면 테이블 랜덤 I/O가 사라져 캐시 미스 시에도 지연이 안정적이다. 단, 인덱스에 컬럼을 욕심내 다 넣으면 인덱스가 커져 쓰기 비용·메모리가 늘어난다 — <strong>핫 쿼리에만 선택적으로</strong>.
+    </div>
+  </section>
+
+  <section id="cardinality">
+    <h2>4. Cardinality(카디널리티)와 Selectivity(선택도)</h2>
+    <p><strong>Cardinality(카디널리티)</strong>는 컬럼의 고유값 개수, <strong>Selectivity(선택도)</strong>는 <code>고유값 수 / 전체 행 수</code>다. 선택도가 높을수록(1에 가까울수록) 인덱스가 걸러내는 효율이 좋다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>컬럼</th><th>예시 카디널리티</th><th>선택도</th><th>단독 인덱스 가치</th></tr></thead>
+        <tbody>
+          <tr><td><code>order_id</code> (PK)</td><td>= 전체 행</td><td>1.0 (최고)</td><td>매우 높음</td></tr>
+          <tr><td><code>tracking_no</code></td><td>거의 unique</td><td>≈ 1.0</td><td>높음</td></tr>
+          <tr><td><code>user_id</code></td><td>수백만</td><td>중간~높음</td><td>높음</td></tr>
+          <tr><td><code>status</code> (enum 6종)</td><td>6</td><td>매우 낮음</td><td>단독은 거의 무의미</td></tr>
+          <tr><td><code>is_deleted</code> (boolean)</td><td>2</td><td>최저</td><td>무의미 (Partial Index로)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">면접 포인트 — "인덱스 있는데 왜 풀스캔?"</div>
+      옵티마이저는 인덱스가 <strong>전체의 대략 20~30% 이상</strong>을 반환할 것으로 추정하면, 보조 인덱스 탐색 + 랜덤 Bookmark Lookup 비용보다 <strong>순차 풀스캔(Sequential Scan)</strong>이 싸다고 판단해 인덱스를 버린다. 저선택도 컬럼(<code>status='PAID'</code>가 전체의 60%)에 인덱스를 걸어도 안 타는 이유다. 해법은 <strong>복합 인덱스</strong>(<code>status</code>를 고선택도 컬럼과 묶기) 또는 <strong>Partial Index</strong>(<code>WHERE status='PENDING'</code> — 소수 상태만 색인).
+    </div>
+  </section>
+
+  <section id="explain">
+    <h2>5. EXPLAIN 실행계획 읽기</h2>
+
+    <h3>MySQL — type 열 (가장 중요)</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>type</th><th>의미</th><th>평가</th></tr></thead>
+        <tbody>
+          <tr><td><code>const / system</code></td><td>PK/Unique 단일 행</td><td>최고</td></tr>
+          <tr><td><code>eq_ref</code></td><td>조인 시 PK/Unique로 1행씩</td><td>매우 좋음</td></tr>
+          <tr><td><code>ref</code></td><td>비고유 인덱스 등치 매칭</td><td>좋음</td></tr>
+          <tr><td><code>range</code></td><td>인덱스 범위 스캔(BETWEEN, &gt;)</td><td>양호</td></tr>
+          <tr><td><code>index</code></td><td>인덱스 풀스캔(리프 전부)</td><td>주의 — 커버링이면 OK</td></tr>
+          <tr><td><code>ALL</code></td><td>테이블 풀스캔</td><td>🚨 위험 신호</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>핵심 보조 열</h4>
+    <ul>
+      <li><code>key</code>: 실제 선택된 인덱스. <code>NULL</code>이면 인덱스 미사용.</li>
+      <li><code>rows</code>: 옵티마이저가 예상한 스캔 행 수(추정치).</li>
+      <li><code>filtered</code>: WHERE로 걸러질 비율(%). 낮으면 인덱스로 충분히 못 거른 것.</li>
+      <li><code>Extra</code>: <code>Using index</code>(커버링·좋음), <code>Using filesort</code>·<code>Using temporary</code>(정렬/임시테이블·주의), <code>Using index condition</code>(ICP·양호).</li>
+    </ul>
+
+    <h3>PostgreSQL — EXPLAIN (ANALYZE, BUFFERS)</h3>
+    <pre>
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT * FROM orders WHERE warehouse_id = 1 AND status = 'PAID';
+
+                                  QUERY PLAN
+-----------------------------------------------------------------------------
+ Index Scan using idx_ws_status_date on orders
+   (cost=0.43..812.10 rows=820 width=210)
+   (actual time=0.05..2.10 rows=812 loops=1)        <- estimated 820 ≈ actual 812 (통계 정상)
+   Index Cond: ((warehouse_id = 1) AND (status = 'PAID'))
+   Buffers: shared hit=215                           <- 디스크 안 가고 캐시 hit
+ Planning Time: 0.18 ms
+ Execution Time: 2.40 ms
+</pre>
+
+    <div class="callout warn">
+      <div class="c-title">estimated vs actual 괴리 = 통계 문제</div>
+      PostgreSQL에서 <code>rows=820 (estimated)</code>인데 <code>actual rows=80000</code>처럼 크게 어긋나면 <strong>통계가 오래된 것</strong>이다. <code>ANALYZE orders;</code>(또는 autovacuum) 후 다시 본다. 통계가 틀리면 Nested Loop를 골라야 할 곳에 Hash Join을 고르는 식으로 플랜 전체가 어긋난다. Scan 종류는 <code>Seq Scan</code>(풀스캔) → <code>Index Scan</code> → <code>Index Only Scan</code>(커버링) → <code>Bitmap Heap Scan</code>(여러 인덱스 결합) 순으로 읽는다.
+    </div>
+  </section>
+
+  <section id="no-index">
+    <h2>6. 인덱스가 안 타는 경우 8가지</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>안티패턴</th><th>예시</th><th>대안</th></tr></thead>
+        <tbody>
+          <tr><td>컬럼에 함수 적용</td><td><code>WHERE DATE(created_at)='2026-07-01'</code></td><td>범위 전개 또는 함수 기반 인덱스</td></tr>
+          <tr><td>묵시적 형변환</td><td><code>WHERE tracking_no = 6012345678</code> (컬럼은 VARCHAR)</td><td>타입 맞추기 (문자열은 따옴표)</td></tr>
+          <tr><td>앞부분 와일드카드 LIKE</td><td><code>WHERE name LIKE '%서울%'</code></td><td>Full-text / 역인덱스(Inverted Index)</td></tr>
+          <tr><td>부정 조건</td><td><code>WHERE status != 'DONE'</code>, <code>NOT IN</code></td><td>긍정 조건으로 재작성, enum 나열</td></tr>
+          <tr><td>OR 양쪽 미인덱스</td><td><code>WHERE a=? OR b=?</code> (b 미색인)</td><td>UNION 분리 또는 각각 인덱스</td></tr>
+          <tr><td>복합 인덱스 선두 누락</td><td><code>(a,b)</code>인데 <code>WHERE b=?</code>만</td><td>선두 포함 또는 <code>(b,a)</code> 추가 검토</td></tr>
+          <tr><td>저선택도</td><td><code>WHERE is_deleted=0</code> (대부분 0)</td><td>Partial Index <code>WHERE is_deleted=1</code></td></tr>
+          <tr><td>통계 미갱신</td><td>대량 적재 직후 옵티마이저 오판</td><td><code>ANALYZE TABLE</code> / autovacuum</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">가장 흔한 실수 — 날짜 함수 감싸기</div>
+      <code>WHERE DATE(created_at) = '2026-07-01'</code>는 모든 행에 함수를 적용해야 하므로 인덱스가 무력화된다. 반드시 <strong>범위(Sargable) 조건</strong>으로:<br>
+      <code>WHERE created_at &gt;= '2026-07-01 00:00:00' AND created_at &lt; '2026-07-02 00:00:00'</code>
+    </div>
+  </section>
+
+  <section id="qa">
+    <h2>이해도 확인 Q&amp;A</h2>
+    <p>아래 질문에 직접 답변을 작성하세요. 자동 저장되며, 버튼으로 복사해 코치에게 피드백을 요청할 수 있습니다.</p>
+
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p><code>orders(warehouse_id, status, created_at)</code> 복합 인덱스가 있을 때, <code>WHERE status='PAID' AND created_at &gt; ?</code> 쿼리는 이 인덱스를 어떻게 활용(또는 못)하나요? 더 나은 인덱스 설계를 제안하고, 선택도 관점에서 근거를 대보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved-ans1">저장됨 ✓</span></div>
+        <textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>운송장 추적 API가 <code>SELECT status, eta FROM waybill WHERE tracking_no=?</code>를 초당 수만 번 호출합니다. 커버링 인덱스를 적용했을 때 I/O 관점에서 무엇이 달라지는지, 그리고 그 대가(쓰기/저장 비용)는 무엇인지 설명하세요. EXPLAIN에서 무엇을 확인하면 되나요?</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved-ans2">저장됨 ✓</span></div>
+        <textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>"인덱스를 분명히 만들었는데 EXPLAIN type이 ALL(풀스캔)로 나옵니다." 가능한 원인을 4가지 이상 들고, 각각 어떻게 진단·교정할지 설명하세요. PostgreSQL이라면 estimated vs actual rows를 어떻게 활용하나요?</p>
+      <div class="ans-area">
+        <div class="ans-label"><span>내 답변</span><span class="saved-badge" id="saved-ans3">저장됨 ✓</span></div>
+        <textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 복사한 뒤, 채팅창에 붙여넣어 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">02. 락 & 격리수준 — Gap/Next-key Lock</div></div>
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">06. 쿼리 튜닝 — N+1·커서 페이지네이션</div></div>
+      <div class="next-card"><div class="coach">database-coach</div><div class="topic">03. MVCC 내부 구조 — Undo·WAL</div></div>
+      <div class="next-card"><div class="coach">backend-dev-coach</div><div class="topic">JPA에서 인덱스 친화 쿼리 작성</div></div>
+    </div>
+  </section>
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'neutral',securityLevel:'loose',flowchart:{htmlLabels:true,curve:'basis'}});
+const NS = 'jobStudy::database::01-index-explain::';
+const ansIds = ['ans1','ans2','ans3'];
+function saveAns(id){
+  const el=document.getElementById(id);
+  localStorage.setItem(NS+id, el.value);
+  const b=document.getElementById('saved-'+id);
+  if(b){b.classList.add('show');setTimeout(()=>b.classList.remove('show'),1800);}
+}
+ansIds.forEach(id=>{
+  const el=document.getElementById(id);
+  if(!el)return;
+  const saved=localStorage.getItem(NS+id);
+  if(saved)el.value=saved;
+  let t;
+  el.addEventListener('input',()=>{clearTimeout(t);t=setTimeout(()=>saveAns(id),400);});
+});
+function copyForFeedback(){
+  const questions = [
+    'Q1. (warehouse_id, status, created_at) 복합 인덱스에서 WHERE status=? AND created_at>? 쿼리의 인덱스 활용을 설명하고, 더 나은 인덱스를 선택도 근거로 제안해보세요.',
+    'Q2. 운송장 추적 SELECT status, eta FROM waybill WHERE tracking_no=? 에 커버링 인덱스를 적용했을 때 I/O 변화와 그 대가, EXPLAIN 확인 포인트를 설명해보세요.',
+    'Q3. 인덱스가 있는데 EXPLAIN type=ALL(풀스캔)이 나오는 원인 4가지 이상과 진단·교정법, PG의 estimated vs actual rows 활용법을 설명해보세요.'
+  ];
+  const lines=['[B-Tree 인덱스 & EXPLAIN — 이해도 확인 Q&A 피드백 요청]\n세션: database/01-index-explain.html\n'];
+  ansIds.forEach((id,i)=>{
+    const ans=(document.getElementById(id)?.value||'').trim()||'(답변 없음)';
+    lines.push(questions[i]);
+    lines.push('A'+(i+1)+'. '+ans+'\n');
+  });
+  const text=lines.join('\n');
+  const resultEl=document.getElementById('copyResult');
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(text).then(()=>{resultEl.textContent='✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.';}).catch(()=>fb(text,resultEl));
+  } else fb(text,resultEl);
+}
+function fb(text,el){
+  const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');el.textContent='✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.';}catch{el.textContent='⚠️ 복사 실패 — 직접 선택해 복사하세요.';}
+  document.body.removeChild(ta);
+}
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      document.querySelectorAll('#sidebar a').forEach(a=>a.classList.remove('active'));
+      const link=document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+      if(link)link.classList.add('active');
+    }
+  });
+},{rootMargin:'-20% 0px -70% 0px'});
+document.querySelectorAll('section[id]').forEach(s=>observer.observe(s));
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>

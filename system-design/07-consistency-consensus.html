@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>일관성과 합의 — CAP / PACELC / Quorum / Raft / 2PC·Saga</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc; --card: #fff; --border: #e2e8f0;
+      --text: #1e293b; --muted: #64748b;
+      --accent: #6366f1;
+      --oms:    #dbeafe; --oms-b:  #3b82f6; --oms-t:  #1e3a8a;
+      --wms:    #fef3c7; --wms-b:  #f59e0b; --wms-t:  #78350f;
+      --tms:    #ede9fe; --tms-b:  #8b5cf6; --tms-t:  #3b0764;
+      --lm:     #dcfce7; --lm-b:   #22c55e; --lm-t:   #14532d;
+      --ret:    #fce7f3; --ret-b:  #ec4899; --ret-t:  #831843;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg); color: var(--text);
+      display: flex; min-height: 100vh;
+      font-size: 14.5px; line-height: 1.75;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 248px; min-height: 100vh;
+      background: var(--card); border-right: 1px solid var(--border);
+      padding: 24px 0; position: fixed; left: 0; top: 0;
+      overflow-y: auto; z-index: 50;
+    }
+    #sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    #sidebar .brand .tag { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    #sidebar .brand h2 { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    #sidebar .group-label { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; }
+    #sidebar a {
+      display: block; padding: 7px 20px;
+      font-size: 13px; color: var(--muted);
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    #sidebar a:hover, #sidebar a.active { color: var(--accent); background: var(--bg); border-left-color: var(--accent); }
+
+    /* ── Main ── */
+    main { margin-left: 248px; flex: 1; max-width: 1080px; padding: 48px 56px; }
+
+    /* ── Page header ── */
+    .page-hdr { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid var(--border); }
+    .page-hdr .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip {
+      font-size: 12px; font-weight: 500;
+      padding: 3px 11px; border-radius: 20px;
+      background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+    }
+    .chip.accent { background: #ede9fe; border-color: var(--accent); color: var(--accent); }
+    .chip.green  { background: var(--lm); border-color: var(--lm-b); color: var(--lm-t); }
+    .page-hdr h1 { font-size: 26px; font-weight: 700; line-height: 1.3; margin-bottom: 10px; }
+    .page-hdr p  { color: var(--muted); }
+
+    /* ── Sections ── */
+    section { margin-bottom: 64px; scroll-margin-top: 24px; }
+    section > h2 {
+      font-size: 20px; font-weight: 700;
+      padding-bottom: 12px; border-bottom: 2px solid var(--border);
+      margin-bottom: 24px; display: flex; align-items: center; gap: 8px;
+    }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; }
+    h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 8px; }
+    p  { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 10px; }
+    li { margin-bottom: 4px; }
+
+    /* ── Diagrams ── */
+    .diagram-wrap {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 28px 24px 20px;
+      margin: 18px 0; overflow-x: auto; text-align: center;
+    }
+    .diagram-wrap .cap { font-size: 12px; color: var(--muted); margin-top: 14px; }
+    .mermaid { display: inline-block; }
+
+    /* ── Tables ── */
+    .tbl-wrap { overflow-x: auto; margin: 14px 0; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 13.5px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    }
+    th { background: #f1f5f9; font-weight: 600; font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    /* ── System cards ── */
+    .sys-card {
+      border-radius: 10px; padding: 18px 22px;
+      margin-bottom: 20px; border-left: 4px solid;
+    }
+    .sys-card .sys-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin-bottom: 4px; }
+    .sys-card .sys-title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+    .sys-card.oms { background: var(--oms); border-color: var(--oms-b); color: var(--oms-t); }
+    .sys-card.wms { background: var(--wms); border-color: var(--wms-b); color: var(--wms-t); }
+    .sys-card.tms { background: var(--tms); border-color: var(--tms-b); color: var(--tms-t); }
+    .sys-card.lm  { background: var(--lm);  border-color: var(--lm-b);  color: var(--lm-t);  }
+    .sys-card.ret { background: var(--ret); border-color: var(--ret-b); color: var(--ret-t); }
+
+    /* ── Callouts ── */
+    .callout {
+      border-radius: 8px; padding: 13px 16px;
+      margin: 14px 0; border-left: 4px solid; font-size: 13.5px;
+    }
+    .callout .c-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .callout.interview { background: #fef2f2; border-color: #dc2626; }
+    .callout.interview .c-title { color: #dc2626; }
+    .callout.warn  { background: #fff7ed; border-color: #ea580c; }
+    .callout.warn  .c-title  { color: #ea580c; }
+    .callout.tip   { background: #f0fdf4; border-color: #16a34a; }
+    .callout.tip   .c-title  { color: #16a34a; }
+
+    /* ── Badges ── */
+    .deep { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; margin-left: 6px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #be185d; }
+
+    /* ── Q&A cards ── */
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 14px; }
+    .q-card .q-num { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 7px; }
+
+    /* ── Next steps ── */
+    .next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+    .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; transition: box-shadow .15s; }
+    .next-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .next-card .coach { font-size: 11px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 5px; }
+    .next-card .topic { font-size: 13px; font-weight: 500; }
+
+    /* ── Q&A Input ── */
+    .ans-area { margin-top: 12px; }
+    .ans-label { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .ans-label .saved-badge { font-size: 11px; color: #16a34a; opacity: 0; transition: opacity .4s; }
+    .ans-label .saved-badge.show { opacity: 1; }
+    .ans-area textarea {
+      width: 100%; min-height: 110px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 11px 14px; font-family: 'Noto Sans KR', sans-serif;
+      font-size: 14px; line-height: 1.7; resize: vertical;
+      background: #fafcff; color: var(--text);
+      transition: border-color .15s, background .15s;
+    }
+    .ans-area textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .ans-area textarea::placeholder { color: #cbd5e1; }
+
+    /* ── Feedback button section ── */
+    .feedback-box {
+      background: var(--card); border: 1.5px dashed var(--border);
+      border-radius: 12px; padding: 22px 24px; margin-top: 28px; text-align: center;
+    }
+    .feedback-box p { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+    .btn-feedback {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 8px; padding: 10px 22px;
+      font-size: 14px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-feedback:hover { background: #4f46e5; }
+    .btn-feedback:active { transform: scale(.97); }
+    .copy-result { margin-top: 12px; font-size: 13px; color: #16a34a; min-height: 20px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 860px) { #sidebar { display: none; } main { margin-left: 0; padding: 24px 20px; } }
+    @media print { #sidebar { display: none; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════ SIDEBAR ══════════════════ -->
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🧩 system-design-coach</div>
+    <h2>일관성과 합의<br/>Consistency &amp; Consensus</h2>
+  </div>
+  <div class="group-label">이론 기둥</div>
+  <a href="#cap">1. CAP 정리</a>
+  <a href="#pacelc">2. PACELC</a>
+  <a href="#models">3. 일관성 모델</a>
+  <div class="group-label">분산 합의</div>
+  <a href="#quorum">4. Quorum 정족수</a>
+  <a href="#raft">5. Consensus — Raft</a>
+  <div class="group-label">분산 트랜잭션</div>
+  <a href="#txn">6. 2PC 한계 &amp; Saga</a>
+  <a href="#classify">7. CP/AP 시스템 분류</a>
+  <div class="group-label">학습 점검</div>
+  <a href="#quiz">이해도 확인 질문</a>
+  <a href="#next">다음 학습 후보</a>
+</nav>
+
+<!-- ══════════════════ MAIN ══════════════════ -->
+<main>
+
+  <!-- Page Header -->
+  <header class="page-hdr" id="top">
+    <div class="chips">
+      <span class="chip accent">🎓 Concept 모드</span>
+      <span class="chip">system-design-coach</span>
+      <span class="chip">2026-07-01</span>
+      <span class="chip green">일관성과 합의</span>
+    </div>
+    <h1>일관성과 합의<br>CAP · PACELC · Quorum · Raft · 2PC/Saga</h1>
+    <p>분산 시스템 면접의 이론 척추. "왜 강한 일관성은 공짜가 아닌가"를 수치·사례·다이어그램으로 끝까지 밀어붙인다. Deep-dive 지점은 <span class="deep">🔥 Deep-dive</span> 로 표시.</p>
+  </header>
+
+  <!-- ── Section 1: CAP ── -->
+  <section id="cap">
+    <h2>1. CAP 정리 — 파티션이 오면 둘 중 하나를 버린다</h2>
+
+    <p><code>CAP(Consistency 일관성, Availability 가용성, Partition tolerance 분할 내성)</code> 정리는 "셋 중 둘만 고른다"로 흔히 외워지지만, 이 요약은 <strong>면접에서 감점 요인</strong>이다. 정확한 명제는 다음과 같다.</p>
+
+    <div class="sys-card oms">
+      <div class="sys-label">정확한 진술</div>
+      <div class="sys-title">네트워크 <em>Partition(분할)</em>이 실제로 발생한 동안에는 <em>Consistency</em>와 <em>Availability</em>를 동시에 만족할 수 없다.</div>
+    </div>
+
+    <ul>
+      <li>여기서 <code>Consistency</code>는 ACID의 C가 아니라 <strong>Linearizability(선형성)</strong> — "모든 노드가 같은 순간 같은 값을 본다"에 가까운 강한 일관성.</li>
+      <li>여기서 <code>Availability</code>는 "장애 노드를 제외한 모든 노드가 모든 요청에 응답한다".</li>
+      <li><strong>P는 선택 항목이 아니다.</strong> 분산 시스템은 광케이블 절단·스위치 장애·GC 멈춤으로 인한 네트워크 분할을 <em>피할 수 없다</em>. 따라서 현실의 선택은 "C냐 A냐"가 아니라 <strong>"분할이 발생했을 때 C를 지킬 것이냐(CP), A를 지킬 것이냐(AP)"</strong>이다.</li>
+    </ul>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    Start{"네트워크 Partition\n발생?"}
+    Normal["정상 시기\n→ C도 A도 모두 가능\n(트레이드오프는 PACELC가 설명)"]
+    Choose{"분할 중\n어느 쪽을 지킬까?"}
+    CP["CP 선택\n소수파 노드는 쓰기 거부 / 에러 반환\n→ 일관성 유지, 가용성 희생\n예: ZooKeeper, etcd, HBase"]
+    AP["AP 선택\n모든 노드가 일단 응답·수용\n→ 가용성 유지, 일시적 불일치 허용\n예: Cassandra, DynamoDB, Riak"]
+
+    Start -->|"No"| Normal
+    Start -->|"Yes"| Choose
+    Choose --> CP
+    Choose --> AP
+
+    style Normal fill:#dcfce7,stroke:#22c55e,color:#14532d
+    style CP fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a
+    style AP fill:#fce7f3,stroke:#ec4899,color:#831843
+      </div>
+      <div class="cap">CAP의 본질 — "P를 버린다"는 선택지는 존재하지 않는다. P는 전제, 선택은 C vs A.</div>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 함정 #1</div>
+      "저희는 P를 버리고 CA 시스템을 쓰겠습니다"라고 말하면 즉시 감점. <strong>분산 시스템에서 P는 버릴 수 없다.</strong> CA 시스템은 단일 노드 RDBMS처럼 네트워크 분할이 애초에 없는 환경에서만 성립한다. 분산을 전제로 한 질문에서 CA를 답으로 내놓으면 "분산 환경을 이해하지 못했다"는 신호다.
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — "CP면 항상 멈춘다"는 과장</div>
+      CP라고 모든 요청이 막히는 게 아니다. <strong>분할 중 소수파(minority) 쪽 노드만</strong> 쓰기를 거부한다. 과반(quorum)을 확보한 다수파는 정상 동작한다. 즉 "5대 중 2대가 고립" → 그 2대만 거부, 3대는 정상. 토스 송금 같은 CP 시스템도 평시엔 멀쩡히 빠르다.
+    </div>
+  </section>
+
+  <!-- ── Section 2: PACELC ── -->
+  <section id="pacelc">
+    <h2>2. PACELC — CAP가 놓친 "평상시"를 채운다</h2>
+
+    <p>CAP는 분할이 발생한 순간만 다룬다. 하지만 분할은 드물고, 시스템은 <strong>대부분의 시간을 정상 상태로</strong> 보낸다. <code>PACELC</code>는 이 빈틈을 메운다.</p>
+
+    <div class="sys-card tms">
+      <div class="sys-label">읽는 법</div>
+      <div class="sys-title"><strong>if P</strong>(분할 시) <strong>then A or C</strong> &nbsp;<strong>else</strong>(평상시) <strong>L or C</strong> &nbsp;— 즉 분할 땐 가용성/일관성, 평상시엔 지연(Latency)/일관성을 저울질한다.</div>
+    </div>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    P{"네트워크\nPartition?"}
+    PA["A\n가용성 우선\n(일관성 양보)"]
+    PC1["C\n일관성 우선\n(가용성 양보)"]
+    E{"Else\n(평상시)"}
+    EL["L\nLatency 우선\n비동기 복제 → 빠르지만 stale 읽기 가능"]
+    EC["C\nConsistency 우선\n동기 복제·quorum → 느리지만 항상 최신"]
+
+    P -->|"Yes"| PA
+    P -->|"Yes"| PC1
+    P -->|"No"| E
+    E --> EL
+    E --> EC
+
+    style PA fill:#fce7f3,stroke:#ec4899,color:#831843
+    style PC1 fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a
+    style EL fill:#fef3c7,stroke:#f59e0b,color:#78350f
+    style EC fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a
+      </div>
+      <div class="cap">PACELC 의사결정 트리 — 같은 AP 계열도 평상시 정책(EL vs EC)에서 갈린다.</div>
+    </div>
+
+    <h3>대표 분류 (PACELC 표기)</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>시스템</th><th>PACELC</th><th>해석</th></tr></thead>
+        <tbody>
+          <tr><td>Cassandra (기본 튜닝)</td><td><strong>PA / EL</strong></td><td>분할 시 가용성, 평상시 지연 우선 — 최신성보다 빠른 응답</td></tr>
+          <tr><td>DynamoDB</td><td><strong>PA / EL</strong></td><td>가용성·저지연 우선. 단, 옵션으로 강한 일관성 읽기 선택 가능</td></tr>
+          <tr><td>MongoDB</td><td><strong>PA / EC</strong></td><td>분할 시 가용성 쪽이지만, 평상시 primary 읽기는 일관성 우선</td></tr>
+          <tr><td>HBase, BigTable</td><td><strong>PC / EC</strong></td><td>분할 시에도 평상시에도 일관성을 끝까지 우선</td></tr>
+          <tr><td>VoltDB / 단일 리전 RDBMS</td><td><strong>PC / EC</strong></td><td>일관성을 위해 지연·가용성 모두 양보</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 PACELC를 면접에서 쓰는 법</div>
+      "이 시스템 CAP에서 뭐예요?"라는 질문에 <strong>"AP인데, 평상시엔 EL이라 stale read를 감수합니다. 단, 결제 경로만 강한 일관성 읽기로 EC로 바꿉니다"</strong>처럼 답하면 한 단계 위로 보인다. 하나의 시스템 안에서도 경로별로 다른 일관성을 쓸 수 있다는 점이 핵심.
+    </div>
+  </section>
+
+  <!-- ── Section 3: 일관성 모델 ── -->
+  <section id="models">
+    <h2>3. 일관성 모델 — Strong에서 Eventual까지의 스펙트럼</h2>
+
+    <p>일관성은 0/1이 아니라 <strong>스펙트럼</strong>이다. 강할수록 추론하기 쉽지만 지연·가용성을 더 내준다. 면접에서는 "강한 일관성=무조건 좋다"가 아니라 <strong>"이 경로엔 이 정도 일관성이면 충분하다"</strong>를 고를 줄 알아야 한다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>모델</th><th>보장 내용</th><th>비용</th><th>적합한 곳</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Strong / Linearizable<br>(강한 일관성·선형성)</strong></td>
+            <td>쓰기 완료 후 모든 읽기가 즉시 최신값. 전역 단일 시점처럼 동작</td>
+            <td>합의·quorum 필요 → 지연 ↑, 분할 시 가용성 ↓</td>
+            <td>잔액·재고 차감·좌석 예약·분산 락</td>
+          </tr>
+          <tr>
+            <td><strong>Causal<br>(인과 일관성)</strong></td>
+            <td>인과관계 있는 연산만 순서 보장 (A→B면 모두가 A 먼저 봄). 무관한 연산은 순서 자유</td>
+            <td>벡터 클럭 등 메타데이터, 중간 비용</td>
+            <td>댓글·답글 스레드, 채팅 메시지 순서</td>
+          </tr>
+          <tr>
+            <td><strong>Read-your-writes<br>(자기 쓰기 읽기)</strong></td>
+            <td>내가 쓴 값은 내가 반드시 다시 읽을 수 있음 (남에겐 늦게 보여도 됨)</td>
+            <td>세션 고정(sticky)·write 후 leader 읽기로 구현. 낮음</td>
+            <td>프로필 수정 직후 본인 화면, 장바구니</td>
+          </tr>
+          <tr>
+            <td><strong>Monotonic read<br>(단조 읽기)</strong></td>
+            <td>한 번 최신값을 봤으면 그 뒤엔 더 옛날 값으로 후퇴하지 않음</td>
+            <td>같은 replica로 라우팅 고정. 낮음</td>
+            <td>타임라인·피드 새로고침 시 역행 방지</td>
+          </tr>
+          <tr>
+            <td><strong>Eventual<br>(최종 일관성)</strong></td>
+            <td>쓰기가 멈추면 "언젠가" 모든 노드가 수렴. 그 사이 stale 읽기 허용</td>
+            <td>가장 저렴. 지연 ↓, 가용성 ↑</td>
+            <td>조회수·좋아요 수, 배송 추적 표시</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant C1 as Client A
+    participant L as Leader
+    participant R as Replica(비동기)
+    participant C2 as Client B
+
+    Note over C1,R: 시나리오 — Read-your-writes 위반 예시
+    C1->>L: write(x = 10)
+    L-->>C1: OK
+    C1->>R: read(x)
+    R-->>C1: x = 5 (복제 지연으로 옛날값!)
+    Note over C1: 내가 방금 쓴 값을 못 읽음 → Read-your-writes 깨짐
+
+    Note over C1,R: 해결 — 같은 세션은 잠시 Leader로 라우팅
+    C1->>L: read(x)
+    L-->>C1: x = 10 ✓
+    C2->>R: read(x)
+    R-->>C2: x = 5 (B에겐 아직 stale — 이건 허용)
+      </div>
+      <div class="cap">최종 일관성 환경에서 Read-your-writes를 보장하는 라우팅 — 본인은 Leader, 타인은 Replica.</div>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 함정 #2 — "Strong = 무조건 느림"으로 단정</div>
+      Strong 일관성이 비싼 건 맞지만 <strong>"그래서 절대 못 쓴다"는 과장</strong>이다. 단일 리전·소수 노드 quorum이면 강한 일관성도 한 자릿수 ms로 가능하다. 토스 송금은 강한 일관성을 쓰면서도 응답은 빠르다 — 리전 내 합의라 RTT가 0.5ms 수준이기 때문. 비싼 건 <strong>"대륙 간 동기 복제"</strong>(RTT 150ms)일 때다. "어느 범위의 강한 일관성이냐"를 구분하라.
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 물류 도메인 매핑</div>
+      <strong>라스트마일 배송 추적(TrackingEvent 표시)</strong> → <code>Eventual</code>로 충분. 화면에 "허브 도착"이 0.5초 늦게 떠도 사고가 아니다.<br>
+      <strong>풀필먼트 재고 차감(Available 감소)</strong> → <code>Strong</code> 필수. stale 읽고 oversell(초과판매)하면 실물 없는 주문이 발생한다. 같은 시스템 안에서도 경로별로 일관성을 다르게 쓴다.
+    </div>
+  </section>
+
+  <!-- ── Section 4: Quorum ── -->
+  <section id="quorum">
+    <h2>4. Quorum(정족수) — W + R &gt; N 의 산수</h2>
+
+    <p>복제본 <code>N</code>개를 두는 시스템에서, 쓰기를 <code>W</code>개 노드가 확인하고 읽기를 <code>R</code>개 노드에서 받아오면, <strong>W + R &gt; N</strong>일 때 읽기 집합과 쓰기 집합이 <em>최소 1개 노드에서 겹쳐</em> 최신값을 반드시 포함한다. 이것이 quorum 일관성의 핵심 부등식이다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    subgraph N5["N = 5 복제본"]
+      direction LR
+      n1["node1"]
+      n2["node2"]
+      n3["node3"]
+      n4["node4"]
+      n5["node5"]
+    end
+    W["Write Quorum W = 3\nnode1·node2·node3 에 기록 확인"]
+    R["Read Quorum R = 3\nnode3·node4·node5 에서 읽음"]
+    O["겹침 = node3\n→ W+R(=6) &gt; N(=5)\n반드시 1개 이상 최신 노드 포함"]
+
+    W --> O
+    R --> O
+
+    style W fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a
+    style R fill:#fef3c7,stroke:#f59e0b,color:#78350f
+    style O fill:#dcfce7,stroke:#22c55e,color:#14532d
+      </div>
+      <div class="cap">N=5, W=3, R=3 — W+R&gt;N 이므로 읽기·쓰기 집합이 node3에서 겹쳐 최신값 보장.</div>
+    </div>
+
+    <h3>W·R 조합의 Trade-off</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>설정 (N=3)</th><th>특성</th><th>장점</th><th>단점</th></tr></thead>
+        <tbody>
+          <tr><td><strong>W=3, R=1</strong></td><td>쓰기 무겁고 읽기 가벼움</td><td>읽기 빠름·읽기 가용성↑</td><td>한 노드만 죽어도 쓰기 불가</td></tr>
+          <tr><td><strong>W=1, R=3</strong></td><td>쓰기 가볍고 읽기 무거움</td><td>쓰기 빠름·쓰기 가용성↑</td><td>한 노드만 죽어도 읽기 불가</td></tr>
+          <tr><td><strong>W=2, R=2</strong></td><td>균형 (W+R=4&gt;3)</td><td>노드 1개 장애 견딤·일관성 유지</td><td>읽기·쓰기 둘 다 중간 지연</td></tr>
+          <tr><td><strong>W=1, R=1</strong></td><td>W+R=2 ≤ 3 → quorum 깨짐</td><td>가장 빠름·가용성 최고</td><td><strong>최종 일관성</strong>으로 떨어짐 (stale 읽기)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — quorum이 "동시 충돌"까지 막아주진 않는다</div>
+      W+R&gt;N은 <em>최신값을 읽을 수 있음</em>만 보장한다. 두 클라이언트가 동시에 같은 키를 쓰면 <strong>충돌(conflict)</strong>이 생기고, Dynamo 계열은 이를 <code>vector clock</code> + 애플리케이션 머지(또는 last-write-wins)로 해결한다. quorum은 합의(consensus)가 아니다 — 순서까지 합의하려면 Raft/Paxos가 필요하다.
+    </div>
+  </section>
+
+  <!-- ── Section 5: Raft ── -->
+  <section id="raft">
+    <h2>5. Consensus — Raft 개요 <span class="deep">🔥 Deep-dive</span></h2>
+
+    <p><code>Consensus(합의)</code>는 "여러 노드가 <strong>하나의 값/순서에 모두 동의</strong>"하게 만드는 문제다. Raft는 Paxos의 난해함을 줄인 합의 알고리즘으로, etcd·Consul·TiKV·CockroachDB가 채택했다. 세 축으로 이해하면 된다: <strong>Leader election(리더 선출)</strong>, <strong>Log replication(로그 복제)</strong>, <strong>Term(임기)</strong>.</p>
+
+    <h3>① Leader election + Term</h3>
+    <ul>
+      <li>노드는 <strong>Follower → Candidate → Leader</strong> 상태를 가진다.</li>
+      <li>Follower가 일정 시간(election timeout) 동안 리더의 heartbeat를 못 받으면 <code>Term</code>(임기 번호)을 +1 하고 Candidate가 되어 투표를 요청한다.</li>
+      <li>과반 표를 얻으면 Leader. <code>Term</code>은 단조 증가하며, 오래된 Term의 메시지는 무시된다 — 이것이 <strong>split-brain(분열 뇌)</strong>을 막는 핵심.</li>
+    </ul>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> Follower
+    Follower --> Candidate : election timeout\n(리더 heartbeat 끊김) → Term+1
+    Candidate --> Candidate : 표 분산(split vote) → 재시도, Term+1
+    Candidate --> Leader : 과반 득표
+    Candidate --> Follower : 더 높은 Term의 Leader 발견
+    Leader --> Follower : 더 높은 Term 발견 → 즉시 강등
+    Leader --> [*]
+      </div>
+      <div class="cap">Raft 상태 머신 — Term이 더 높은 노드를 만나면 무조건 Follower로 강등(split-brain 방지).</div>
+    </div>
+
+    <h3>② Log replication</h3>
+    <p>모든 쓰기는 Leader를 거친다. Leader가 로그 엔트리를 append하고 Follower들에게 복제한 뒤, <strong>과반(quorum)이 기록을 확인하면 commit</strong>하고 클라이언트에 응답한다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant L as Leader (Term 4)
+    participant F1 as Follower 1
+    participant F2 as Follower 2
+
+    C->>L: write(set x = 10)
+    L->>L: 로그에 append (uncommitted)
+    par 병렬 복제
+        L->>F1: AppendEntries(x=10, Term=4)
+        L->>F2: AppendEntries(x=10, Term=4)
+    end
+    F1-->>L: ack
+    F2-->>L: ack
+    Note over L: 과반(3노드 중 2 ack) 확보 → commit
+    L->>L: x = 10 commit & 상태 머신 적용
+    L-->>C: OK
+    L->>F1: 다음 heartbeat에 commitIndex 전파
+    L->>F2: 다음 heartbeat에 commitIndex 전파
+      </div>
+      <div class="cap">Raft 로그 복제 — Leader가 과반 ack를 받은 뒤에야 commit하고 응답한다. 이것이 강한 일관성의 원천.</div>
+    </div>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 포인트 — 왜 홀수 노드(3, 5, 7)인가</div>
+      과반(quorum) = ⌊N/2⌋+1. <strong>N=3이면 2, N=5면 3</strong>이 과반. 4노드는 과반이 3이라 3노드(과반 2)보다 장애 내성이 같으면서(둘 다 1대 장애 허용) 비용만 늘어 비효율. 그래서 합의 클러스터는 거의 항상 홀수다. "왜 ZooKeeper를 3대나 5대로 두나요?"의 답이 여기 있다.
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 사례 — 카카오톡 메시지 순서 & 분산 락</div>
+      카카오톡처럼 <strong>한 대화방 안 메시지 순서</strong>를 보장하려면 그 방의 쓰기를 단일 리더로 직렬화(혹은 시퀀서)해야 한다. 합의 기반 시스템(ZooKeeper/etcd)은 분산 락·리더 선출·메타데이터 저장에 쓰여, 토스의 멱등 처리나 좌석 예약 직렬화의 토대가 된다.
+    </div>
+  </section>
+
+  <!-- ── Section 6: 2PC & Saga ── -->
+  <section id="txn">
+    <h2>6. 분산 트랜잭션 — 2PC의 한계와 Saga</h2>
+
+    <p>여러 서비스/DB에 걸친 원자성은 <code>2PC(Two-Phase Commit, 2단계 커밋)</code>로 풀려고 시도되어 왔다. 코디네이터가 ① <strong>prepare</strong>(모두 준비됐나?) ② <strong>commit/abort</strong> 두 단계로 진행한다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant Co as Coordinator
+    participant P as 결제 서비스
+    participant I as 재고 서비스
+
+    Note over Co,I: Phase 1 — Prepare
+    Co->>P: prepare
+    Co->>I: prepare
+    P-->>Co: vote YES (자원 잠금 유지)
+    I-->>Co: vote YES (자원 잠금 유지)
+
+    Note over Co,I: Phase 2 — Commit
+    Co->>P: commit
+    Co->>I: commit
+    P-->>Co: done
+    I-->>Co: done
+
+    Note over Co,I: ⚠️ Coordinator가 Phase 2 직전 죽으면?\n참가자들은 잠금 쥔 채 무기한 blocking
+      </div>
+      <div class="cap">2PC 흐름 — 평시엔 원자적이지만, Coordinator 단일 장애 시 참가자가 잠금을 쥔 채 멈춘다.</div>
+    </div>
+
+    <h3>2PC의 한계</h3>
+    <ul>
+      <li><strong>Blocking</strong>: 코디네이터가 commit 결정 직후 죽으면 참가자는 commit/abort를 몰라 <em>잠금을 쥔 채 무기한 대기</em>. 가용성 치명타.</li>
+      <li><strong>동기·잠금 기반</strong>: prepare~commit 사이 자원이 잠겨 처리량(QPS)이 급락. 마이크로서비스·고트래픽엔 부적합.</li>
+      <li><strong>단일 장애점(SPOF, Single Point of Failure)</strong>: 코디네이터 자체가 SPOF. (3PC, Paxos-Commit으로 보완 시도하지만 복잡·여전히 느림.)</li>
+    </ul>
+
+    <div class="callout interview">
+      <div class="c-title">🎯 면접 함정 #3 — "2PC 쓰면 분산 트랜잭션 다 해결"</div>
+      "주문-결제-재고를 2PC로 묶겠습니다"는 위험 신호. 면접관은 <strong>"코디네이터가 죽으면?"</strong>으로 곧장 압박한다. 현대 MSA는 2PC 대신 <code>Saga(사가)</code> + <code>Outbox</code> + <code>멱등 소비자</code>로 <strong>최종 일관성</strong>을 택하는 게 정석. "강한 원자성 대신 보상 트랜잭션으로 일관성을 맞춘다"가 답.
+    </div>
+
+    <h3>Saga 패턴 개요 <span class="deep">🔥 Deep-dive (backend-architecture-coach로 연결)</span></h3>
+    <p>Saga는 긴 트랜잭션을 <strong>로컬 트랜잭션의 연쇄</strong>로 쪼개고, 중간 실패 시 <strong>보상 트랜잭션(Compensating Transaction)</strong>으로 되돌린다. 잠금을 길게 쥐지 않아 가용성·처리량이 높지만, <em>격리성이 약해져</em> 중간 상태가 외부에 노출될 수 있다.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    O["① 주문 생성\n(local txn)"] --> P["② 결제 승인\n(local txn)"]
+    P --> S["③ 재고 차감\n(local txn)"]
+    S --> D["④ 배송 생성\n(local txn)"]
+    D --> Done(["완료"])
+
+    S -.->|"실패"| CP["보상: 결제 취소"]
+    CP -.-> CO["보상: 주문 취소"]
+
+    style O fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a
+    style P fill:#fef3c7,stroke:#f59e0b,color:#78350f
+    style S fill:#ede9fe,stroke:#8b5cf6,color:#3b0764
+    style D fill:#dcfce7,stroke:#22c55e,color:#14532d
+    style CP fill:#fee2e2,stroke:#ef4444
+    style CO fill:#fee2e2,stroke:#ef4444
+      </div>
+      <div class="cap">Saga — 재고 차감 실패 시 결제·주문을 보상 트랜잭션으로 역순 롤백. 2PC의 잠금 대신 최종 일관성.</div>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 실무 함정 — Saga는 공짜가 아니다</div>
+      보상 로직을 <strong>모든 실패 경로마다</strong> 설계해야 하고, 보상이 또 실패하면? 멱등성과 재시도, dead-letter가 필수다. 또 ③ 재고가 차감된 중간 상태에서 사용자가 조회하면 "있던 재고가 사라진" 비격리 현상을 볼 수 있다. <strong>"Saga가 2PC보다 항상 낫다"가 아니라, 강한 격리가 필요 없을 때만 우월</strong>하다.
+    </div>
+  </section>
+
+  <!-- ── Section 7: CP/AP 분류 ── -->
+  <section id="classify">
+    <h2>7. CP / AP 시스템 분류 — 어디에 무엇을 쓰나</h2>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>시스템</th><th>CAP 성향</th><th>일관성 모델</th><th>전형적 용도</th></tr></thead>
+        <tbody>
+          <tr><td><strong>ZooKeeper / etcd</strong></td><td><strong style="color:var(--oms-b)">CP</strong></td><td>Linearizable (합의 기반)</td><td>분산 락·리더 선출·서비스 디스커버리·설정 저장</td></tr>
+          <tr><td><strong>HBase / BigTable</strong></td><td><strong style="color:var(--oms-b)">CP</strong></td><td>Strong (region 단위)</td><td>대용량 OLTP·시계열·로그 분석 백엔드</td></tr>
+          <tr><td><strong>Spanner / CockroachDB</strong></td><td><strong style="color:var(--oms-b)">CP</strong></td><td>외부 일관성 / Serializable</td><td>글로벌 분산 + 강한 일관성이 동시에 필요할 때</td></tr>
+          <tr><td><strong>Cassandra</strong></td><td><strong style="color:var(--ret-b)">AP</strong></td><td>Tunable (W·R로 조절)</td><td>쓰기 폭주·시계열·로그·피드</td></tr>
+          <tr><td><strong>DynamoDB / Riak</strong></td><td><strong style="color:var(--ret-b)">AP</strong></td><td>Eventual (옵션으로 Strong 읽기)</td><td>세션·장바구니·카탈로그·고가용 KV</td></tr>
+          <tr><td><strong>MySQL/PostgreSQL (단일 노드)</strong></td><td>CA 영역*</td><td>Serializable~RC</td><td>* 분할이 없는 단일 노드라 CAP 논의 밖. 복제 붙이면 PACELC 적용</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">💡 설계 한 줄 요약</div>
+      <strong>"틀린 답을 빠르게 주느니, 늦게라도 맞는 답을 줘야 하는 경로"</strong>(잔액·재고·예약) → <code>CP</code>.<br>
+      <strong>"좀 틀려도 되니 항상 응답해야 하는 경로"</strong>(피드·좋아요·추적 표시) → <code>AP</code>.<br>
+      하나의 서비스 안에서도 경로별로 다른 저장소·일관성을 섞는 게 시니어의 설계다. 토스 = 송금 CP + 알림 AP, 쿠팡 = 재고 CP + 상품 추천 AP.
+    </div>
+  </section>
+
+  <!-- ── Section 8: 이해도 확인 ── -->
+  <section id="quiz">
+    <h2>8. 이해도 확인 질문</h2>
+
+    <div class="q-card">
+      <div class="q-num">Q1</div>
+      <p>"우리는 P를 버리고 CA 시스템으로 설계하겠습니다"라는 답변이 왜 분산 시스템 면접에서 감점인지 설명하고, CAP에서 <strong>실제로 선택 가능한 것이 무엇인지</strong> 정확히 진술해보세요. (Partition이 전제인 이유 포함)</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>내 답변</span>
+          <span class="saved-badge" id="saved1">저장됨 ✓</span>
+        </div>
+        <textarea id="ans1" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q2</div>
+      <p>N=5 복제본에서 <code>W=3, R=3</code>과 <code>W=1, R=1</code>의 일관성·가용성·지연을 비교하세요. 또한 <strong>quorum(W+R&gt;N)이 보장하는 것과 보장하지 <em>못</em>하는 것</strong>(예: 동시 쓰기 충돌)을 구분해 설명해보세요.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>내 답변</span>
+          <span class="saved-badge" id="saved2">저장됨 ✓</span>
+        </div>
+        <textarea id="ans2" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-num">Q3</div>
+      <p>주문-결제-재고-배송을 묶는 분산 트랜잭션을 설계할 때 <code>2PC</code> 대신 <code>Saga</code>를 택하는 이유를 <strong>2PC의 blocking·SPOF 한계</strong>와 함께 설명하고, Saga가 도입하는 <strong>새로운 비용</strong>(보상 로직·약한 격리)도 함께 짚어보세요. 물류 맥락(재고 차감 실패 시 보상)으로 예를 들면 가산점.</p>
+      <div class="ans-area">
+        <div class="ans-label">
+          <span>내 답변</span>
+          <span class="saved-badge" id="saved3">저장됨 ✓</span>
+        </div>
+        <textarea id="ans3" placeholder="답변을 입력하세요... (자동 저장됩니다)"></textarea>
+      </div>
+    </div>
+
+    <div class="feedback-box">
+      <p>답변을 다 작성했다면 아래 버튼으로 Q&amp;A 전체를 클립보드에 복사한 뒤, 채팅창에 붙여넣기 해서 코치에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 — Q&amp;A 복사하기</button>
+      <div class="copy-result" id="copyResult"></div>
+    </div>
+  </section>
+
+  <!-- ── Section 9: 다음 학습 ── -->
+  <section id="next">
+    <h2>9. 다음 학습 후보</h2>
+    <div class="next-grid">
+      <div class="next-card">
+        <div class="coach">backend-architecture-coach</div>
+        <div class="topic">Saga / Outbox / 멱등성 심화 설계 (Concept 모드)</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">database-coach</div>
+        <div class="topic">격리 수준(Isolation Level)과 Serializability</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">system-design-coach</div>
+        <div class="topic">Rate Limiter 설계 케이스 (Design 모드)</div>
+      </div>
+      <div class="next-card">
+        <div class="coach">system-design-coach</div>
+        <div class="topic">Consistent Hashing & 복제 토폴로지</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // ── Mermaid ──
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    themeVariables: {
+      primaryColor: '#dbeafe',
+      primaryTextColor: '#1e293b',
+      primaryBorderColor: '#3b82f6',
+      lineColor: '#64748b',
+      secondaryColor: '#fef3c7',
+      tertiaryColor: '#ede9fe',
+      fontSize: '13px'
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    sequence: { actorMargin: 50, messageMargin: 35 }
+  });
+
+  // ── Active sidebar link on scroll ──
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('#sidebar a');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`#sidebar a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.25 });
+  sections.forEach(s => io.observe(s));
+
+  // ── Q&A localStorage (key namespace per file) ──
+  const NS = 'jobStudy::system-design::07-consistency-consensus::';
+  const ansIds = ['ans1', 'ans2', 'ans3'];
+
+  // Load saved answers on page load
+  ansIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem(NS + id);
+    if (saved) el.value = saved;
+
+    // Auto-save with debounce
+    let timer;
+    el.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        localStorage.setItem(NS + id, el.value);
+        const badge = document.getElementById('saved' + (i + 1));
+        if (badge) {
+          badge.classList.add('show');
+          setTimeout(() => badge.classList.remove('show'), 1800);
+        }
+      }, 400);
+    });
+  });
+
+  // ── Copy Q&A for feedback ──
+  function copyForFeedback() {
+    const questions = [
+      'Q1. "P를 버리고 CA로 설계하겠다"가 왜 분산 시스템 면접에서 감점인지 설명하고, CAP에서 실제로 선택 가능한 것(C vs A)을 Partition이 전제인 이유와 함께 정확히 진술해보세요.',
+      'Q2. N=5에서 W=3,R=3 vs W=1,R=1 의 일관성·가용성·지연을 비교하고, quorum(W+R>N)이 보장하는 것과 보장하지 못하는 것(동시 쓰기 충돌 등)을 구분해 설명해보세요.',
+      'Q3. 주문-결제-재고-배송 분산 트랜잭션에서 2PC 대신 Saga를 택하는 이유를 2PC의 blocking·SPOF 한계와 함께 설명하고, Saga가 새로 도입하는 비용(보상 로직·약한 격리)도 물류 맥락 예시와 함께 짚어보세요.'
+    ];
+
+    const lines = ['[일관성과 합의 — 이해도 확인 Q&A 피드백 요청]\n세션: system-design/07-consistency-consensus.html\n'];
+    ansIds.forEach((id, i) => {
+      const ans = (document.getElementById(id)?.value || '').trim() || '(답변 없음)';
+      lines.push(questions[i]);
+      lines.push('A' + (i + 1) + '. ' + ans + '\n');
+    });
+
+    const text = lines.join('\n');
+    const resultEl = document.getElementById('copyResult');
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        resultEl.textContent = '✅ 클립보드에 복사됐습니다! 채팅창에 붙여넣기 후 "피드백 주세요"라고 입력하세요.';
+      }).catch(() => fallbackCopy(text, resultEl));
+    } else {
+      fallbackCopy(text, resultEl);
+    }
+  }
+
+  function fallbackCopy(text, el) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try {
+      document.execCommand('copy');
+      el.textContent = '✅ 복사됐습니다! 채팅창에 붙여넣기 하세요.';
+    } catch {
+      el.textContent = '⚠️ 복사 실패 — 직접 텍스트를 선택해서 복사하세요.';
+    }
+    document.body.removeChild(ta);
+  }
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>
