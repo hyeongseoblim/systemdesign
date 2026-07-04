@@ -128,6 +128,38 @@ jobStudy/
 ### 참고 템플릿
 `logistics/00-domain-overview.html` 이 기준 템플릿. 새 파일 작성 시 이 파일의 구조(CSS 변수, 컴포넌트 클래스, JS 패턴)를 재사용.
 
+## 학습 인덱스 대시보드
+
+루트 `index.html` 은 학습 자료 인덱스 대시보드다. https://hyeongseoblim.github.io/systemdesign/ 에 자동 배포되며, 모든 HTML 산출물이 카드로 모인다.
+
+### 코치가 새 HTML 을 만들 때 함께 챙길 것
+
+1. **HTML 파일 작성** — 위 출력 규칙대로 작성.
+2. **`data/contents.manual.json` 에 항목 추가** — 빌드 스크립트가 HTML 에서 못 뽑는 메타를 여기서 보강한다. 새 항목 키는 콘텐츠 ID(예: `system-design/01-url-shortener`)이며 다음 필드를 채운다.
+   - `tags`: 검색·필터에 쓰이는 핵심 키워드 배열 (5–7개 권장)
+   - `difficulty`: 1–5 정수 (1 입문 ~ 5 시니어)
+   - `estimatedMinutes`: 학습 예상 소요(분)
+   - `keywords`: tags 보다 학습 의도에 가까운 한국어 키워드
+   - `description`: 한 줄 요약 (카드 부제목으로 표시)
+   - `prerequisites`: 선수 학습 콘텐츠 ID 배열 (없으면 `[]`)
+3. **Q&A 입력 키 패턴** — 신규 HTML 은 **Group A 패턴**을 권장한다.
+   - `<textarea id="ans1">` + `const ansIds = ['ans1', 'ans2', ...]` + `const questions = ['Q문장', ...]`
+   - localStorage 키: `jobStudy::<경로>::<파일명>::ans1`
+   - 빌드 스크립트가 `ansIds` / `questions` 배열을 그대로 읽어 인덱스 메타에 저장한다.
+   - (Group B: `<textarea id="ans-XXX-q1">` + `saveAns('XXX-q1', ...)` 도 파서가 지원하지만, 질문 추출이 더 까다롭다.)
+
+### 빌드와 배포
+
+- 인덱스 빌드: `node scripts/build-index.mjs` → `data/contents.json` 재생성.
+- **로컬 빌드는 push 전 검증용**. main 으로 push 되면 GitHub Actions(`.github/workflows/build-and-deploy.yml`)가 자동으로 빌드 후 Pages 에 배포한다. 따라서 평소엔 `data/contents.json` 을 수동 commit 할 필요 없다.
+- 로컬 미리보기: `python3 -m http.server 8765` → http://localhost:8765/
+
+### 클라우드 동기화
+
+- 각 학습 HTML 은 `assets/qna-sync.js` 가 와이어링되어 있다. 답변을 입력하면 Cloudflare Worker(`worker/worker.js`)를 거쳐 GitHub `answers/<경로>/<파일명>.json` 에 자동 저장된다.
+- 인덱스 대시보드(`assets/qa-aggregator.js`)는 같은 경로의 `answers/*.json` 을 read-only 로 prefetch 하고, **cloud 우선 → localStorage fallback** 정책으로 통합 표시한다. 디바이스 간 답변 공유가 자동.
+- 새 HTML 을 추가하면 첫 답변 입력 시 워커가 자동으로 `answers/` 하위 파일을 만든다. 별도 작업 불필요.
+
 ## 세션 시작 프로토콜
 
 새 세션을 열었을 때 사용자 요청이 모호하면 다음을 차례로 확인한다.

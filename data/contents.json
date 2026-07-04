@@ -1,0 +1,328 @@
+{
+  "version": 1,
+  "generatedAt": "2026-04-25T05:05:51.970Z",
+  "contents": [
+    {
+      "id": "backend/00-introduction",
+      "path": "backend/00-introduction.html",
+      "area": "backend",
+      "title": "백엔드 구현 핵심 개념 개관",
+      "h1": "백엔드 구현 핵심 개념 개관",
+      "coach": "backend-dev-coach",
+      "mode": "concept",
+      "sessionLabel": "Session #0 — 구현 기초 개관",
+      "createdAt": null,
+      "chips": [
+        "🎓 Concept 모드",
+        "backend-dev-coach",
+        "Session #0 — 구현 기초 개관"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [],
+      "qaNs": "jobStudy::backend::00-introduction::",
+      "lineCount": 367,
+      "fileSizeKB": 22.9,
+      "updatedAt": "2026-04-25",
+      "tags": [
+        "Spring",
+        "transaction",
+        "concurrency",
+        "test-pyramid",
+        "observability"
+      ],
+      "difficulty": 2,
+      "estimatedMinutes": 40,
+      "prerequisites": [],
+      "keywords": [
+        "트랜잭션",
+        "동시성",
+        "테스트",
+        "관측성"
+      ],
+      "description": "백엔드 구현 핵심 개념 — Spring 라이프사이클, 트랜잭션, 동시성, 관측성"
+    },
+    {
+      "id": "backend/architecture/00-introduction",
+      "path": "backend/architecture/00-introduction.html",
+      "area": "backend/architecture",
+      "title": "백엔드 아키텍처 핵심 패턴 개관",
+      "h1": "백엔드 아키텍처 핵심 패턴 개관",
+      "coach": "backend-architecture-coach",
+      "mode": "concept",
+      "sessionLabel": "Session #0 — 아키텍처 패턴 개관",
+      "createdAt": null,
+      "chips": [
+        "🎓 Concept 모드",
+        "backend-architecture-coach",
+        "Session #0 — 아키텍처 패턴 개관"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [],
+      "qaNs": "jobStudy::backend::architecture::00-introduction::",
+      "lineCount": 386,
+      "fileSizeKB": 22.4,
+      "updatedAt": "2026-04-25",
+      "tags": [
+        "MSA",
+        "DDD",
+        "Saga",
+        "CQRS",
+        "Outbox",
+        "modular-monolith"
+      ],
+      "difficulty": 3,
+      "estimatedMinutes": 50,
+      "prerequisites": [],
+      "keywords": [
+        "Bounded Context",
+        "Aggregate",
+        "Idempotency"
+      ],
+      "description": "백엔드 아키텍처 패턴 개관 — MSA vs Modular Monolith부터 Saga·CQRS·Outbox까지"
+    },
+    {
+      "id": "cs/00-introduction",
+      "path": "cs/00-introduction.html",
+      "area": "cs",
+      "title": "CS 기초 핵심 개념 개관",
+      "h1": "CS 기초 핵심 개념 개관",
+      "coach": "cs-fundamentals-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-04-15",
+      "chips": [
+        "cs-fundamentals-coach",
+        "Concept Mode",
+        "v0.1 — 2026-04-15"
+      ],
+      "qaCount": 4,
+      "qaIds": [
+        "cs-q1",
+        "cs-q2",
+        "cs-q3",
+        "cs-q4"
+      ],
+      "qaQuestions": [],
+      "qaNs": "jobStudy::cs::00-introduction::",
+      "lineCount": 578,
+      "fileSizeKB": 33.3,
+      "updatedAt": "2026-04-25",
+      "tags": [
+        "data-structure",
+        "algorithm",
+        "OS",
+        "TCP",
+        "TLS",
+        "deadlock",
+        "I/O"
+      ],
+      "difficulty": 2,
+      "estimatedMinutes": 45,
+      "prerequisites": [],
+      "keywords": [
+        "복잡도",
+        "프로세스 상태",
+        "TCP 핸드셰이크",
+        "Deadlock"
+      ],
+      "description": "CS 기초 개관 — 자료구조·OS·네트워크(TCP/TLS)·동시성 이론"
+    },
+    {
+      "id": "database/00-introduction",
+      "path": "database/00-introduction.html",
+      "area": "database",
+      "title": "데이터베이스 핵심 개념 개관",
+      "h1": "데이터베이스 핵심 개념 개관",
+      "coach": "database-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-04-15",
+      "chips": [
+        "database-coach",
+        "Concept Mode",
+        "v0.1 — 2026-04-15"
+      ],
+      "qaCount": 4,
+      "qaIds": [
+        "db-q1",
+        "db-q2",
+        "db-q3",
+        "db-q4"
+      ],
+      "qaQuestions": [],
+      "qaNs": "jobStudy::database::00-introduction::",
+      "lineCount": 596,
+      "fileSizeKB": 33,
+      "updatedAt": "2026-04-25",
+      "tags": [
+        "index",
+        "lock",
+        "isolation",
+        "replication",
+        "B+Tree",
+        "RDBMS",
+        "NoSQL"
+      ],
+      "difficulty": 2,
+      "estimatedMinutes": 45,
+      "prerequisites": [],
+      "keywords": [
+        "격리수준",
+        "B+Tree",
+        "낙관적/비관적 락",
+        "복제"
+      ],
+      "description": "데이터베이스 핵심 — 인덱스·락·격리수준·복제와 RDBMS/NoSQL 선택"
+    },
+    {
+      "id": "infra/00-introduction",
+      "path": "infra/00-introduction.html",
+      "area": "infra",
+      "title": "인프라·DevOps 핵심 개념 개관",
+      "h1": "인프라·DevOps 핵심 개념 개관",
+      "coach": "infra-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-04-15",
+      "chips": [
+        "infra-coach",
+        "Concept Mode",
+        "v0.1 — 2026-04-15"
+      ],
+      "qaCount": 4,
+      "qaIds": [
+        "infra-q1",
+        "infra-q2",
+        "infra-q3",
+        "infra-q4"
+      ],
+      "qaQuestions": [],
+      "qaNs": "jobStudy::infra::00-introduction::",
+      "lineCount": 629,
+      "fileSizeKB": 31.5,
+      "updatedAt": "2026-04-25",
+      "tags": [
+        "AWS",
+        "VPC",
+        "Kubernetes",
+        "CI/CD",
+        "deployment",
+        "SRE"
+      ],
+      "difficulty": 3,
+      "estimatedMinutes": 50,
+      "prerequisites": [],
+      "keywords": [
+        "Blue-Green",
+        "오토스케일",
+        "다중 AZ",
+        "관측성"
+      ],
+      "description": "인프라·DevOps 개관 — AWS·K8s·CI/CD·배포 전략·SRE 기본"
+    },
+    {
+      "id": "logistics/00-domain-overview",
+      "path": "logistics/00-domain-overview.html",
+      "area": "logistics",
+      "title": "물류 도메인 전체 지도 — OMS / WMS / TMS 개관",
+      "h1": "물류 도메인 전체 지도OMS / WMS / TMS 개관",
+      "coach": "logistics-domain-coach",
+      "mode": "concept",
+      "sessionLabel": "Session #1",
+      "createdAt": "2026-04-15",
+      "chips": [
+        "🎓 Concept 모드",
+        "logistics-domain-coach",
+        "2026-04-15",
+        "Session #1"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. OMS의 \"가용 재고(Available)\"와 WMS의 \"실물 재고(On-hand)\"가 순간적으로 다를 수 있는 상황을 3가지 이상 설명하고, 동기화 방향까지 제시해보세요.",
+        "Q2. 쿠팡(수직 통합) vs 전통 이커머스(3PL 위탁) — 리드타임·데이터 일관성·확장성·초기 투자비 관점에서 비교해보세요.",
+        "Q3. \"주문 1건 = 배송 1건\"이 깨지는 구체 시나리오 2개와, Order ↔ Shipment의 카디널리티·상태 전이 설계에 미치는 영향을 설명해보세요."
+      ],
+      "qaNs": "jobStudy::logistics::00-domain-overview::",
+      "lineCount": 803,
+      "fileSizeKB": 37.1,
+      "updatedAt": "2026-04-25",
+      "tags": [
+        "OMS",
+        "WMS",
+        "TMS",
+        "last-mile",
+        "returns",
+        "쿠팡",
+        "Saga"
+      ],
+      "difficulty": 2,
+      "estimatedMinutes": 45,
+      "prerequisites": [],
+      "keywords": [
+        "밸류체인",
+        "재고 정합성",
+        "라스트마일",
+        "역물류"
+      ],
+      "description": "물류 도메인 전체 지도 — OMS/WMS/TMS와 라스트마일·역물류까지 한눈에"
+    },
+    {
+      "id": "system-design/00-introduction",
+      "path": "system-design/00-introduction.html",
+      "area": "system-design",
+      "title": "시스템 디자인 면접 방법론 개관",
+      "h1": "시스템 디자인 면접 방법론 개관",
+      "coach": "system-design-coach",
+      "mode": "concept",
+      "sessionLabel": "Session #0 — 방법론 개관",
+      "createdAt": null,
+      "chips": [
+        "🎓 Concept 모드",
+        "system-design-coach",
+        "Session #0 — 방법론 개관"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [],
+      "qaNs": "jobStudy::system-design::00-introduction::",
+      "lineCount": 350,
+      "fileSizeKB": 24.1,
+      "updatedAt": "2026-04-25",
+      "tags": [
+        "framework",
+        "capacity-estimation",
+        "CAP",
+        "PACELC",
+        "trade-off"
+      ],
+      "difficulty": 2,
+      "estimatedMinutes": 40,
+      "prerequisites": [],
+      "keywords": [
+        "6단계 프레임워크",
+        "용량 추정",
+        "Building Blocks"
+      ],
+      "description": "시스템 디자인 면접의 6단계 프레임워크와 용량 추정·CAP 기초"
+    }
+  ]
+}

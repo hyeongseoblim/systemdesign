@@ -3,404 +3,103 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SYSTEM DESIGN Study Index</title>
-  <style>
-    :root {
-      --bg: #0f172a;
-      --bg-card: #1e293b;
-      --bg-card-hover: #334155;
-      --text: #e2e8f0;
-      --text-muted: #94a3b8;
-      --accent: #38bdf8;
-      --border: #334155;
-      --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
-    @media (prefers-color-scheme: light) {
-      :root {
-        --bg: #f8fafc;
-        --bg-card: #ffffff;
-        --bg-card-hover: #f1f5f9;
-        --text: #0f172a;
-        --text-muted: #64748b;
-        --accent: #0284c7;
-        --border: #e2e8f0;
-        --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-      }
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.6;
-      min-height: 100vh;
-      padding: 2rem 1rem;
-    }
-    .container { max-width: 1100px; margin: 0 auto; }
-    header { margin-bottom: 3rem; text-align: center; }
-    header h1 {
-      font-size: 2.25rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 0.5rem;
-    }
-    header p { color: var(--text-muted); font-size: 1rem; }
-    .group { margin-bottom: 2.5rem; }
-    .group-title {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 1rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 1px solid var(--border);
-    }
-    .group-title h2 {
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: var(--accent);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .group-title .count {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      background: var(--bg-card);
-      padding: 0.15rem 0.55rem;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 1rem;
-    }
-    .card {
-      display: block;
-      padding: 1.25rem;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      text-decoration: none;
-      color: inherit;
-      transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
-      box-shadow: var(--shadow);
-    }
-    .card:hover {
-      background: var(--bg-card-hover);
-      border-color: var(--accent);
-      transform: translateY(-2px);
-    }
-    .card-title {
-      font-weight: 600;
-      font-size: 1.05rem;
-      margin-bottom: 0.35rem;
-      color: var(--text);
-    }
-    .card-path {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      font-family: "SF Mono", Menlo, Consolas, monospace;
-      word-break: break-all;
-    }
-    footer {
-      margin-top: 3rem;
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 0.85rem;
-    }
-    footer a { color: var(--accent); text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
-  </style>
+  <title>jobStudy 대시보드</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./assets/dashboard.css" />
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>SYSTEM DESIGN</h1>
-      <p>주제별 학습 자료 모음 — 백엔드 이직 준비 스터디룸</p>
-    </header>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-emoji">🎓</span>
+        <div>
+          <h1 class="brand-title">jobStudy 대시보드</h1>
+          <p class="brand-sub">백엔드 이직 준비 — 시스템 디자인·물류 도메인·백엔드·DB·인프라·CS</p>
+        </div>
+      </div>
+      <div class="search-wrap">
+        <input id="searchBox" class="search-box" type="search" placeholder="🔍 제목·태그·코치·키워드 검색…" autocomplete="off" />
+      </div>
+      <div class="kpis">
+        <div class="kpi"><span class="kpi-num" id="kpiProgress">–</span><span class="kpi-lbl">진도</span></div>
+        <div class="kpi"><span class="kpi-num" id="kpiReview">–</span><span class="kpi-lbl">오늘 복습</span></div>
+        <div class="kpi"><span class="kpi-num" id="kpiQa">–</span><span class="kpi-lbl">미답변 Q</span></div>
+        <button class="theme-toggle" id="themeToggle" title="다크모드 전환">🌙</button>
+      </div>
+    </div>
+  </header>
 
-    <section class="group">
-      <div class="group-title">
-        <h2>System Design</h2>
-        <span class="count">11</span>
-      </div>
-      <div class="grid">
-        <a class="card" href="./system-design/00-introduction.html" title="시스템 디자인 면접 방법론 개관">
-          <div class="card-title">시스템 디자인 면접 방법론 개관</div>
-          <div class="card-path">system-design/00-introduction.html</div>
-        </a>
-        <a class="card" href="./system-design/01-fundamentals.html" title="시스템 디자인 기초 — Scalability · Availability · Consistency · Latency · SLA">
-          <div class="card-title">시스템 디자인 기초</div>
-          <div class="card-path">system-design/01-fundamentals.html</div>
-        </a>
-        <a class="card" href="./system-design/02-capacity-estimation.html" title="용량 추정 — Back-of-the-envelope (DAU → QPS → 스토리지 → 대역폭)">
-          <div class="card-title">용량 추정</div>
-          <div class="card-path">system-design/02-capacity-estimation.html</div>
-        </a>
-        <a class="card" href="./system-design/03-networking.html" title="네트워킹 빌딩블록 — DNS / CDN / LB / API Gateway / REST·gRPC·GraphQL">
-          <div class="card-title">네트워킹 빌딩블록</div>
-          <div class="card-path">system-design/03-networking.html</div>
-        </a>
-        <a class="card" href="./system-design/04-data-storage.html" title="데이터 저장·확장 — SQL/NoSQL · 복제 · 파티셔닝 · 샤딩 · 일관성 해시">
-          <div class="card-title">데이터 저장·확장</div>
-          <div class="card-path">system-design/04-data-storage.html</div>
-        </a>
-        <a class="card" href="./system-design/05-caching.html" title="캐싱(Caching) — 계층·패턴·Eviction·Redis·Stampede">
-          <div class="card-title">캐싱(Caching)</div>
-          <div class="card-path">system-design/05-caching.html</div>
-        </a>
-        <a class="card" href="./system-design/06-messaging-async.html" title="메시징·비동기(Messaging &amp; Async) — Kafka·전달보장·Back-pressure">
-          <div class="card-title">메시징·비동기(Messaging &amp; Async)</div>
-          <div class="card-path">system-design/06-messaging-async.html</div>
-        </a>
-        <a class="card" href="./system-design/07-consistency-consensus.html" title="일관성과 합의 — CAP / PACELC / Quorum / Raft / 2PC·Saga">
-          <div class="card-title">일관성과 합의</div>
-          <div class="card-path">system-design/07-consistency-consensus.html</div>
-        </a>
-        <a class="card" href="./system-design/08-case-rate-limiter.html" title="Rate Limiter 설계 케이스 — 알고리즘·분산·Redis">
-          <div class="card-title">Rate Limiter 설계 케이스</div>
-          <div class="card-path">system-design/08-case-rate-limiter.html</div>
-        </a>
-        <a class="card" href="./system-design/09-case-url-shortener.html" title="URL 단축기 설계 — System Design 케이스">
-          <div class="card-title">URL 단축기 설계</div>
-          <div class="card-path">system-design/09-case-url-shortener.html</div>
-        </a>
-        <a class="card" href="./system-design/10-case-delivery-tracking.html" title="라스트마일 실시간 배송 추적 시스템 설계 — System Design 케이스">
-          <div class="card-title">라스트마일 실시간 배송 추적 시스템 설계</div>
-          <div class="card-path">system-design/10-case-delivery-tracking.html</div>
-        </a>
-      </div>
-    </section>
+  <div class="layout">
+    <aside class="filters" id="filters">
+      <section class="filter-block">
+        <h3>영역</h3>
+        <div class="filter-list" id="areaFilters"></div>
+      </section>
+      <section class="filter-block">
+        <h3>코치</h3>
+        <div class="filter-list" id="coachFilters"></div>
+      </section>
+      <section class="filter-block">
+        <h3>모드</h3>
+        <div class="filter-list" id="modeFilters"></div>
+      </section>
+      <section class="filter-block">
+        <h3>난이도</h3>
+        <div class="filter-list" id="difficultyFilters"></div>
+      </section>
+      <section class="filter-block">
+        <h3>학습 상태</h3>
+        <div class="filter-list" id="statusFilters"></div>
+      </section>
+      <button id="resetFilters" class="reset-btn">필터 초기화</button>
+    </aside>
 
-    <section class="group">
-      <div class="group-title">
-        <h2>Logistics</h2>
-        <span class="count">8</span>
+    <main class="content">
+      <div class="result-bar">
+        <span id="resultCount" class="result-count">로딩 중…</span>
+        <div class="sort-wrap">
+          <label for="sortSelect">정렬:</label>
+          <select id="sortSelect">
+            <option value="area">영역 → 코치순</option>
+            <option value="recent">최근 학습순</option>
+            <option value="difficulty">난이도순</option>
+            <option value="title">제목순</option>
+          </select>
+        </div>
       </div>
-      <div class="grid">
-        <a class="card" href="./logistics/00-domain-overview.html" title="물류 도메인 전체 지도 — OMS / WMS / TMS 개관">
-          <div class="card-title">물류 도메인 전체 지도</div>
-          <div class="card-path">logistics/00-domain-overview.html</div>
-        </a>
-        <a class="card" href="./logistics/01-oms-order-management.html" title="OMS 심화 — 주문 수명주기 · 할당 · 분할출고">
-          <div class="card-title">OMS 심화</div>
-          <div class="card-path">logistics/01-oms-order-management.html</div>
-        </a>
-        <a class="card" href="./logistics/02-wms-warehouse.html" title="WMS 심화 — 입고·피킹·재고상태 · Oversell 방지">
-          <div class="card-title">WMS 심화</div>
-          <div class="card-path">logistics/02-wms-warehouse.html</div>
-        </a>
-        <a class="card" href="./logistics/03-tms-transportation.html" title="TMS 심화 — 운송장 상태머신 · 허브앤스포크 · 배차">
-          <div class="card-title">TMS 심화</div>
-          <div class="card-path">logistics/03-tms-transportation.html</div>
-        </a>
-        <a class="card" href="./logistics/04-fulfillment-inventory.html" title="풀필먼트 모델 · 재고 정합성 — 자체 FC vs 3PL vs 드랍쉬핑 · 멀티 창고 할당 · 안전재고">
-          <div class="card-title">풀필먼트 모델 · 재고 정합성</div>
-          <div class="card-path">logistics/04-fulfillment-inventory.html</div>
-        </a>
-        <a class="card" href="./logistics/05-last-mile-routing.html" title="라스트마일 심화 — 배차 · 라우팅 · 실시간 재최적화 · POD">
-          <div class="card-title">라스트마일 심화</div>
-          <div class="card-path">logistics/05-last-mile-routing.html</div>
-        </a>
-        <a class="card" href="./logistics/06-returns-reverse-logistics.html" title="반품 · 역물류 심화 — 정·역 상태 합류 · QC · 환불 흐름">
-          <div class="card-title">반품 · 역물류 심화</div>
-          <div class="card-path">logistics/06-returns-reverse-logistics.html</div>
-        </a>
-        <a class="card" href="./logistics/07-case-studies.html" title="물류사 비교 사례 연구 — 쿠팡 · CJ대한통운 · 컬리 · Amazon">
-          <div class="card-title">물류사 비교 사례 연구</div>
-          <div class="card-path">logistics/07-case-studies.html</div>
-        </a>
+      <div id="cardGrid" class="card-grid"></div>
+      <div id="emptyState" class="empty-state" hidden>
+        <p>검색 결과가 없습니다.</p>
+        <button onclick="window.dispatchEvent(new CustomEvent('jobstudy:reset-filters'))">필터 초기화</button>
       </div>
-    </section>
+    </main>
 
-    <section class="group">
-      <div class="group-title">
-        <h2>Backend</h2>
-        <span class="count">7</span>
-      </div>
-      <div class="grid">
-        <a class="card" href="./backend/00-introduction.html" title="백엔드 구현 핵심 개념 개관">
-          <div class="card-title">백엔드 구현 핵심 개념 개관</div>
-          <div class="card-path">backend/00-introduction.html</div>
-        </a>
-        <a class="card" href="./backend/01-api-design.html" title="REST API 설계 — 리소스·버저닝·페이지네이션·에러 모델">
-          <div class="card-title">REST API 설계</div>
-          <div class="card-path">backend/01-api-design.html</div>
-        </a>
-        <a class="card" href="./backend/02-concurrency.html" title="동시성 — 스레드·락·메모리 가시성·재고 차감">
-          <div class="card-title">동시성</div>
-          <div class="card-path">backend/02-concurrency.html</div>
-        </a>
-        <a class="card" href="./backend/03-transaction.html" title="트랜잭션 — ACID·격리수준·전파·분산 트랜잭션">
-          <div class="card-title">트랜잭션</div>
-          <div class="card-path">backend/03-transaction.html</div>
-        </a>
-        <a class="card" href="./backend/04-resilience-idempotency.html" title="복원력 · 멱등성 — Retry·Circuit Breaker·Idempotency-Key">
-          <div class="card-title">복원력 · 멱등성</div>
-          <div class="card-path">backend/04-resilience-idempotency.html</div>
-        </a>
-        <a class="card" href="./backend/05-testing.html" title="테스트 — 피라미드·Testcontainers·Contract·동시성">
-          <div class="card-title">테스트</div>
-          <div class="card-path">backend/05-testing.html</div>
-        </a>
-        <a class="card" href="./backend/06-observability.html" title="관측성 — 로그·메트릭(RED/USE)·트레이싱·OpenTelemetry">
-          <div class="card-title">관측성</div>
-          <div class="card-path">backend/06-observability.html</div>
-        </a>
-      </div>
-    </section>
-
-    <section class="group">
-      <div class="group-title">
-        <h2>Backend · Architecture</h2>
-        <span class="count">7</span>
-      </div>
-      <div class="grid">
-        <a class="card" href="./backend/architecture/00-introduction.html" title="백엔드 아키텍처 핵심 패턴 개관">
-          <div class="card-title">백엔드 아키텍처 핵심 패턴 개관</div>
-          <div class="card-path">backend/architecture/00-introduction.html</div>
-        </a>
-        <a class="card" href="./backend/architecture/01-msa-vs-monolith.html" title="Modular Monolith vs MSA — 분리 기준과 마이그레이션 전략">
-          <div class="card-title">Modular Monolith vs MSA</div>
-          <div class="card-path">backend/architecture/01-msa-vs-monolith.html</div>
-        </a>
-        <a class="card" href="./backend/architecture/02-ddd.html" title="DDD — Bounded Context · Aggregate · Context Map">
-          <div class="card-title">DDD</div>
-          <div class="card-path">backend/architecture/02-ddd.html</div>
-        </a>
-        <a class="card" href="./backend/architecture/03-event-driven.html" title="Event-Driven Architecture — 도메인/통합 이벤트 · Choreography vs Orchestration">
-          <div class="card-title">Event-Driven Architecture</div>
-          <div class="card-path">backend/architecture/03-event-driven.html</div>
-        </a>
-        <a class="card" href="./backend/architecture/04-saga.html" title="Saga 패턴 — 분산 트랜잭션 · 보상 트랜잭션 · 주문-결제-배송">
-          <div class="card-title">Saga 패턴</div>
-          <div class="card-path">backend/architecture/04-saga.html</div>
-        </a>
-        <a class="card" href="./backend/architecture/05-cqrs-event-sourcing.html" title="CQRS &amp; Event Sourcing — 읽기/쓰기 분리 · Projection · Trade-off">
-          <div class="card-title">CQRS &amp; Event Sourcing</div>
-          <div class="card-path">backend/architecture/05-cqrs-event-sourcing.html</div>
-        </a>
-        <a class="card" href="./backend/architecture/06-outbox-idempotency.html" title="Transactional Outbox &amp; Idempotency — Dual-write · CDC · Exactly-once">
-          <div class="card-title">Transactional Outbox &amp; Idempotency</div>
-          <div class="card-path">backend/architecture/06-outbox-idempotency.html</div>
-        </a>
-      </div>
-    </section>
-
-    <section class="group">
-      <div class="group-title">
-        <h2>Database</h2>
-        <span class="count">8</span>
-      </div>
-      <div class="grid">
-        <a class="card" href="./database/00-introduction.html" title="데이터베이스 핵심 개념 개관">
-          <div class="card-title">데이터베이스 핵심 개념 개관</div>
-          <div class="card-path">database/00-introduction.html</div>
-        </a>
-        <a class="card" href="./database/01-index-explain.html" title="B-Tree 인덱스와 EXPLAIN 실행계획 읽기">
-          <div class="card-title">B-Tree 인덱스와 EXPLAIN 실행계획 읽기</div>
-          <div class="card-path">database/01-index-explain.html</div>
-        </a>
-        <a class="card" href="./database/02-lock-isolation.html" title="트랜잭션 격리수준과 락">
-          <div class="card-title">트랜잭션 격리수준과 락</div>
-          <div class="card-path">database/02-lock-isolation.html</div>
-        </a>
-        <a class="card" href="./database/03-mvcc-internals.html" title="MVCC 내부 구조 — Undo Log·WAL과 InnoDB vs PostgreSQL">
-          <div class="card-title">MVCC 내부 구조</div>
-          <div class="card-path">database/03-mvcc-internals.html</div>
-        </a>
-        <a class="card" href="./database/04-sharding-partitioning-replication.html" title="파티셔닝·샤딩·복제 — 수평 확장과 일관성 트레이드오프">
-          <div class="card-title">파티셔닝·샤딩·복제</div>
-          <div class="card-path">database/04-sharding-partitioning-replication.html</div>
-        </a>
-        <a class="card" href="./database/05-rdbms-vs-nosql.html" title="RDBMS vs NoSQL — CAP 관점 선택과 데이터 모델링">
-          <div class="card-title">RDBMS vs NoSQL</div>
-          <div class="card-path">database/05-rdbms-vs-nosql.html</div>
-        </a>
-        <a class="card" href="./database/06-query-tuning.html" title="쿼리 튜닝 — 슬로우쿼리·N+1·커서 페이지네이션·옵티마이저">
-          <div class="card-title">쿼리 튜닝</div>
-          <div class="card-path">database/06-query-tuning.html</div>
-        </a>
-        <a class="card" href="./database/07-inventory-concurrency.html" title="재고 차감 동시성 심화 — 비관·낙관·원자적 UPDATE·Redis와 Oversell 방지">
-          <div class="card-title">재고 차감 동시성 심화</div>
-          <div class="card-path">database/07-inventory-concurrency.html</div>
-        </a>
-      </div>
-    </section>
-
-    <section class="group">
-      <div class="group-title">
-        <h2>Infra</h2>
-        <span class="count">7</span>
-      </div>
-      <div class="grid">
-        <a class="card" href="./infra/00-introduction.html" title="인프라·DevOps 핵심 개념 개관">
-          <div class="card-title">인프라·DevOps 핵심 개념 개관</div>
-          <div class="card-path">infra/00-introduction.html</div>
-        </a>
-        <a class="card" href="./infra/01-aws-core.html" title="AWS 핵심 — VPC / 컴퓨트 / 데이터 / 엣지">
-          <div class="card-title">AWS 핵심</div>
-          <div class="card-path">infra/01-aws-core.html</div>
-        </a>
-        <a class="card" href="./infra/02-kubernetes.html" title="Kubernetes 핵심 — Pod / Deployment / 오토스케일">
-          <div class="card-title">Kubernetes 핵심</div>
-          <div class="card-path">infra/02-kubernetes.html</div>
-        </a>
-        <a class="card" href="./infra/03-iac-terraform.html" title="IaC / Terraform — 코드형 인프라 · 상태 · GitOps">
-          <div class="card-title">IaC / Terraform</div>
-          <div class="card-path">infra/03-iac-terraform.html</div>
-        </a>
-        <a class="card" href="./infra/04-cicd-deploy-strategy.html" title="CI/CD · 배포 전략 — Rolling / Blue-Green / Canary">
-          <div class="card-title">CI/CD · 배포 전략</div>
-          <div class="card-path">infra/04-cicd-deploy-strategy.html</div>
-        </a>
-        <a class="card" href="./infra/05-observability-stack.html" title="관측성 스택 — Logs / Metrics / Traces">
-          <div class="card-title">관측성 스택</div>
-          <div class="card-path">infra/05-observability-stack.html</div>
-        </a>
-        <a class="card" href="./infra/06-sre-incident.html" title="SRE · 장애 대응 — SLO / Error Budget / 포스트모템">
-          <div class="card-title">SRE · 장애 대응</div>
-          <div class="card-path">infra/06-sre-incident.html</div>
-        </a>
-      </div>
-    </section>
-
-    <section class="group">
-      <div class="group-title">
-        <h2>CS</h2>
-        <span class="count">6</span>
-      </div>
-      <div class="grid">
-        <a class="card" href="./cs/00-introduction.html" title="CS 기초 핵심 개념 개관">
-          <div class="card-title">CS 기초 핵심 개념 개관</div>
-          <div class="card-path">cs/00-introduction.html</div>
-        </a>
-        <a class="card" href="./cs/01-ds-algo.html" title="자료구조 &amp; 알고리즘 — 복잡도·정렬·면접 패턴">
-          <div class="card-title">자료구조 &amp; 알고리즘</div>
-          <div class="card-path">cs/01-ds-algo.html</div>
-        </a>
-        <a class="card" href="./cs/02-os.html" title="운영체제(OS) — 프로세스·메모리·스케줄링·동기화">
-          <div class="card-title">운영체제(OS)</div>
-          <div class="card-path">cs/02-os.html</div>
-        </a>
-        <a class="card" href="./cs/03-network.html" title="네트워크 — TCP·HTTP·HTTPS/TLS·DNS·CDN">
-          <div class="card-title">네트워크</div>
-          <div class="card-path">cs/03-network.html</div>
-        </a>
-        <a class="card" href="./cs/04-concurrency-theory.html" title="동시성 이론 — 병렬성·락·메모리 모델·Amdahl">
-          <div class="card-title">동시성 이론</div>
-          <div class="card-path">cs/04-concurrency-theory.html</div>
-        </a>
-        <a class="card" href="./cs/05-complexity.html" title="복잡도 분석 — 빅오·시간/공간·DP/그리디·자료구조 복잡도표">
-          <div class="card-title">복잡도 분석</div>
-          <div class="card-path">cs/05-complexity.html</div>
-        </a>
-      </div>
-    </section>
-
-    <footer>
-      <p>Source: <a href="https://github.com/hyeongseoblim/SystemDesign">github.com/hyeongseoblim/SystemDesign</a></p>
-    </footer>
+    <aside class="sidebar-right" id="sidebarRight">
+      <section class="widget">
+        <h3>영역별 진도</h3>
+        <div id="areaProgress" class="area-progress"></div>
+      </section>
+      <section class="widget">
+        <h3>오늘 복습</h3>
+        <div id="reviewQueue" class="review-queue"><p class="muted">— 곧 추가됩니다 —</p></div>
+      </section>
+      <section class="widget">
+        <h3>최근 학습</h3>
+        <div id="recentList" class="recent-list"><p class="muted">— 곧 추가됩니다 —</p></div>
+      </section>
+      <section class="widget" id="cloudWidget" hidden>
+        <h3>☁️ 클라우드 동기화</h3>
+        <div id="cloudStatus" class="cloud-status"></div>
+      </section>
+      <section class="widget actions">
+        <button id="openQaModal" class="primary-btn">📋 Q&amp;A 통합 뷰</button>
+        <button id="openBackup" class="ghost-btn">💾 JSON 백업/복원</button>
+      </section>
+    </aside>
   </div>
+
+  <script type="module" src="./assets/dashboard.js"></script>
 </body>
 </html>
