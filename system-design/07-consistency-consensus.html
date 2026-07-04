@@ -717,7 +717,7 @@ flowchart LR
   sections.forEach(s => io.observe(s));
 
   // ── Q&A localStorage (key namespace per file) ──
-  const NS = 'jobStudy::system-design::07-consistency-consensus::';
+  const NS = 'jobStudy::system-design::07-consistency-consensus::';window.NS=NS;
   const ansIds = ['ans1', 'ans2', 'ans3'];
 
   // Load saved answers on page load
@@ -783,5 +783,6 @@ flowchart LR
   }
 </script>
 <script src="../assets/qna-sync.js?v=1"></script>
+<script type="module" src="../assets/study-widget.js?v=1"></script>
 </body>
 </html>

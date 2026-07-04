@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-04-25T05:05:51.970Z",
+  "generatedAt": "2026-07-04T02:43:52.870Z",
   "contents": [
     {
       "id": "backend/00-introduction",
@@ -25,9 +25,9 @@
       ],
       "qaQuestions": [],
       "qaNs": "jobStudy::backend::00-introduction::",
-      "lineCount": 367,
-      "fileSizeKB": 22.9,
-      "updatedAt": "2026-04-25",
+      "lineCount": 369,
+      "fileSizeKB": 23.1,
+      "updatedAt": "2026-07-04",
       "tags": [
         "Spring",
         "transaction",
@@ -37,7 +37,9 @@
       ],
       "difficulty": 2,
       "estimatedMinutes": 40,
-      "prerequisites": [],
+      "prerequisites": [
+        "cs/00-introduction"
+      ],
       "keywords": [
         "트랜잭션",
         "동시성",
@@ -45,6 +47,234 @@
         "관측성"
       ],
       "description": "백엔드 구현 핵심 개념 — Spring 라이프사이클, 트랜잭션, 동시성, 관측성"
+    },
+    {
+      "id": "backend/01-api-design",
+      "path": "backend/01-api-design.html",
+      "area": "backend",
+      "title": "REST API 설계 — 리소스·버저닝·페이지네이션·에러 모델",
+      "h1": "REST API 설계리소스 · 버저닝 · 페이지네이션 · 에러 모델",
+      "coach": "backend-dev-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "backend-dev-coach",
+        "2026-07-01",
+        "REST API 설계"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. PUT은 멱등하고 POST는 비멱등인 이유를 정의 수준에서 설명하고, \"주문 생성\" API를 멱등하게 만드는 방법을 클라이언트·서버 양쪽 관점에서 제시해보세요.",
+        "Q2. 수천만 건 무한스크롤에서 Offset 페이지네이션을 쓰면 안 되는 이유 2가지와, Cursor 방식의 커서 구성·정렬 키 선택을 구체적으로 설명해보세요.",
+        "Q3. \"모든 응답을 200으로 주고 body에서 성공/실패 판단\" 제안을 관측성·운영 관점에서 반박하고, RFC 7807 도입 방안을 설명해보세요."
+      ],
+      "qaNs": "jobStudy::backend::01-api-design::",
+      "lineCount": 649,
+      "fileSizeKB": 36.4,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "backend/02-concurrency",
+      "path": "backend/02-concurrency.html",
+      "area": "backend",
+      "title": "동시성 — 스레드·락·메모리 가시성·재고 차감",
+      "h1": "동시성(Concurrency)스레드 · 락 · 메모리 가시성 · 재고 차감",
+      "coach": "backend-dev-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "backend-dev-coach",
+        "2026-07-01",
+        "동시성"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. volatile만으로 count++ 동시성 버그를 못 막는 이유를 가시성·원자성으로 설명하고, 올바른 대안 2가지를 제시해보세요.",
+        "Q2. 인기 상품(경합 높음) vs 일반 상품(경합 낮음)에서 낙관적/비관적/원자적 UPDATE 중 무엇을 택할지 처리량·재시도 관점에서 비교해보세요.",
+        "Q3. 서버 2대로 스케일아웃하니 synchronized 재고 차감이 다시 Oversell이 났습니다. 이유와 분산 환경 해결책 2가지를 Trade-off와 함께 제시해보세요."
+      ],
+      "qaNs": "jobStudy::backend::02-concurrency::",
+      "lineCount": 441,
+      "fileSizeKB": 30.4,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "backend/03-transaction",
+      "path": "backend/03-transaction.html",
+      "area": "backend",
+      "title": "트랜잭션 — ACID·격리수준·전파·분산 트랜잭션",
+      "h1": "트랜잭션(Transaction)ACID · 격리수준 · 전파 · 분산 트랜잭션",
+      "coach": "backend-dev-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "backend-dev-coach",
+        "2026-07-01",
+        "트랜잭션"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. 같은 코드를 MySQL과 PostgreSQL에서 돌렸더니 동시성 동작이 달랐습니다. 기본 격리수준 차이와, 발생/방지되는 이상현상을 설명해보세요.",
+        "Q2. 주문 저장 트랜잭션 안에서 결제 API(HTTP)를 호출하면 어떤 장애가 나는지 2가지로 설명하고, Outbox 패턴의 해결 방식을 그려보세요.",
+        "Q3. 같은 서비스 클래스 안에서 outer()가 @Transactional inner()를 호출했는데 트랜잭션이 안 열렸습니다. 원인을 Spring AOP로 설명하고 해결책 2가지를 제시해보세요."
+      ],
+      "qaNs": "jobStudy::backend::03-transaction::",
+      "lineCount": 387,
+      "fileSizeKB": 27.4,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "backend/04-resilience-idempotency",
+      "path": "backend/04-resilience-idempotency.html",
+      "area": "backend",
+      "title": "복원력 · 멱등성 — Retry·Circuit Breaker·Idempotency-Key",
+      "h1": "복원력(Resilience) · 멱등성(Idempotency)Retry · Circuit Breaker · Idempotency-Key",
+      "coach": "backend-dev-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "backend-dev-coach",
+        "2026-07-01",
+        "복원력 · 멱등성"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. 재시도에 지수 백오프 + 지터를 쓰는 이유를 Thundering Herd 개념으로 설명하고, 다층 재시도 곱셈 문제 방지법을 제시해보세요.",
+        "Q2. 동시에 같은 Idempotency-Key 요청 2개가 들어왔을 때 둘 다 처리되지 않게 막는 DB 레벨 메커니즘과, 키 TTL·본문 검증의 필요성을 설명해보세요.",
+        "Q3. Kafka로 TrackingEvent 소비 시 중복 수신을 At-least-once 전제에서 멱등 소비자로 어떻게 처리하고, 자동 커밋을 왜 끄는지 설명해보세요."
+      ],
+      "qaNs": "jobStudy::backend::04-resilience-idempotency::",
+      "lineCount": 410,
+      "fileSizeKB": 29.2,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "backend/05-testing",
+      "path": "backend/05-testing.html",
+      "area": "backend",
+      "title": "테스트 — 피라미드·Testcontainers·Contract·동시성",
+      "h1": "테스트(Testing)피라미드 · Testcontainers · Contract · 동시성",
+      "coach": "backend-dev-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "backend-dev-coach",
+        "2026-07-01",
+        "테스트"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. \"통합 테스트는 빠른 H2로 하자\"는 동료에게 왜 Testcontainers로 실제 DB를 써야 하는지 방언·격리수준·제약 3가지 차이로 반박해보세요.",
+        "Q2. 재고 차감 로직의 동시성 안전성 검증 테스트를 CountDownLatch·스레드풀·단언으로 설계하고, Flaky 방지법도 답해보세요.",
+        "Q3. MSA에서 OMS·WMS 독립 배포 시 전체 E2E 없이 API 호환성 깨짐을 조기에 잡는 Contract 테스트의 동작과 E2E 대비 장점을 설명해보세요."
+      ],
+      "qaNs": "jobStudy::backend::05-testing::",
+      "lineCount": 365,
+      "fileSizeKB": 25.6,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "backend/06-observability",
+      "path": "backend/06-observability.html",
+      "area": "backend",
+      "title": "관측성 — 로그·메트릭(RED/USE)·트레이싱·OpenTelemetry",
+      "h1": "관측성(Observability)로그 · 메트릭(RED/USE) · 분산 추적 · OpenTelemetry",
+      "coach": "backend-dev-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "backend-dev-coach",
+        "2026-07-01",
+        "관측성"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. 관측성의 세 기둥(Log·Metric·Trace)을 각각 어떤 질문에 답하는지로 설명하고, traceId로 엮으면 장애 분석이 어떻게 빨라지는지 시나리오로 답해보세요.",
+        "Q2. \"응답시간 평균 100ms라 괜찮다\"를 백분위(p50/p95/p99)·Tail latency 관점에서 반박하고, RED 방법론으로 API 건강을 어떻게 볼지 설명해보세요.",
+        "Q3. 주문 요청이 OMS→WMS→TMS 5개 서비스를 거치며 느립니다. 분산 추적·W3C Trace Context·상관관계 ID로 병목을 찾고, 비동기/Kafka 경계 trace 끊김을 어떻게 해결할지 답해보세요."
+      ],
+      "qaNs": "jobStudy::backend::06-observability::",
+      "lineCount": 376,
+      "fileSizeKB": 26.8,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
     },
     {
       "id": "backend/architecture/00-introduction",
@@ -69,9 +299,9 @@
       ],
       "qaQuestions": [],
       "qaNs": "jobStudy::backend::architecture::00-introduction::",
-      "lineCount": 386,
-      "fileSizeKB": 22.4,
-      "updatedAt": "2026-04-25",
+      "lineCount": 388,
+      "fileSizeKB": 22.5,
+      "updatedAt": "2026-07-04",
       "tags": [
         "MSA",
         "DDD",
@@ -82,13 +312,244 @@
       ],
       "difficulty": 3,
       "estimatedMinutes": 50,
-      "prerequisites": [],
+      "prerequisites": [
+        "backend/00-introduction",
+        "database/00-introduction"
+      ],
       "keywords": [
         "Bounded Context",
         "Aggregate",
         "Idempotency"
       ],
       "description": "백엔드 아키텍처 패턴 개관 — MSA vs Modular Monolith부터 Saga·CQRS·Outbox까지"
+    },
+    {
+      "id": "backend/architecture/01-msa-vs-monolith",
+      "path": "backend/architecture/01-msa-vs-monolith.html",
+      "area": "backend/architecture",
+      "title": "Modular Monolith vs MSA — 분리 기준과 마이그레이션 전략",
+      "h1": "Modular Monolith vs MSA분리 기준 · 분산 비용 · 마이그레이션 전략",
+      "coach": "backend-architecture-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "backend-architecture-coach",
+        "2026-07-01",
+        "Modular Monolith vs MSA"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. \"DB를 공유하는 MSA\"가 왜 Distributed Monolith인지, SSOT를 분리하면 새로 생기는 문제(이중 쓰기 등)와 해법을 설명해보세요.",
+        "Q2. 각 99.9% 가용성 5개 서비스를 동기 직렬 체인으로 호출 시 전체 가용성은? 개선 패턴 3가지를 제시해보세요.",
+        "Q3. 물류 모놀리스를 Strangler Fig로 전환할 때 어떤 모듈부터 어떤 순서로 떼어낼지와 근거, 핵심 트랜잭션을 마지막에 두는 이유를 설명해보세요."
+      ],
+      "qaNs": "jobStudy::backend::architecture::01-msa-vs-monolith::",
+      "lineCount": 644,
+      "fileSizeKB": 33,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "backend/architecture/02-ddd",
+      "path": "backend/architecture/02-ddd.html",
+      "area": "backend/architecture",
+      "title": "DDD — Bounded Context · Aggregate · Context Map",
+      "h1": "DDD — Domain-Driven DesignBounded Context · Aggregate · Context Map",
+      "coach": "backend-architecture-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "backend-architecture-coach",
+        "2026-07-01",
+        "Domain-Driven Design"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. \"상품\"이 Catalog/Inventory/Billing 컨텍스트에서 각각 어떻게 다른 모델인지 속성 수준으로 설명하고, 하나로 합치면 왜 위험한지 말해보세요.",
+        "Q2. \"한 트랜잭션 = 한 Aggregate\" 원칙하에 주문 생성 시 재고를 차감하려면 어떻게 설계하나요? 즉시/최종 일관성 선택과 이유를 설명해보세요.",
+        "Q3. 레거시 WMS와 외부 택배사 API를 Shipping 컨텍스트에 통합할 때 ACL·Conformist·OHS를 어디에 적용할지와 이유를 설명해보세요."
+      ],
+      "qaNs": "jobStudy::backend::architecture::02-ddd::",
+      "lineCount": 620,
+      "fileSizeKB": 30.7,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "backend/architecture/03-event-driven",
+      "path": "backend/architecture/03-event-driven.html",
+      "area": "backend/architecture",
+      "title": "Event-Driven Architecture — 도메인/통합 이벤트 · Choreography vs Orchestration",
+      "h1": "Event-Driven Architecture도메인/통합 이벤트 · Choreography vs Orchestration",
+      "coach": "backend-architecture-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "backend-architecture-coach",
+        "2026-07-01",
+        "Event-Driven Architecture"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. Domain Event vs Integration Event를 스키마 진화·전달 방식·결합도 관점에서 설명하고, 내부 이벤트를 그대로 외부 발행 시 문제를 말해보세요.",
+        "Q2. 주문-재고-배송을 Choreography vs Orchestration으로 결정하는 기준과, 실패 보상이 복잡할수록 Orchestration이 유리한 이유를 설명해보세요.",
+        "Q3. TrackingEvent가 At-least-once로 중복·순서 뒤바뀜이 발생할 때 Effectively once 효과를 내는 컨슈머 설계를 설명해보세요."
+      ],
+      "qaNs": "jobStudy::backend::architecture::03-event-driven::",
+      "lineCount": 600,
+      "fileSizeKB": 29.8,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "backend/architecture/04-saga",
+      "path": "backend/architecture/04-saga.html",
+      "area": "backend/architecture",
+      "title": "Saga 패턴 — 분산 트랜잭션 · 보상 트랜잭션 · 주문-결제-배송",
+      "h1": "Saga 패턴분산 트랜잭션 · 보상 트랜잭션 · 주문-결제-배송",
+      "coach": "backend-architecture-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "backend-architecture-coach",
+        "2026-07-01",
+        "Saga · 분산 트랜잭션"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. 2PC와 Saga를 일관성·가용성·격리성·확장성 관점에서 비교하고, 현대 MSA에서 2PC 대신 Saga를 택하는 이유를 설명해보세요.",
+        "Q2. 주문-결제-재고-배송 4단계 Saga에서 비가역 단계가 있을 때 Pivot 트랜잭션으로 단계 순서와 취소 가능 구간을 어떻게 설계할지 설명해보세요.",
+        "Q3. Orchestration Saga에서 결제 승인 직후 오케스트레이터가 죽었다 재시작 시, 이중 결제를 막고 다음 단계부터 이어가는 메커니즘을 설명해보세요."
+      ],
+      "qaNs": "jobStudy::backend::architecture::04-saga::",
+      "lineCount": 654,
+      "fileSizeKB": 31.5,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "backend/architecture/05-cqrs-event-sourcing",
+      "path": "backend/architecture/05-cqrs-event-sourcing.html",
+      "area": "backend/architecture",
+      "title": "CQRS & Event Sourcing — 읽기/쓰기 분리 · Projection · Trade-off",
+      "h1": "CQRS & Event Sourcing읽기/쓰기 모델 분리 · Projection · Trade-off",
+      "coach": "backend-architecture-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "backend-architecture-coach",
+        "2026-07-01",
+        "CQRS · Event Sourcing"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. 운송추적에 CQRS 적용 시 쓰기/읽기 모델 설계와, 최종 일관성 지연이 고객 경험에 주는 문제·완화책을 설명해보세요.",
+        "Q2. Event Sourcing을 단순 CRUD 게시판에 도입하면 안 되는 이유를 스키마 진화·GDPR 삭제·조회 비용 관점에서 설명해보세요.",
+        "Q3. \"CQRS와 ES는 항상 함께\"가 왜 틀린지 설명하고, 각각을 독립 적용하는 시나리오를 하나씩 들어보세요."
+      ],
+      "qaNs": "jobStudy::backend::architecture::05-cqrs-event-sourcing::",
+      "lineCount": 588,
+      "fileSizeKB": 28.7,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "backend/architecture/06-outbox-idempotency",
+      "path": "backend/architecture/06-outbox-idempotency.html",
+      "area": "backend/architecture",
+      "title": "Transactional Outbox & Idempotency — Dual-write · CDC · Exactly-once",
+      "h1": "Transactional Outbox & IdempotencyDual-write · CDC · Exactly-once 의미론",
+      "coach": "backend-architecture-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "backend-architecture-coach",
+        "2026-07-01",
+        "Outbox · Idempotency"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. \"재고 차감 후 InventoryReserved 발행\" 코드의 발행 직전 크래시 문제와, Transactional Outbox가 트랜잭션 경계로 이를 해결하는 방식을 설명해보세요.",
+        "Q2. Outbox가 \"유실 0\"은 보장하지만 \"중복 0\"은 못 하는 이유(릴레이 At-least-once)와, 소비 측 Inbox/멱등성으로 중복을 흡수하는 방법을 설명해보세요.",
+        "Q3. \"Kafka exactly-once가 있으니 멱등성 불필요\" 주장이 틀린 이유를 delivery vs processing 차이와 ack 유실 시나리오로 반박해보세요."
+      ],
+      "qaNs": "jobStudy::backend::architecture::06-outbox-idempotency::",
+      "lineCount": 652,
+      "fileSizeKB": 31.9,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
     },
     {
       "id": "cs/00-introduction",
@@ -114,9 +575,9 @@
       ],
       "qaQuestions": [],
       "qaNs": "jobStudy::cs::00-introduction::",
-      "lineCount": 578,
-      "fileSizeKB": 33.3,
-      "updatedAt": "2026-04-25",
+      "lineCount": 580,
+      "fileSizeKB": 33.5,
+      "updatedAt": "2026-07-04",
       "tags": [
         "data-structure",
         "algorithm",
@@ -136,6 +597,176 @@
         "Deadlock"
       ],
       "description": "CS 기초 개관 — 자료구조·OS·네트워크(TCP/TLS)·동시성 이론"
+    },
+    {
+      "id": "cs/01-ds-algo",
+      "path": "cs/01-ds-algo.html",
+      "area": "cs",
+      "title": "자료구조 & 알고리즘 — 복잡도·정렬·면접 패턴",
+      "h1": "자료구조 & 알고리즘복잡도 · 정렬 · 면접 빈출 패턴",
+      "coach": "cs-fundamentals-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "cs-fundamentals-coach",
+        "2026-07-01",
+        "자료구조 & 알고리즘"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "q1",
+        "q2",
+        "q3"
+      ],
+      "qaQuestions": [],
+      "qaNs": "jobStudy::cs::01-ds-algo::",
+      "lineCount": 478,
+      "fileSizeKB": 29.9,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "cs/02-os",
+      "path": "cs/02-os.html",
+      "area": "cs",
+      "title": "운영체제(OS) — 프로세스·메모리·스케줄링·동기화",
+      "h1": "운영체제(OS)프로세스 · 메모리 · 스케줄링 · 동기화",
+      "coach": "cs-fundamentals-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "cs-fundamentals-coach",
+        "2026-07-01",
+        "운영체제(OS)"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "q1",
+        "q2",
+        "q3"
+      ],
+      "qaQuestions": [],
+      "qaNs": "jobStudy::cs::02-os::",
+      "lineCount": 470,
+      "fileSizeKB": 29.6,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "cs/03-network",
+      "path": "cs/03-network.html",
+      "area": "cs",
+      "title": "네트워크 — TCP·HTTP·HTTPS/TLS·DNS·CDN",
+      "h1": "네트워크TCP · HTTP · HTTPS/TLS · DNS · CDN",
+      "coach": "cs-fundamentals-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "cs-fundamentals-coach",
+        "2026-07-01",
+        "네트워크"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "q1",
+        "q2",
+        "q3"
+      ],
+      "qaQuestions": [],
+      "qaNs": "jobStudy::cs::03-network::",
+      "lineCount": 443,
+      "fileSizeKB": 26.4,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "cs/04-concurrency-theory",
+      "path": "cs/04-concurrency-theory.html",
+      "area": "cs",
+      "title": "동시성 이론 — 병렬성·락·메모리 모델·Amdahl",
+      "h1": "동시성 이론병렬성 · 락 · 메모리 모델 · Amdahl",
+      "coach": "cs-fundamentals-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "cs-fundamentals-coach",
+        "2026-07-01",
+        "동시성 이론"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "q1",
+        "q2",
+        "q3"
+      ],
+      "qaQuestions": [],
+      "qaNs": "jobStudy::cs::04-concurrency-theory::",
+      "lineCount": 396,
+      "fileSizeKB": 23.7,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "cs/05-complexity",
+      "path": "cs/05-complexity.html",
+      "area": "cs",
+      "title": "복잡도 분석 — 빅오·시간/공간·DP/그리디·자료구조 복잡도표",
+      "h1": "복잡도 분석빅오 · 시간/공간 · DP/그리디 · 복잡도표",
+      "coach": "cs-fundamentals-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "cs-fundamentals-coach",
+        "2026-07-01",
+        "복잡도 분석"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "q1",
+        "q2",
+        "q3"
+      ],
+      "qaQuestions": [],
+      "qaNs": "jobStudy::cs::05-complexity::",
+      "lineCount": 382,
+      "fileSizeKB": 24.1,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
     },
     {
       "id": "database/00-introduction",
@@ -161,9 +792,9 @@
       ],
       "qaQuestions": [],
       "qaNs": "jobStudy::database::00-introduction::",
-      "lineCount": 596,
-      "fileSizeKB": 33,
-      "updatedAt": "2026-04-25",
+      "lineCount": 598,
+      "fileSizeKB": 33.2,
+      "updatedAt": "2026-07-04",
       "tags": [
         "index",
         "lock",
@@ -175,7 +806,9 @@
       ],
       "difficulty": 2,
       "estimatedMinutes": 45,
-      "prerequisites": [],
+      "prerequisites": [
+        "cs/00-introduction"
+      ],
       "keywords": [
         "격리수준",
         "B+Tree",
@@ -183,6 +816,273 @@
         "복제"
       ],
       "description": "데이터베이스 핵심 — 인덱스·락·격리수준·복제와 RDBMS/NoSQL 선택"
+    },
+    {
+      "id": "database/01-index-explain",
+      "path": "database/01-index-explain.html",
+      "area": "database",
+      "title": "B-Tree 인덱스와 EXPLAIN 실행계획 읽기",
+      "h1": "B-Tree 인덱스와 EXPLAIN 실행계획 읽기",
+      "coach": "database-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "database-coach",
+        "2026-07-01",
+        "인덱스 & EXPLAIN"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. (warehouse_id, status, created_at) 복합 인덱스에서 WHERE status=? AND created_at>? 쿼리의 인덱스 활용을 설명하고, 더 나은 인덱스를 선택도 근거로 제안해보세요.",
+        "Q2. 운송장 추적 SELECT status, eta FROM waybill WHERE tracking_no=? 에 커버링 인덱스를 적용했을 때 I/O 변화와 그 대가, EXPLAIN 확인 포인트를 설명해보세요.",
+        "Q3. 인덱스가 있는데 EXPLAIN type=ALL(풀스캔)이 나오는 원인 4가지 이상과 진단·교정법, PG의 estimated vs actual rows 활용법을 설명해보세요."
+      ],
+      "qaNs": "jobStudy::database::01-index-explain::",
+      "lineCount": 462,
+      "fileSizeKB": 29.3,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "database/02-lock-isolation",
+      "path": "database/02-lock-isolation.html",
+      "area": "database",
+      "title": "트랜잭션 격리수준과 락",
+      "h1": "트랜잭션 격리수준과 락 — Dirty/Phantom부터 Next-key Lock·데드락까지",
+      "coach": "database-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "database-coach",
+        "2026-07-01",
+        "락 & 격리수준"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. MySQL InnoDB RR이 팬텀을 막는다는 말의 정확한 범위를, 일반 SELECT vs FOR UPDATE로 구분하고 표준 SQL·PostgreSQL과 비교해 설명해보세요.",
+        "Q2. WHERE status=\\",
+        " FOR UPDATE가 다른 트랜잭션 INSERT까지 막은 이유를 Gap/Next-key Lock으로 설명하고, status에 인덱스가 없을 때의 추가 문제를 설명해보세요.",
+        "Q3. 여러 SKU 재고를 동시 차감하는 주문에서 발생하는 데드락의 근본 원인과 예방책(잠금 순서 등)을 SQL 수준으로 제시하고, 재시도 전략의 역할을 설명해보세요."
+      ],
+      "qaNs": "jobStudy::database::02-lock-isolation::",
+      "lineCount": 416,
+      "fileSizeKB": 24.5,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "database/03-mvcc-internals",
+      "path": "database/03-mvcc-internals.html",
+      "area": "database",
+      "title": "MVCC 내부 구조 — Undo Log·WAL과 InnoDB vs PostgreSQL",
+      "h1": "MVCC 내부 구조 — Undo Log·WAL과 InnoDB vs PostgreSQL",
+      "coach": "database-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "database-coach",
+        "2026-07-01",
+        "MVCC 내부구조"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. InnoDB에서 RR vs READ COMMITTED 차이가 Read View 생성 시점으로 설명되는 이유와, 각각의 Non-repeatable read 발생/방지를 버전 체인 관점으로 설명해보세요.",
+        "Q2. WAL이 랜덤 쓰기를 순차 쓰기로 바꾸는 원리를 checkpoint·fsync·group commit으로 설명하고, innodb_flush_log_at_trx_commit 1 vs 2의 결제/재고 시스템 의미를 설명해보세요.",
+        "Q3. 고빈도 UPDATE PostgreSQL 테이블의 조회 저하를 MVCC 특성으로 진단하고 VACUUM·HOT·fillfactor·wraparound 대응책을 제시, InnoDB였다면의 차이도 설명해보세요."
+      ],
+      "qaNs": "jobStudy::database::03-mvcc-internals::",
+      "lineCount": 312,
+      "fileSizeKB": 22.1,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "database/04-sharding-partitioning-replication",
+      "path": "database/04-sharding-partitioning-replication.html",
+      "area": "database",
+      "title": "파티셔닝·샤딩·복제 — 수평 확장과 일관성 트레이드오프",
+      "h1": "파티셔닝·샤딩·복제 — 수평 확장과 일관성 트레이드오프",
+      "coach": "database-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "database-coach",
+        "2026-07-01",
+        "샤딩·파티셔닝·복제"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. 일별 1억 건 주문에서 user_id 해시 vs order_date 샤딩의 트레이드오프(분포·지역성·핫스팟·분석)를 비교하고 최종 선택과 분석 요구의 분리 처리를 설명해보세요.",
+        "Q2. hash(key)%N 샤딩에서 노드 4→5 증설 시 일어나는 일과, 일관성 해시·Virtual Node가 이를 어떻게 완화하는지, 어떤 DB가 쓰는지 설명해보세요.",
+        "Q3. 쓰기 직후 읽기복제본에서 값이 안 보이는 원인을 설명하고 Read-your-writes 라우팅 전략 3가지 이상과 동기/비동기 복제 트레이드오프를 설명해보세요."
+      ],
+      "qaNs": "jobStudy::database::04-sharding-partitioning-replication::",
+      "lineCount": 369,
+      "fileSizeKB": 24.2,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "database/05-rdbms-vs-nosql",
+      "path": "database/05-rdbms-vs-nosql.html",
+      "area": "database",
+      "title": "RDBMS vs NoSQL — CAP 관점 선택과 데이터 모델링",
+      "h1": "RDBMS vs NoSQL — CAP 관점 선택과 KV·Document·Wide-column·Graph 모델링",
+      "coach": "database-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "database-coach",
+        "2026-07-01",
+        "RDBMS vs NoSQL"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. CAP \"셋 중 둘\" 설명의 오해 지적 + PACELC가 메우는 빈틈 + DynamoDB/PostgreSQL의 PACELC 분류",
+        "Q2. Query-first modeling과 RDBMS 설계의 차이 + denormalize 정당화(비용 관점) + 핫 파티션 회피책",
+        "Q3. 물류 서비스(주문·결제/운송장 타임라인/세션 캐시) 저장소 선택과 polyglot persistence 정당화"
+      ],
+      "qaNs": "jobStudy::database::05-rdbms-vs-nosql::",
+      "lineCount": 410,
+      "fileSizeKB": 26.7,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "database/06-query-tuning",
+      "path": "database/06-query-tuning.html",
+      "area": "database",
+      "title": "쿼리 튜닝 — 슬로우쿼리·N+1·커서 페이지네이션·옵티마이저",
+      "h1": "쿼리 튜닝 — 슬로우쿼리·N+1·커서 페이지네이션·옵티마이저",
+      "coach": "database-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "database-coach",
+        "2026-07-01",
+        "쿼리 튜닝"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. 주문 목록(배송 1:1 + 주문항목 1:N, 100건 페이징)의 N+1 해법 선택과 근거, Fetch join을 그대로 못 쓰는 이유.",
+        "Q2. 운송장 이력 무한스크롤이 깊은 페이지에서 느린 원인(EXPLAIN 관점)과 Keyset/Cursor SQL·인덱스·동률 타임스탬프 처리.",
+        "Q3. estimated 100 vs actual 900000 괴리 + Nested Loop 선택의 진단·교정 순서와 힌트 강제를 최후수단으로 두는 이유."
+      ],
+      "qaNs": "jobStudy::database::06-query-tuning::",
+      "lineCount": 399,
+      "fileSizeKB": 25.8,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "database/07-inventory-concurrency",
+      "path": "database/07-inventory-concurrency.html",
+      "area": "database",
+      "title": "재고 차감 동시성 심화 — 비관·낙관·원자적 UPDATE·Redis와 Oversell 방지",
+      "h1": "재고 차감 동시성 심화 — 비관·낙관·원자적 UPDATE·Redis와 Oversell 방지",
+      "coach": "database-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "database-coach",
+        "2026-07-01",
+        "재고 동시성"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. UPDATE stock SET qty=qty-1 WHERE sku=? AND qty>=1 한 문장이 Oversell을 막는 이유와, SELECT FOR UPDATE 대비 throughput 우위를 설명해보세요.",
+        "Q2. 티켓 1만 장에 50만 동시접속 시 RDBMS 단일 행 병목 이유와, Redis 원자 감소 설계(Lua·영속성·DB 반영)·정합성 리스크·보완책을 제시해보세요.",
+        "Q3. 여러 SKU를 전부 또는 전무로 차감하는 풀필먼트 주문에서 데드락 예방과 원자성 보장, 예약 TTL 복원, 멱등성의 필요성을 설명해보세요."
+      ],
+      "qaNs": "jobStudy::database::07-inventory-concurrency::",
+      "lineCount": 375,
+      "fileSizeKB": 24.3,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
     },
     {
       "id": "infra/00-introduction",
@@ -208,9 +1108,9 @@
       ],
       "qaQuestions": [],
       "qaNs": "jobStudy::infra::00-introduction::",
-      "lineCount": 629,
-      "fileSizeKB": 31.5,
-      "updatedAt": "2026-04-25",
+      "lineCount": 631,
+      "fileSizeKB": 31.7,
+      "updatedAt": "2026-07-04",
       "tags": [
         "AWS",
         "VPC",
@@ -221,7 +1121,9 @@
       ],
       "difficulty": 3,
       "estimatedMinutes": 50,
-      "prerequisites": [],
+      "prerequisites": [
+        "backend/00-introduction"
+      ],
       "keywords": [
         "Blue-Green",
         "오토스케일",
@@ -229,6 +1131,234 @@
         "관측성"
       ],
       "description": "인프라·DevOps 개관 — AWS·K8s·CI/CD·배포 전략·SRE 기본"
+    },
+    {
+      "id": "infra/01-aws-core",
+      "path": "infra/01-aws-core.html",
+      "area": "infra",
+      "title": "AWS 핵심 — VPC / 컴퓨트 / 데이터 / 엣지",
+      "h1": "AWS 핵심VPC · 컴퓨트 · 데이터 · 엣지",
+      "coach": "infra-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "infra-coach",
+        "2026-07-01",
+        "AWS Core"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. Private Subnet의 App 서버가 외부 API와 S3를 호출할 때 각각의 아웃바운드 경로(NAT GW vs VPC Endpoint)와, S3에 NAT를 쓰면 안 되는 비용상 이유를 설명해보세요.",
+        "Q2. RDS Multi-AZ Standby와 Read Replica의 목적 차이를 설명하고, 둘을 동시에 쓰는 구성이 정당한 이유를 RTO/RPO와 함께 답해보세요.",
+        "Q3. 초당 수만 건 폴링을 받는 배송 추적 API에 ALB+자체인증 vs API Gateway 중 무엇을 택할지, 비용과 기능 양면에서 근거를 제시해보세요."
+      ],
+      "qaNs": "jobStudy::infra::01-aws-core::",
+      "lineCount": 690,
+      "fileSizeKB": 36.3,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "infra/02-kubernetes",
+      "path": "infra/02-kubernetes.html",
+      "area": "infra",
+      "title": "Kubernetes 핵심 — Pod / Deployment / 오토스케일",
+      "h1": "Kubernetes 핵심Pod · Deployment · 오토스케일 · 무중단 배포",
+      "coach": "infra-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "infra-coach",
+        "2026-07-01",
+        "Kubernetes"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. Pod이 반복 OOMKilled 되는 원인을 requests/limits·QoS Class로 진단하고, limit을 빼는 것이 왜 더 위험한지 설명해보세요.",
+        "Q2. 배포 직후 502가 나는 이유를 readinessProbe와 graceful shutdown(preStop) 관점에서 진단하고 수정 방향을 제시해보세요.",
+        "Q3. 새벽 주문 폭주에서 CPU 기반 HPA만으로 재고 워커가 못 따라오는 이유와, 올바른 스케일링 조합(커스텀 메트릭/KEDA/Cluster Autoscaler)을 제안해보세요."
+      ],
+      "qaNs": "jobStudy::infra::02-kubernetes::",
+      "lineCount": 473,
+      "fileSizeKB": 30.5,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "infra/03-iac-terraform",
+      "path": "infra/03-iac-terraform.html",
+      "area": "infra",
+      "title": "IaC / Terraform — 코드형 인프라 · 상태 · GitOps",
+      "h1": "IaC / Terraform코드형 인프라 · 상태 · 멱등성 · GitOps",
+      "coach": "infra-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "infra-coach",
+        "2026-07-01",
+        "IaC / Terraform"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. 팀 3명이 같은 Terraform 코드를 관리할 때 State를 어디에 어떻게 두어야 동시 apply 충돌·비밀정보 유출을 막을지, 백엔드·Lock 구성으로 답해보세요.",
+        "Q2. plan에서 운영 RDS가 -/+ (destroy then create)로 표시됐을 때 무슨 일이 일어나며 데이터 손실을 막을 조치는 무엇인지 설명해보세요.",
+        "Q3. 콘솔 수동 변경(Drift)을 정기 apply가 되돌려 장애가 난 이유와 예방책을 멱등성·불변 인프라·drift detection으로 답해보세요."
+      ],
+      "qaNs": "jobStudy::infra::03-iac-terraform::",
+      "lineCount": 444,
+      "fileSizeKB": 28.6,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "infra/04-cicd-deploy-strategy",
+      "path": "infra/04-cicd-deploy-strategy.html",
+      "area": "infra",
+      "title": "CI/CD · 배포 전략 — Rolling / Blue-Green / Canary",
+      "h1": "CI/CD · 배포 전략Rolling · Blue-Green · Canary · 무중단 · 롤백",
+      "coach": "infra-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "infra-coach",
+        "2026-07-01",
+        "CI/CD · 배포"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. 고트래픽 결제 API의 위험 변경에 Blue-Green vs Canary 중 무엇을 택할지 폭발 반경·비용·롤백 속도 Trade-off로 결정해보세요.",
+        "Q2. 코드는 롤백했지만 DB 컬럼 삭제 마이그레이션이 적용된 상황의 위험과, Expand-Contract 패턴으로 안전 설계하는 방법을 설명해보세요.",
+        "Q3. 배포와 릴리스의 분리를 피처 플래그로 설명하고, 라스트마일 배차 알고리즘 교체 같은 위험한 출시에 왜 유리한지 답해보세요."
+      ],
+      "qaNs": "jobStudy::infra::04-cicd-deploy-strategy::",
+      "lineCount": 446,
+      "fileSizeKB": 27.8,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "infra/05-observability-stack",
+      "path": "infra/05-observability-stack.html",
+      "area": "infra",
+      "title": "관측성 스택 — Logs / Metrics / Traces",
+      "h1": "관측성 스택3 Pillars · Prometheus · Grafana · Loki · Tempo",
+      "coach": "infra-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "infra-coach",
+        "2026-07-01",
+        "Observability"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. Monitoring과 Observability의 차이를 설명하고, 분산 추적에서 3 Pillars를 trace_id로 연결하는 것이 왜 디버깅의 핵심인지 답해보세요.",
+        "Q2. Prometheus 비용 폭증의 원인을 Cardinality 폭발로 진단하고, 어떤 데이터를 메트릭 라벨이 아닌 다른 Pillar로 옮겨야 하는지 답해보세요.",
+        "Q3. \"CPU 80% 알람\"이 안티패턴인 이유와, SLO 기반 알람 + Alert fatigue 방지 관점에서 어떤 알람만 사람을 깨워야 하는지 답해보세요."
+      ],
+      "qaNs": "jobStudy::infra::05-observability-stack::",
+      "lineCount": 420,
+      "fileSizeKB": 27,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "infra/06-sre-incident",
+      "path": "infra/06-sre-incident.html",
+      "area": "infra",
+      "title": "SRE · 장애 대응 — SLO / Error Budget / 포스트모템",
+      "h1": "SRE · 장애 대응SLI/SLO · Error Budget · 포스트모템 · 카오스",
+      "coach": "infra-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "infra-coach",
+        "2026-07-01",
+        "SRE · Incident"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. SLI/SLO/SLA를 정의하고, SLO를 SLA보다 엄격히 설정하는 이유와 SLO 99.9%의 월 허용 다운타임(분)을 계산해 설명해보세요.",
+        "Q2. Cut-off 직전 주문 API 장애에서 완화를 원인 규명보다 먼저 해야 하는 이유를 MTTR·Graceful degradation·Shed load로 답하고, IC/Comms/Ops 역할을 설명해보세요.",
+        "Q3. Error Budget이 \"빨리 출시 vs 안정성\" 갈등을 객관적 규칙으로 바꾸는 원리와, 포스트모템이 Blameless여야 하는 이유를 답해보세요."
+      ],
+      "qaNs": "jobStudy::infra::06-sre-incident::",
+      "lineCount": 413,
+      "fileSizeKB": 27.4,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
     },
     {
       "id": "logistics/00-domain-overview",
@@ -258,9 +1388,9 @@
         "Q3. \"주문 1건 = 배송 1건\"이 깨지는 구체 시나리오 2개와, Order ↔ Shipment의 카디널리티·상태 전이 설계에 미치는 영향을 설명해보세요."
       ],
       "qaNs": "jobStudy::logistics::00-domain-overview::",
-      "lineCount": 803,
-      "fileSizeKB": 37.1,
-      "updatedAt": "2026-04-25",
+      "lineCount": 805,
+      "fileSizeKB": 37.2,
+      "updatedAt": "2026-07-04",
       "tags": [
         "OMS",
         "WMS",
@@ -272,7 +1402,9 @@
       ],
       "difficulty": 2,
       "estimatedMinutes": 45,
-      "prerequisites": [],
+      "prerequisites": [
+        "system-design/00-introduction"
+      ],
       "keywords": [
         "밸류체인",
         "재고 정합성",
@@ -280,6 +1412,272 @@
         "역물류"
       ],
       "description": "물류 도메인 전체 지도 — OMS/WMS/TMS와 라스트마일·역물류까지 한눈에"
+    },
+    {
+      "id": "logistics/01-oms-order-management",
+      "path": "logistics/01-oms-order-management.html",
+      "area": "logistics",
+      "title": "OMS 심화 — 주문 수명주기 · 할당 · 분할출고",
+      "h1": "OMS 심화주문 수명주기 · 할당 · 분할출고",
+      "coach": "logistics-domain-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "logistics-domain-coach",
+        "2026-07-01",
+        "OMS 심화"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. 주문 상태를 Boolean 플래그 조합으로 관리할 때의 문제와, 상태 머신(Enum+전이) 전환의 이점을 설명해보세요.",
+        "Q2. 분할출고 시 Order 헤더 상태를 어떻게 결정하고, 한 Shipment만 배송 실패했을 때 필요한 상태/보상 흐름을 설명해보세요.",
+        "Q3. \"결제 성공 + 재고 Reserve 실패\"의 Saga 처리, 필요한 보상 트랜잭션, Idempotency-Key의 필요성, 출고 시점 Capture의 이유를 설명해보세요."
+      ],
+      "qaNs": "jobStudy::logistics::01-oms-order-management::",
+      "lineCount": 480,
+      "fileSizeKB": 30,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "logistics/02-wms-warehouse",
+      "path": "logistics/02-wms-warehouse.html",
+      "area": "logistics",
+      "title": "WMS 심화 — 입고·피킹·재고상태 · Oversell 방지",
+      "h1": "WMS 심화입고·피킹·재고상태 · Oversell 방지",
+      "coach": "logistics-domain-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "logistics-domain-coach",
+        "2026-07-01",
+        "WMS 심화"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. 재고를 On-hand/Reserved/Available로 분해해야 하는 이유와, 주문 수락을 어떤 값 기준으로 해야 Oversell이 방지되는지 설명해보세요.",
+        "Q2. Reserve→Commit→Ship 3단계로 나누는 이유, Reserve의 TTL이 필요한 이유, 실물 On-hand 차감 시점을 설명해보세요.",
+        "Q3. \"남은 1개를 두 요청이 동시 구매\"하는 Oversell을 막는 방법(원자적 조건부 UPDATE/낙관적 락/Redis 원자 감소)의 Trade-off와, 코드로 막아도 Cycle count가 필요한 이유를 설명해보세요."
+      ],
+      "qaNs": "jobStudy::logistics::02-wms-warehouse::",
+      "lineCount": 459,
+      "fileSizeKB": 34.4,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "logistics/03-tms-transportation",
+      "path": "logistics/03-tms-transportation.html",
+      "area": "logistics",
+      "title": "TMS 심화 — 운송장 상태머신 · 허브앤스포크 · 배차",
+      "h1": "TMS 심화운송장 상태머신 · 허브앤스포크 · 배차",
+      "coach": "logistics-domain-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "logistics-domain-coach",
+        "2026-07-01",
+        "TMS 심화"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. 운송장 상태머신에서 IN_TRANSIT 자가전이를 허브앤스포크와 연결해 설명하고, 순서 뒤바뀐 스캔 이벤트의 상태 판정 보정 방법을 설명해보세요.",
+        "Q2. 거점 50개 기준 허브앤스포크 vs P2P 노선 수를 추정하고, 적재효율·리드타임·운송비·장애전파 Trade-off와 P2P 직배가 유리한 조건을 설명해보세요.",
+        "Q3. At-least-once TrackingEvent 스트림을 Kafka로 처리할 때 (1)멱등 중복 처리 (2)운송장별 순서 보장 (3)오프라인 지연 이벤트 처리를 각각 설계해보세요."
+      ],
+      "qaNs": "jobStudy::logistics::03-tms-transportation::",
+      "lineCount": 532,
+      "fileSizeKB": 40.1,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "logistics/04-fulfillment-inventory",
+      "path": "logistics/04-fulfillment-inventory.html",
+      "area": "logistics",
+      "title": "풀필먼트 모델 · 재고 정합성 — 자체 FC vs 3PL vs 드랍쉬핑 · 멀티 창고 할당 · 안전재고",
+      "h1": "풀필먼트 모델 · 재고 정합성자체 FC · 3PL · 드랍쉬핑 · 멀티 창고 할당 · 안전재고",
+      "coach": "logistics-domain-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "logistics-domain-coach",
+        "2026-07-01",
+        "풀필먼트 심화"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. 자체 FC·3PL·드랍쉬핑을 CapEx·마진·통제력·확장성·리드타임 관점에서 비교하고, 출고량 성장 시 합리적 모델 전환 순서와 임계점 판단 근거를 설명해보세요.",
+        "Q2. 전산-실물 재고 불일치의 원인 분류와, ATP=보유−예약−안전재고 공식 기반으로 \"있어도 팔면 안 되는\" 상황, 그리고 Cycle count가 전수 실사보다 나은 이유를 설명해보세요.",
+        "Q3. 멀티 창고 동시 할당의 Race condition, 단일 창고 차감(낙관적 락) vs 분산 예약(Saga 보상)의 차이, 안전재고를 변동성(Z×σ_LT) 기반으로 산정하는 이유와 결품 비용이 과소평가되는 이유를 설명해보세요."
+      ],
+      "qaNs": "jobStudy::logistics::04-fulfillment-inventory::",
+      "lineCount": 494,
+      "fileSizeKB": 36.3,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "logistics/05-last-mile-routing",
+      "path": "logistics/05-last-mile-routing.html",
+      "area": "logistics",
+      "title": "라스트마일 심화 — 배차 · 라우팅 · 실시간 재최적화 · POD",
+      "h1": "라스트마일 심화배차 · 라우팅 · 실시간 재최적화 · POD",
+      "coach": "logistics-domain-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "logistics-domain-coach",
+        "2026-07-01",
+        "Last-mile 심화"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. 라스트마일이 전체 물류비의 40~60%를 차지하는 이유를 배송 밀도(stops/km²)·1차 배송 성공률과 함께 설명하고, 무엇을 최적화해야 하는지 설명해보세요.",
+        "Q2. 라우팅이 왜 NP-hard인지, TSP/VRP/CVRP/VRPTW가 각각 추가하는 제약, 그리고 OR-Tools·LKH 같은 휴리스틱·메타휴리스틱을 쓰는 이유를 설명해보세요.",
+        "Q3. 운행 중 신규 주문 삽입 시 전체 재계산 vs 증분 재최적화 Trade-off(지연·품질·안정성)와, 약 1만 QPS 위치 이벤트를 처리하는 백엔드 설계(Kafka/CDC/최종 일관성)를 설명해보세요."
+      ],
+      "qaNs": "jobStudy::logistics::05-last-mile-routing::",
+      "lineCount": 491,
+      "fileSizeKB": 36.5,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "logistics/06-returns-reverse-logistics",
+      "path": "logistics/06-returns-reverse-logistics.html",
+      "area": "logistics",
+      "title": "반품 · 역물류 심화 — 정·역 상태 합류 · QC · 환불 흐름",
+      "h1": "반품 · 교환 역물류정·역방향 상태 합류 · QC · 환불 흐름",
+      "coach": "logistics-domain-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "logistics-domain-coach",
+        "2026-07-01",
+        "역물류 심화"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. 정방향 주문 상태 머신과 역방향 반품 상태 머신을 합치면 안 되는 이유와, 둘이 어느 지점에서 어떤 메커니즘으로 합류(Join)하는지 설명해보세요.",
+        "Q2. 재고 환원(Restock)을 \"반품 입고\"가 아닌 \"QC 통과\" 시점에 해야 하는 이유, 그 사이 재고 격리 상태, 환원 이벤트 멱등성의 필요성을 설명해보세요.",
+        "Q3. 선환불 vs 검수후환불의 Trade-off를 손실 리스크·고객 경험·회계 관점에서 비교하고, 각각이 적합한 상품/고객 조건을 설명해보세요."
+      ],
+      "qaNs": "jobStudy::logistics::06-returns-reverse-logistics::",
+      "lineCount": 467,
+      "fileSizeKB": 33,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "logistics/07-case-studies",
+      "path": "logistics/07-case-studies.html",
+      "area": "logistics",
+      "title": "물류사 비교 사례 연구 — 쿠팡 · CJ대한통운 · 컬리 · Amazon",
+      "h1": "물류사 비교 사례 연구쿠팡 로켓배송 · CJ대한통운 · 컬리 샛별배송 · Amazon",
+      "coach": "logistics-domain-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "logistics-domain-coach",
+        "2026-07-01",
+        "사례 연구"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. 쿠팡 수직 통합 vs CJ대한통운 3PL을 데이터 일관성 관점(강한 일관성 vs 최종 일관성·멱등 수신)에서 상태 전파 시나리오를 들어 비교해보세요.",
+        "Q2. 컬리 샛별배송의 23시→07시 8시간 윈도우라는 고정 데드라인이 백엔드 처리 모델(마감 역산 배치)과 Wave picking, 콜드체인 단절 비용에 주는 제약을 설명해보세요.",
+        "Q3. Amazon FBA 멀티 FC 할당과 쿠팡 로켓 권역 FC 선할당의 재고 소유 차이가 만드는 추가 백엔드 복잡도(판매자 정합성·정산, 멀티 FC 동시성)를 설명해보세요."
+      ],
+      "qaNs": "jobStudy::logistics::07-case-studies::",
+      "lineCount": 549,
+      "fileSizeKB": 40.5,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
     },
     {
       "id": "system-design/00-introduction",
@@ -304,9 +1702,9 @@
       ],
       "qaQuestions": [],
       "qaNs": "jobStudy::system-design::00-introduction::",
-      "lineCount": 350,
-      "fileSizeKB": 24.1,
-      "updatedAt": "2026-04-25",
+      "lineCount": 352,
+      "fileSizeKB": 24.2,
+      "updatedAt": "2026-07-04",
       "tags": [
         "framework",
         "capacity-estimation",
@@ -323,6 +1721,386 @@
         "Building Blocks"
       ],
       "description": "시스템 디자인 면접의 6단계 프레임워크와 용량 추정·CAP 기초"
+    },
+    {
+      "id": "system-design/01-fundamentals",
+      "path": "system-design/01-fundamentals.html",
+      "area": "system-design",
+      "title": "시스템 디자인 기초 — Scalability · Availability · Consistency · Latency · SLA",
+      "h1": "시스템 디자인 기초 개념Scalability · Availability · Consistency · Latency · SLA",
+      "coach": "system-design-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "system-design-coach",
+        "2026-07-01",
+        "시스템 디자인 기초"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. LB(99.99%)→App(99.95%)→Cache(99.9%)→DB(99.95%) 직렬 시스템의 전체 가용성을 계산(연간 다운타임 환산)하고, 99.99%↑로 올리는 이중화 전략을 수학적 근거와 함께 설명해보세요.",
+        "Q2. 같은 라스트마일 시스템에서 재고 예약은 강한 일관성, TrackingEvent 조회는 최종 일관성을 택하는 이유를 CAP·비즈니스 영향·지연 관점에서 설명하고, 최종 일관성 위에서 UX를 지키는 보장(Read-your-writes 등)을 제시해보세요.",
+        "Q3. \"평균 응답 30ms\"라는 답에 면접관이 던질 추가 질문 3가지를 만들고, p99·Tail latency 원인·대응책과 SLI/SLO/SLA/Error Budget을 엮어 모범 답변을 작성해보세요."
+      ],
+      "qaNs": "jobStudy::system-design::01-fundamentals::",
+      "lineCount": 696,
+      "fileSizeKB": 38.3,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "system-design/02-capacity-estimation",
+      "path": "system-design/02-capacity-estimation.html",
+      "area": "system-design",
+      "title": "용량 추정 — Back-of-the-envelope (DAU → QPS → 스토리지 → 대역폭)",
+      "h1": "용량 추정 — Back-of-the-envelopeDAU → QPS → 스토리지 → 대역폭",
+      "coach": "system-design-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "system-design-coach",
+        "2026-07-01",
+        "용량 추정"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. DAU 1,000만·사용자당 20회 조회·Read:Write=50:1 SNS 타임라인에서, 평균/피크(×8) 읽기 QPS와 쓰기 QPS를 라운딩 트릭으로 암산 과정과 함께 구하고, 도출되는 설계 결정(캐시/샤딩/큐)을 설명해보세요.",
+        "Q2. 라스트마일 추적에서 캐시 히트(메모리 0.1ms) vs 미스(SSD/DB) 지연 차이를 지연시간 숫자표로 설명하고, 조회 7,500 QPS·캐시 적중률 95% vs 50%일 때 DB로 흘러가는 QPS를 계산해보세요. 적중률이 왜 중요한가?",
+        "Q3. \"평균 쓰기 500 QPS면 큐 없이 DB 직접 써도 되지 않나\"라는 압박에, 피크·버스트·기사 앱 오프라인 동기화 관점에서 큐(Kafka) 필요성을 반박하고 큐 유무의 Trade-off(지연·복잡도·내구성·백프레셔)를 정리해보세요."
+      ],
+      "qaNs": "jobStudy::system-design::02-capacity-estimation::",
+      "lineCount": 674,
+      "fileSizeKB": 35.7,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "system-design/03-networking",
+      "path": "system-design/03-networking.html",
+      "area": "system-design",
+      "title": "네트워킹 빌딩블록 — DNS / CDN / LB / API Gateway / REST·gRPC·GraphQL",
+      "h1": "네트워킹 빌딩블록DNS / CDN / Load Balancer / API Gateway / REST·gRPC·GraphQL",
+      "coach": "system-design-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "system-design-coach",
+        "2026-07-01",
+        "네트워킹 빌딩블록"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. DNS Round-robin만으로 부하 분산을 하면 안 되는 이유 3가지 이상과, DNS 분산 vs L4/L7 Load Balancer의 역할 차이를 설명해보세요.",
+        "Q2. \"내부 MSA 간=gRPC, 외부 공개 API=REST/GraphQL\"이 정석인 이유를 성능·브라우저 호환·캐싱·디버깅 관점에서 정리하고, \"gRPC는 무조건 빠르다\"를 반박해보세요.",
+        "Q3. 라스트마일 실시간 추적 시스템에서 DNS·CDN·LB·API Gateway·프로토콜(REST/gRPC)을 어디에 배치하고, 추적 조회 QPS 폭주를 Origin DB까지 내려가지 않게 흡수하는 경로를 설명해보세요."
+      ],
+      "qaNs": "jobStudy::system-design::03-networking::",
+      "lineCount": 774,
+      "fileSizeKB": 43.3,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "system-design/04-data-storage",
+      "path": "system-design/04-data-storage.html",
+      "area": "system-design",
+      "title": "데이터 저장·확장 — SQL/NoSQL · 복제 · 파티셔닝 · 샤딩 · 일관성 해시",
+      "h1": "데이터 저장·확장SQL/NoSQL · Replication · Partitioning · Sharding · Consistent Hashing",
+      "coach": "system-design-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "system-design-coach",
+        "2026-07-01",
+        "데이터 저장·확장"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. \"읽기 많으면 Replication, 쓰기·용량 한계면 Sharding\" 축으로 복제가 풀어주는/못 풀어주는 문제를 구분하고, 비동기 복제에서 Read-your-writes가 깨지는 시나리오와 보장 기법 2가지를 제시해보세요.",
+        "Q2. 샤딩 키를 auto-increment ID/timestamp로 잡을 때의 Hot shard 문제를 설명하고, hash % N 대비 Consistent Hashing + 가상 노드가 노드 증감 시 무엇을 줄여주는지 설명해보세요.",
+        "Q3. 풀필먼트 재고 테이블을 창고ID vs SKU로 샤딩할 때 각각의 장단점·교차 샤드 비용을 비교하고, 핫딜 인기 SKU 동시 차감 핫스팟 흡수 + 오버셀 방지 일관성 경로를 설명해보세요."
+      ],
+      "qaNs": "jobStudy::system-design::04-data-storage::",
+      "lineCount": 715,
+      "fileSizeKB": 37.3,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "system-design/05-caching",
+      "path": "system-design/05-caching.html",
+      "area": "system-design",
+      "title": "캐싱(Caching) — 계층·패턴·Eviction·Redis·Stampede",
+      "h1": "캐싱(Caching)계층 · 패턴 · Eviction · Redis · Stampede",
+      "coach": "system-design-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "system-design-coach",
+        "2026-07-01",
+        "Caching"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. Cache-aside에서 DB 갱신 후 캐시를 삭제(DEL)하는 이유는? 삭제 대신 새 값으로 갱신(SET)하면 생기는 race condition과, 그래도 남는 stale 위험을 줄이는 방법을 설명해보세요.",
+        "Q2. 좋아요 카운터(유실 일부 허용)와 계좌 잔액(정합성 필수)에 각각 Write-through/Write-back/Write-around 중 무엇을 적용할지 고르고 Trade-off를 설명해보세요.",
+        "Q3. QPS 50,000 메인 배너 캐시(hot key)가 60초 TTL로 동시 만료될 때 Cache Stampede가 어떻게 발생하는지 설명하고, 완화책 2가지 이상을 각 Trade-off와 함께 제시해보세요."
+      ],
+      "qaNs": "jobStudy::system-design::05-caching::",
+      "lineCount": 719,
+      "fileSizeKB": 38.7,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "system-design/06-messaging-async",
+      "path": "system-design/06-messaging-async.html",
+      "area": "system-design",
+      "title": "메시징·비동기(Messaging & Async) — Kafka·전달보장·Back-pressure",
+      "h1": "메시징 · 비동기(Messaging & Async)Kafka · 전달 보장 · Back-pressure",
+      "coach": "system-design-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "system-design-coach",
+        "2026-07-01",
+        "Messaging"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. \"Exactly-once로 처리하겠다\"는 답을 면접관이 의심하는 이유는? Kafka EOS의 실제 보장 범위와, 외부 시스템까지 포함한 현실적 대안(at-least-once + 멱등 소비)을 구현과 함께 설명해보세요.",
+        "Q2. 같은 orderId 이벤트의 순서를 Kafka에서 어떻게 보장하며, 그 부작용(Hot partition·병렬성 제약)과 파티션 수 증가의 Trade-off를 설명해보세요.",
+        "Q3. Consumer Lag이 시간당 100만 건 누적될 때 원인·진단·완화책(scale-out/throttle/배치)을 retention 한계와 함께 설명하고, 같은 워크로드를 SQS로 했다면 무엇이 달라졌을지 비교해보세요."
+      ],
+      "qaNs": "jobStudy::system-design::06-messaging-async::",
+      "lineCount": 688,
+      "fileSizeKB": 36.5,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "system-design/07-consistency-consensus",
+      "path": "system-design/07-consistency-consensus.html",
+      "area": "system-design",
+      "title": "일관성과 합의 — CAP / PACELC / Quorum / Raft / 2PC·Saga",
+      "h1": "일관성과 합의CAP · PACELC · Quorum · Raft · 2PC/Saga",
+      "coach": "system-design-coach",
+      "mode": "concept",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🎓 Concept 모드",
+        "system-design-coach",
+        "2026-07-01",
+        "일관성과 합의"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. \"P를 버리고 CA로 설계하겠다\"가 왜 분산 시스템 면접에서 감점인지 설명하고, CAP에서 실제로 선택 가능한 것(C vs A)을 Partition이 전제인 이유와 함께 정확히 진술해보세요.",
+        "Q2. N=5에서 W=3,R=3 vs W=1,R=1 의 일관성·가용성·지연을 비교하고, quorum(W+R>N)이 보장하는 것과 보장하지 못하는 것(동시 쓰기 충돌 등)을 구분해 설명해보세요.",
+        "Q3. 주문-결제-재고-배송 분산 트랜잭션에서 2PC 대신 Saga를 택하는 이유를 2PC의 blocking·SPOF 한계와 함께 설명하고, Saga가 새로 도입하는 비용(보상 로직·약한 격리)도 물류 맥락 예시와 함께 짚어보세요."
+      ],
+      "qaNs": "jobStudy::system-design::07-consistency-consensus::",
+      "lineCount": 788,
+      "fileSizeKB": 41.9,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "system-design/08-case-rate-limiter",
+      "path": "system-design/08-case-rate-limiter.html",
+      "area": "system-design",
+      "title": "Rate Limiter 설계 케이스 — 알고리즘·분산·Redis",
+      "h1": "Rate Limiter 설계 케이스분산 환경 · 5대 알고리즘 · Redis",
+      "coach": "system-design-coach",
+      "mode": "design",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🏗 Design 모드",
+        "system-design-coach",
+        "2026-07-01",
+        "Rate Limiter"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. \"100 req/min\"에서 Fixed Window Counter가 왜 순간 한도의 2배를 통과시킬 수 있는지(경계 버스트) 설명하고, Sliding Window Counter가 가중 평균 근사로 이를 어떻게 완화하는지 서술해보세요.",
+        "Q2. 여러 App 인스턴스가 중앙 Redis 카운터를 공유할 때 GET→판단→SET 방식의 race condition을 구체 시나리오로 설명하고, INCR/Lua로 원자화하는 방법과 INCR·EXPIRE를 따로 부를 때의 함정까지 짚어보세요.",
+        "Q3. 중앙 Redis의 SPOF·병목에 대해 fail-open/fail-close·동기화 비용·Redis Cluster 관점에서 대응을 제시하고, \"배차 요청 Rate Limiter\"에서 기사 단위 vs 화주 API key 단위에 각각 어떤 알고리즘을 쓰고 왜 그런지 설명해보세요."
+      ],
+      "qaNs": "jobStudy::system-design::08-case-rate-limiter::",
+      "lineCount": 675,
+      "fileSizeKB": 35.5,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "system-design/09-case-url-shortener",
+      "path": "system-design/09-case-url-shortener.html",
+      "area": "system-design",
+      "title": "URL 단축기 설계 — System Design 케이스",
+      "h1": "URL 단축기(URL Shortener) 설계read-heavy 시스템의 정석 케이스",
+      "coach": "system-design-coach",
+      "mode": "design",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🏗 Design 모드",
+        "system-design-coach",
+        "2026-07-01",
+        "URL Shortener"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. 키 생성에서 auto-increment id를 base62 인코딩하는 방식의 치명적 약점은 무엇이며, KGS 방식과 비교해 어떻게 보완할 수 있나요?",
+        "Q2. 리다이렉트에 301 대신 302를 쓰는 이유를 클릭 통계 관점에서 설명하고, 반대로 301이 더 나은 상황과 각각의 서버 부하·latency 영향을 제시해보세요.",
+        "Q3. 읽기 QPS 2만을 받기 위한 캐싱 전략을 설명하고, Cache Stampede(쇄도)와 Hot Key 문제를 각각 어떻게 막을지 구체적 기법으로 답해보세요."
+      ],
+      "qaNs": "jobStudy::system-design::09-case-url-shortener::",
+      "lineCount": 788,
+      "fileSizeKB": 39.6,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
+    },
+    {
+      "id": "system-design/10-case-delivery-tracking",
+      "path": "system-design/10-case-delivery-tracking.html",
+      "area": "system-design",
+      "title": "라스트마일 실시간 배송 추적 시스템 설계 — System Design 케이스",
+      "h1": "라스트마일 실시간 배송 추적 시스템 설계송장번호로 보는 \"지금 내 택배 어디?\"",
+      "coach": "system-design-coach",
+      "mode": "design",
+      "sessionLabel": null,
+      "createdAt": "2026-07-01",
+      "chips": [
+        "🏗 Design 모드",
+        "system-design-coach",
+        "2026-07-01",
+        "Delivery Tracking"
+      ],
+      "qaCount": 3,
+      "qaIds": [
+        "ans1",
+        "ans2",
+        "ans3"
+      ],
+      "qaQuestions": [
+        "Q1. 같은 송장의 이벤트 순서를 Kafka 파티셔닝 관점에서 어떻게 보장하나요? \"Kafka가 알아서 전역 순서를 보장한다\"가 왜 틀린 답인지 함께 설명해보세요.",
+        "Q2. 기사앱 오프라인 재전송으로 늦게 도착한 과거 스캔이 이미 DELIVERED인 송장을 IN_TRANSIT으로 되돌리려 할 때, out-of-order + 상태 역행을 데이터 모델과 처리 로직에서 각각 어떻게 막나요?",
+        "Q3. 이벤트소싱과 상태 스냅샷을 함께 쓰는 이유(CQRS)를 조회 성능·이력 보존·재처리 관점에서 설명하고, 둘 중 하나만 쓰면 생기는 문제를 제시해보세요."
+      ],
+      "qaNs": "jobStudy::system-design::10-case-delivery-tracking::",
+      "lineCount": 737,
+      "fileSizeKB": 39.5,
+      "updatedAt": "2026-06-30",
+      "tags": [],
+      "difficulty": null,
+      "estimatedMinutes": null,
+      "prerequisites": [],
+      "keywords": [],
+      "description": null
     }
   ]
 }

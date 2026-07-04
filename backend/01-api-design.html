@@ -594,7 +594,7 @@ stateDiagram-v2
   }, { threshold: 0.25 });
   sections.forEach(s => io.observe(s));
 
-  const NS = 'jobStudy::backend::01-api-design::';
+  const NS = 'jobStudy::backend::01-api-design::';window.NS=NS;
   const ansIds = ['ans1', 'ans2', 'ans3'];
 
   ansIds.forEach((id, i) => {
@@ -644,5 +644,6 @@ stateDiagram-v2
   }
 </script>
 <script src="../assets/qna-sync.js?v=1"></script>
+<script type="module" src="../assets/study-widget.js?v=1"></script>
 </body>
 </html>

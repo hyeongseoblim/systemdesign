@@ -604,7 +604,7 @@ sequenceDiagram
   sections.forEach(s => io.observe(s));
 
   // ── Q&A localStorage (key namespace per file) ──
-  const NS = 'jobStudy::system-design::08-case-rate-limiter::';
+  const NS = 'jobStudy::system-design::08-case-rate-limiter::';window.NS=NS;
   const ansIds = ['ans1', 'ans2', 'ans3'];
 
   // Load saved answers on page load
@@ -670,5 +670,6 @@ sequenceDiagram
   }
 </script>
 <script src="../assets/qna-sync.js?v=1"></script>
+<script type="module" src="../assets/study-widget.js?v=1"></script>
 </body>
 </html>

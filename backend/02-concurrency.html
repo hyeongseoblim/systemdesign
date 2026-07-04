@@ -409,7 +409,7 @@ flowchart TD
   }, { threshold: 0.25 });
   sections.forEach(s => io.observe(s));
 
-  const NS = 'jobStudy::backend::02-concurrency::';
+  const NS = 'jobStudy::backend::02-concurrency::';window.NS=NS;
   const ansIds = ['ans1', 'ans2', 'ans3'];
   ansIds.forEach((id, i) => {
     const el = document.getElementById(id); if (!el) return;
@@ -436,5 +436,6 @@ flowchart TD
   }
 </script>
 <script src="../assets/qna-sync.js?v=1"></script>
+<script type="module" src="../assets/study-widget.js?v=1"></script>
 </body>
 </html>

@@ -422,7 +422,7 @@ flowchart LR
 <script>
 mermaid.initialize({startOnLoad:true,theme:'neutral',securityLevel:'loose',flowchart:{htmlLabels:true,curve:'basis'}});
 
-const NS = 'jobStudy::cs::02-os::';
+const NS = 'jobStudy::cs::02-os::';window.NS=NS;
 
 function saveAns(id, val) {
   localStorage.setItem(NS + id, val);
@@ -465,5 +465,6 @@ document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
 loadAll();
 </script>
 <script src="../assets/qna-sync.js?v=1"></script>
+<script type="module" src="../assets/study-widget.js?v=1"></script>
 </body>
 </html>

@@ -497,7 +497,7 @@ flowchart TB
   }, { threshold: 0.25 });
   sections.forEach(s => io.observe(s));
 
-  const NS = 'jobStudy::logistics::07-case-studies::';
+  const NS = 'jobStudy::logistics::07-case-studies::';window.NS=NS;
   const ansIds = ['ans1', 'ans2', 'ans3'];
   ansIds.forEach((id, i) => {
     const el = document.getElementById(id);
@@ -544,5 +544,6 @@ flowchart TB
   }
 </script>
 <script src="../assets/qna-sync.js?v=1"></script>
+<script type="module" src="../assets/study-widget.js?v=1"></script>
 </body>
 </html>
