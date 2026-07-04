@@ -1,0 +1,41 @@
+# Oracle A1.Flex VM에서 API + PostgreSQL 실행
+# 사용: cd infra && docker compose up -d --build
+services:
+  postgres:
+    image: postgres:16
+    container_name: jobstudy-pg
+    environment:
+      POSTGRES_DB: jobstudy
+      POSTGRES_USER: jobstudy
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-jobstudy}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobstudy"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../apps/api
+    container_name: jobstudy-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/jobstudy
+      DB_USER: jobstudy
+      DB_PASSWORD: ${DB_PASSWORD:-jobstudy}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      GEN_ENABLED: ${GEN_ENABLED:-true}
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

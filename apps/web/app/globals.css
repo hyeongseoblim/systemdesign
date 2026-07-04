@@ -1,0 +1,131 @@
+:root {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --card-hover: #334155;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+  --border: #334155;
+  --radius: 14px;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --card-hover: #f1f5f9;
+    --text: #0f172a;
+    --muted: #64748b;
+    --accent: #0284c7;
+    --border: #e2e8f0;
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Noto Sans KR", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+
+.app {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 16px 96px;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  padding: 16px 0 10px;
+  border-bottom: 1px solid var(--border);
+}
+.topbar h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+.topbar p { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+
+/* 영역 필터 칩 — 가로 스크롤 */
+.tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 12px 0 4px;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* 카드 */
+.feed { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+.card {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+.card:active { transform: scale(0.99); background: var(--card-hover); }
+.card .meta { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+.badge {
+  font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+.badge.mode { background: var(--card-hover); color: var(--muted); }
+.diff { font-size: 11px; color: var(--muted); margin-left: auto; }
+.card h2 { font-size: 16.5px; font-weight: 700; line-height: 1.4; margin-bottom: 6px; }
+.card .summary { font-size: 13.5px; color: var(--muted); }
+.tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.tag { font-size: 11px; color: var(--muted); background: var(--bg); border: 1px solid var(--border); padding: 1px 8px; border-radius: 6px; }
+
+.loadmore {
+  width: 100%; margin-top: 16px; padding: 12px; border-radius: var(--radius);
+  background: var(--card); border: 1px solid var(--border); color: var(--text);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.empty { text-align: center; color: var(--muted); padding: 60px 0; font-size: 14px; }
+
+/* 상세 */
+.detail { padding-top: 18px; }
+.back { font-size: 13px; color: var(--accent); display: inline-block; margin-bottom: 14px; }
+.detail h1 { font-size: 22px; font-weight: 800; line-height: 1.35; margin: 6px 0 12px; }
+.content { font-size: 15px; }
+.content h1, .content h2, .content h3 { margin: 22px 0 10px; line-height: 1.35; }
+.content h1 { font-size: 20px; } .content h2 { font-size: 18px; } .content h3 { font-size: 16px; }
+.content p { margin: 10px 0; }
+.content ul, .content ol { padding-left: 22px; margin: 10px 0; }
+.content code { font-family: "SF Mono", Menlo, monospace; font-size: 13px; background: var(--card-hover); padding: 2px 6px; border-radius: 5px; }
+.content pre { background: #0b1220; color: #e2e8f0; padding: 14px 16px; border-radius: 10px; overflow-x: auto; margin: 14px 0; }
+.content pre code { background: none; padding: 0; }
+.content table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+.content th, .content td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; }
+.mermaid-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin: 14px 0; overflow-x: auto; text-align: center; }
+
+.qsection { margin-top: 32px; border-top: 1px solid var(--border); padding-top: 20px; }
+.qsection h3 { font-size: 16px; margin-bottom: 12px; }
+.qcard { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+.qcard .qn { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; margin-bottom: 6px; }
+.qcard textarea {
+  width: 100%; min-height: 90px; margin-top: 8px; padding: 10px 12px;
+  border: 1.5px solid var(--border); border-radius: 10px; background: var(--bg);
+  color: var(--text); font-family: inherit; font-size: 14px; line-height: 1.6; resize: vertical;
+}
+.qcard textarea:focus { outline: none; border-color: var(--accent); }

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>jobStudy 플랫폼 아키텍처 설계 (Phase 0)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root{--bg:#f8fafc;--card:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--accent:#0d9488}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14.5px;line-height:1.75}
+#sidebar{width:248px;min-height:100vh;background:var(--card);border-right:1px solid var(--border);padding:24px 0;position:fixed;left:0;top:0;overflow-y:auto;z-index:50}
+#sidebar .brand{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:16px}
+#sidebar .brand .tag{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+#sidebar .brand h2{font-size:14px;font-weight:700;line-height:1.4}
+#sidebar .group-label{padding:12px 20px 4px;font-size:10.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em}
+#sidebar a{display:block;padding:7px 20px;font-size:13px;color:var(--muted);text-decoration:none;border-left:3px solid transparent;transition:all .15s}
+#sidebar a:hover,#sidebar a.active{color:var(--accent);background:var(--bg);border-left-color:var(--accent)}
+main{margin-left:248px;flex:1;max-width:1080px;padding:48px 56px}
+.page-hdr{margin-bottom:48px;padding-bottom:32px;border-bottom:2px solid var(--border)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{font-size:12px;font-weight:500;padding:3px 11px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.accent{background:#ccfbf1;border-color:var(--accent);color:#115e59}
+.page-hdr h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:10px}
+.page-hdr p{color:var(--muted)}
+section{margin-bottom:64px;scroll-margin-top:24px}
+section>h2{font-size:20px;font-weight:700;padding-bottom:12px;border-bottom:2px solid var(--border);margin-bottom:24px}
+h3{font-size:16px;font-weight:600;margin:28px 0 12px}
+p{margin-bottom:10px}ul,ol{padding-left:22px;margin:8px 0 10px}li{margin-bottom:4px}
+.diagram-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px 24px 20px;margin:18px 0;overflow-x:auto;text-align:center}
+.diagram-wrap .cap{font-size:12px;color:var(--muted);margin-top:14px}
+.mermaid{display:inline-block}
+.tbl-wrap{overflow-x:auto;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+th{background:#f1f5f9;font-weight:600;font-size:12.5px;padding:9px 14px;border-bottom:1px solid var(--border);text-align:left}
+td{padding:9px 14px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+tr:last-child td{border-bottom:none}tr:hover td{background:#fafafa}
+.callout{border-radius:8px;padding:13px 16px;margin:14px 0;border-left:4px solid;font-size:13.5px}
+.callout .c-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.callout.interview{background:#fef2f2;border-color:#dc2626}.callout.interview .c-title{color:#dc2626}
+.callout.warn{background:#fff7ed;border-color:#ea580c}.callout.warn .c-title{color:#ea580c}
+.callout.tip{background:#f0fdf4;border-color:#16a34a}.callout.tip .c-title{color:#16a34a}
+.callout.gate{background:#eff6ff;border-color:#2563eb}.callout.gate .c-title{color:#2563eb}
+code{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#be185d}
+pre{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#1e293b;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:14px 0;line-height:1.6}
+.phase{display:flex;gap:14px;align-items:flex-start;padding:14px 0;border-bottom:1px solid #f1f5f9}
+.phase:last-child{border-bottom:none}
+.phase .num{flex-shrink:0;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+.phase .body{flex:1}
+.phase .body .t{font-weight:600;margin-bottom:2px}
+.phase .body .d{font-size:13px;color:var(--muted)}
+.phase .badge{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px;align-self:center}
+.phase .badge.now{background:#ccfbf1;color:#115e59}
+.phase .badge.todo{background:#f1f5f9;color:#94a3b8}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:14px}
+.q-card .q-num{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px}
+.ans-area{margin-top:12px}
+.ans-label{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.saved-badge{font-size:11px;color:#16a34a;opacity:0;transition:opacity .4s}.saved-badge.show{opacity:1}
+.ans-area textarea{width:100%;min-height:90px;border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-family:'Noto Sans KR',sans-serif;font-size:14px;line-height:1.7;resize:vertical;background:#fafcff;color:var(--text)}
+.ans-area textarea:focus{outline:none;border-color:var(--accent);background:#fff}
+.feedback-box{background:var(--card);border:1.5px dashed var(--border);border-radius:12px;padding:22px 24px;margin-top:28px;text-align:center}
+.feedback-box p{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+.btn-feedback{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer}
+.btn-feedback:hover{background:#0f766e}
+.copy-result{margin-top:12px;font-size:13px;color:#16a34a;min-height:20px}
+@media(max-width:860px){#sidebar{display:none}main{margin-left:0;padding:24px 20px}}
+</style>
+</head>
+<body>
+<nav id="sidebar">
+  <div class="brand">
+    <div class="tag">🏛️ Platform Design</div>
+    <h2>jobStudy 플랫폼<br>아키텍처 (Phase 0)</h2>
+  </div>
+  <div class="group-label">설계</div>
+  <a href="#vision">1. 비전 &amp; 스코프</a>
+  <a href="#arch">2. 전체 아키텍처</a>
+  <a href="#repo">3. 모노레포 구조</a>
+  <a href="#model">4. 데이터 모델</a>
+  <a href="#pipeline">5. AI 생성 파이프라인</a>
+  <a href="#api">6. API 설계</a>
+  <a href="#deploy">7. 배포 토폴로지</a>
+  <a href="#roadmap">8. 로드맵</a>
+  <div class="group-label">검토</div>
+  <a href="#qa">설계 점검 Q&amp;A</a>
+</nav>
+<main>
+  <div class="page-hdr">
+    <div class="chips">
+      <span class="chip accent">Platform Architecture</span>
+      <span class="chip">Phase 0</span>
+      <span class="chip">v0.1 — 2026-04-21</span>
+    </div>
+    <h1>jobStudy 학습 플랫폼 — 아키텍처 설계</h1>
+    <p>정적 HTML 모음에서 <strong>"매일 AI가 학습 카드를 자동 생성하고, 모바일 PWA 카드 피드로 학습하는 동적 플랫폼"</strong>으로 전면 개편. 결정: <code>1A(AI 자동 생성)</code> + <code>2A(풀스택 동적)</code> + <code>3A(Next.js PWA)</code>, 품질 게이트 3종 적용, 전부 0원(Free Tier).</p>
+  </div>
+
+  <!-- 1. 비전 -->
+  <section id="vision">
+    <h2>1. 비전 &amp; 스코프</h2>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>구분</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td><strong>핵심 가치</strong></td><td>이직 준비 학습 자료를 매일 자동으로 쌓고, 모바일에서 카드로 소비 + Q&amp;A 연습</td></tr>
+        <tr><td><strong>콘텐츠 생성</strong></td><td>AI 자동 생성 (스케줄러 → Claude API → 카드). CLAUDE.md 코치 페르소나를 프롬프트로 활용</td></tr>
+        <tr><td><strong>학습 영역</strong></td><td>system-design / logistics / backend-dev / backend-architecture / database / infra / cs</td></tr>
+        <tr><td><strong>모드</strong></td><td>concept / design / interview / review (기존 4모드 계승)</td></tr>
+        <tr><td><strong>예산</strong></td><td>인프라 0원 (Oracle Free Tier + Vercel + Cloudflare). Claude API 토큰 비용만 일일 캡으로 통제</td></tr>
+        <tr><td><strong>이직 어필</strong></td><td>혼자 풀스택 + LLM 파이프라인 + PWA + 0원 운영 = 백엔드 시니어 종합 역량 증명</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- 2. 아키텍처 -->
+  <section id="arch">
+    <h2>2. 전체 아키텍처</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TB
+    subgraph Client["📱 클라이언트"]
+        PWA["Next.js PWA<br/>모바일 카드 피드"]
+    end
+    subgraph Edge["엣지"]
+        CF["Cloudflare<br/>DNS + SSL + CDN"]
+        VERCEL["Vercel<br/>(프론트 호스팅)"]
+    end
+    subgraph Oracle["☁️ Oracle Free Tier (A1.Flex)"]
+        API["Spring Boot API<br/>(Kotlin)"]
+        SCHED["⏰ Scheduler<br/>@Scheduled"]
+        WORKER["🤖 Card Generator<br/>Claude API 호출"]
+        DB[("PostgreSQL")]
+    end
+    CLAUDE["Anthropic<br/>Claude API"]
+
+    PWA --> VERCEL
+    PWA -->|"REST /api"| CF --> API
+    API --> DB
+    SCHED --> WORKER
+    WORKER -->|"생성 요청"| CLAUDE
+    WORKER --> DB
+
+    style PWA fill:#dbeafe,stroke:#3b82f6
+    style API fill:#dcfce7,stroke:#22c55e
+    style WORKER fill:#fef3c7,stroke:#f59e0b
+    style DB fill:#ede9fe,stroke:#8b5cf6
+    style CLAUDE fill:#fce7f3,stroke:#ec4899
+      </div>
+      <div class="cap">전체 아키텍처 — 읽기는 PWA→API→DB, 생성은 Scheduler→Worker→Claude→DB 비동기</div>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">읽기/쓰기 경로 분리</div>
+      <strong>읽기(사용자)</strong>와 <strong>생성(AI 배치)</strong>이 완전히 분리됨. 생성이 느리거나 실패해도 사용자 읽기는 영향 없음. 생성된 카드는 DB에 쌓이고 사용자는 항상 published 카드만 본다.
+    </div>
+  </section>
+
+  <!-- 3. 모노레포 -->
+  <section id="repo">
+    <h2>3. 모노레포 구조</h2>
+    <p>기존 <code>SystemDesign</code> 레포를 모노레포로 재구성. 기존 학습 HTML은 <code>content/</code>로 이동(Phase 5에서 카드 DB로 마이그레이션).</p>
+    <pre>jobStudy/
+├── apps/
+│   ├── api/              # Spring Boot (Kotlin) — REST API + 스케줄러 + 카드 생성기
+│   │   ├── src/main/kotlin/
+│   │   │   ├── card/         # 카드 도메인 (Entity, Repository, Service, Controller)
+│   │   │   ├── curriculum/   # 주제 큐레이션
+│   │   │   ├── generation/   # Claude API 연동 + 품질 게이트
+│   │   │   └── progress/     # 학습 진행/북마크/답변
+│   │   └── build.gradle.kts
+│   └── web/              # Next.js PWA — 모바일 카드 피드
+│       ├── app/             # App Router
+│       ├── components/      # 카드 컴포넌트
+│       └── public/manifest.json  # PWA
+├── content/             # 기존 학습 HTML (마이그레이션 원본)
+├── docs/               # 설계 문서 (본 파일)
+├── infra/              # Docker, docker-compose, GitHub Actions
+└── CLAUDE.md</pre>
+    <div class="callout warn">
+      <div class="c-title">⚠️ 마이그레이션 주의</div>
+      기존 GitHub Pages URL(<code>/cs/00-introduction.html</code> 등)이 폴더 이동 시 깨진다. Phase 5에서 리다이렉트 또는 content 경로 유지 전략을 별도로 정한다. <strong>지금은 기존 파일을 건드리지 않는다.</strong>
+    </div>
+  </section>
+
+  <!-- 4. 데이터 모델 -->
+  <section id="model">
+    <h2>4. 데이터 모델</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+erDiagram
+    CARD ||--o{ CARD_QUESTION : has
+    CARD ||--o{ INTERACTION : tracked_by
+    CURRICULUM_TOPIC ||--o| CARD : generates
+
+    CARD {
+        uuid id PK
+        string area "system-design, logistics..."
+        string coach "생성 코치 페르소나"
+        string mode "concept/design/interview/review"
+        string title
+        string slug
+        text summary "피드 카드 요약"
+        text content_md "마크다운 본문"
+        int difficulty "1-5"
+        string_array tags
+        string status "draft/published/archived"
+        int quality_score "자가검증 0-100"
+        string source "ai_generated/manual"
+        timestamp created_at
+        timestamp published_at
+    }
+    CARD_QUESTION {
+        uuid id PK
+        uuid card_id FK
+        text question
+        int order
+    }
+    CURRICULUM_TOPIC {
+        uuid id PK
+        string area
+        string title
+        int order
+        bool generated
+        date planned_date
+    }
+    INTERACTION {
+        uuid id PK
+        uuid card_id FK
+        text answer "Q&A 답변"
+        bool bookmarked
+        timestamp last_viewed_at
+    }
+      </div>
+      <div class="cap">ERD — CARD가 중심. CURRICULUM_TOPIC이 "무엇을 생성할지" 관리, INTERACTION이 학습 진행 기록</div>
+    </div>
+
+    <div class="callout tip">
+      <div class="c-title">설계 의도</div>
+      <ul>
+        <li><strong>CURRICULUM_TOPIC</strong>: 품질 게이트 1(중복 방지)의 핵심. 미리 주제를 커리큘럼으로 정의 → 매일 <code>generated=false</code> 중 하나를 골라 생성</li>
+        <li><strong>content_md</strong>: HTML이 아닌 마크다운으로 저장 → 프론트에서 렌더 + 다이어그램은 mermaid 코드블록으로</li>
+        <li><strong>quality_score</strong>: 자가검증 통과 점수. 임계치 미달이면 <code>status=draft</code>로 보류 (사용자에게 안 보임)</li>
+        <li><strong>INTERACTION</strong>: 기존 localStorage+Worker 동기화를 DB로 정식 흡수</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 5. 파이프라인 -->
+  <section id="pipeline">
+    <h2>5. AI 생성 파이프라인 + 품질 게이트 3종</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant C as ⏰ Scheduler
+    participant W as Card Generator
+    participant DB as PostgreSQL
+    participant AI as Claude API
+
+    C->>W: 매일 09:00 트리거
+    W->>DB: 오늘 생성할 주제 조회
+    Note over W,DB: 🚪 Gate1 — 중복 방지<br/>generated=false 중 N개만
+    W->>DB: 일일 생성 수/토큰 누적 확인
+    Note over W: 🚪 Gate3 — 예산 캡<br/>상한 초과 시 중단
+    loop 주제별
+        W->>AI: 카드 생성 (코치 페르소나 프롬프트)
+        AI-->>W: 카드 초안 (구조화 JSON)
+        W->>AI: 2차 호출 — 사실/구조 검증
+        AI-->>W: quality_score + 지적사항
+        Note over W: 🚪 Gate2 — 자가검증<br/>점수 ≥ 70 → published<br/>미달 → draft 보류
+        W->>DB: 카드 저장 + 토픽 generated=true
+    end
+      </div>
+      <div class="cap">생성 파이프라인 — 3개 게이트로 중복·품질·비용을 자동 통제</div>
+    </div>
+
+    <div class="callout gate">
+      <div class="c-title">🚪 품질 게이트 3종</div>
+      <ol>
+        <li><strong>중복 방지</strong>: CURRICULUM_TOPIC에서 <code>generated=false</code>인 주제만 생성 대상. 같은 주제 두 번 생성 불가</li>
+        <li><strong>자가 검증</strong>: 생성 직후 LLM 2차 호출로 사실성·구조·난이도 검증 → <code>quality_score</code>. 70점 미만은 <code>draft</code>로 보류(사용자 미노출)</li>
+        <li><strong>예산 캡</strong>: 일일 생성 카드 수 상한(예: 3개) + 누적 토큰 한도. 초과 시 당일 생성 중단 → 비용 폭주 차단</li>
+      </ol>
+    </div>
+
+    <div class="callout warn">
+      <div class="c-title">⚠️ 1A의 본질적 리스크</div>
+      완전 자동 게시는 <strong>틀린 학습 자료</strong>를 만들 수 있다. 자가 검증(Gate2)은 환각을 100% 막지 못하므로, 향후 <code>draft</code> 카드를 모바일에서 빠르게 승인/반려하는 <strong>경량 검수 화면</strong>을 옵션으로 둔다(하이브리드로 후퇴 가능한 안전판).
+    </div>
+  </section>
+
+  <!-- 6. API -->
+  <section id="api">
+    <h2>6. API 설계</h2>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>메서드</th><th>경로</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td><code>GET</code></td><td><code>/api/v1/cards?area=&amp;mode=&amp;cursor=&amp;limit=20</code></td><td>카드 피드 (published만, Cursor 페이지네이션)</td></tr>
+        <tr><td><code>GET</code></td><td><code>/api/v1/cards/{id}</code></td><td>카드 상세 (본문 + 질문)</td></tr>
+        <tr><td><code>POST</code></td><td><code>/api/v1/cards/{id}/answers</code></td><td>Q&amp;A 답변 저장</td></tr>
+        <tr><td><code>POST</code></td><td><code>/api/v1/cards/{id}/bookmark</code></td><td>북마크 토글</td></tr>
+        <tr><td><code>GET</code></td><td><code>/api/v1/curriculum?area=</code></td><td>커리큘럼 진행 현황</td></tr>
+        <tr><td><code>POST</code></td><td><code>/api/v1/admin/generate</code></td><td>수동 생성 트리거 (테스트/보충)</td></tr>
+        <tr><td><code>GET</code></td><td><code>/api/v1/admin/drafts</code></td><td>검수 대기 draft 목록 (경량 검수)</td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout tip">
+      <div class="c-title">인증</div>
+      개인 사용이므로 초기엔 단순 토큰(또는 단일 계정 JWT). admin 엔드포인트만 보호. 추후 OAuth 확장 가능.
+    </div>
+  </section>
+
+  <!-- 7. 배포 -->
+  <section id="deploy">
+    <h2>7. 배포 토폴로지 (0원)</h2>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>구성요소</th><th>호스팅</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>Next.js PWA</td><td><strong>Vercel</strong> (무료)</td><td>SSG/SSR + 글로벌 CDN + 자동 HTTPS</td></tr>
+        <tr><td>Spring Boot API + Worker</td><td><strong>Oracle A1.Flex VM</strong> (Docker)</td><td>4 OCPU/24GB 무료. Nginx로 SSL 종료</td></tr>
+        <tr><td>PostgreSQL</td><td><strong>Oracle VM 내 Docker</strong> 또는 Autonomous DB</td><td>20GB 무료 한도</td></tr>
+        <tr><td>DNS + 보안</td><td><strong>Cloudflare</strong> (무료)</td><td>DDoS 방어 + 캐시</td></tr>
+        <tr><td>CI/CD</td><td><strong>GitHub Actions</strong></td><td>빌드 → Docker 이미지 → VM 배포</td></tr>
+        <tr><td>Claude API</td><td>Anthropic</td><td>유일한 변동 비용. 일일 캡으로 통제</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- 8. 로드맵 -->
+  <section id="roadmap">
+    <h2>8. 로드맵</h2>
+    <div class="phase"><div class="num">0</div><div class="body"><div class="t">설계 문서화</div><div class="d">본 문서 — 아키텍처·데이터모델·파이프라인·로드맵 확정</div></div><span class="badge now">진행중</span></div>
+    <div class="phase"><div class="num">1</div><div class="body"><div class="t">백엔드 코어</div><div class="d">Spring Boot/Kotlin + PostgreSQL 카드 스키마 + CRUD API</div></div><span class="badge todo">예정</span></div>
+    <div class="phase"><div class="num">2</div><div class="body"><div class="t">AI 생성 파이프라인</div><div class="d">스케줄러 + Claude API + 큐레이션 + 품질 게이트 3종</div></div><span class="badge todo">예정</span></div>
+    <div class="phase"><div class="num">3</div><div class="body"><div class="t">프론트 PWA</div><div class="d">Next.js 카드 피드 + 홈화면 추가 + 오프라인</div></div><span class="badge todo">예정</span></div>
+    <div class="phase"><div class="num">4</div><div class="body"><div class="t">배포</div><div class="d">Oracle VM + Vercel + GitHub Actions</div></div><span class="badge todo">예정</span></div>
+    <div class="phase"><div class="num">5</div><div class="body"><div class="t">기존 콘텐츠 마이그레이션</div><div class="d">7개 학습 HTML → 카드 DB 이관</div></div><span class="badge todo">예정</span></div>
+  </section>
+
+  <!-- Q&A -->
+  <section id="qa">
+    <h2>설계 점검 Q&amp;A</h2>
+    <p>이 설계를 본인이 이해/검증했는지 점검. 자동 저장 + 클라우드 동기화됩니다.</p>
+
+    <div class="q-card">
+      <div class="q-num">Q1 — 읽기/쓰기 분리</div>
+      <p>AI 생성 배치가 30분간 멈춰도 사용자 학습에는 영향이 없도록 설계했습니다. 이 구조의 장점과, 반대로 "생성이 계속 실패하면" 사용자가 겪게 될 문제는 무엇이며 어떻게 모니터링하겠습니까?</p>
+      <div class="ans-area"><div class="ans-label"><span>나의 답변</span><span class="saved-badge" id="badge-arch-q1">저장됨 ✓</span></div>
+        <textarea id="ans-arch-q1" placeholder="답변을 입력하세요..." oninput="saveAns('arch-q1',this.value)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q2 — 품질 게이트</div>
+      <p>품질 게이트 3종(중복방지/자가검증/예산캡) 중, LLM 환각으로 인한 "그럴듯하지만 틀린 카드"를 막는 데 가장 효과적인 것은 무엇이며 그 한계는? 추가로 둘 수 있는 4번째 게이트를 제안해보세요.</p>
+      <div class="ans-area"><div class="ans-label"><span>나의 답변</span><span class="saved-badge" id="badge-arch-q2">저장됨 ✓</span></div>
+        <textarea id="ans-arch-q2" placeholder="답변을 입력하세요..." oninput="saveAns('arch-q2',this.value)"></textarea></div>
+    </div>
+    <div class="q-card">
+      <div class="q-num">Q3 — 비용/확장</div>
+      <p>Claude API가 유일한 변동 비용입니다. 일일 생성 3개 × 카드당 입출력 토큰을 가정해 월 비용을 개략 추정하고, 비용이 부담되면 어떤 Trade-off(생성 빈도/모델 등급/캐싱)로 줄이겠습니까?</p>
+      <div class="ans-area"><div class="ans-label"><span>나의 답변</span><span class="saved-badge" id="badge-arch-q3">저장됨 ✓</span></div>
+        <textarea id="ans-arch-q3" placeholder="답변을 입력하세요..." oninput="saveAns('arch-q3',this.value)"></textarea></div>
+    </div>
+
+    <div class="feedback-box">
+      <p>작성한 답변을 복사해서 Claude에게 피드백을 요청하세요.</p>
+      <button class="btn-feedback" onclick="copyForFeedback()">📋 피드백 요청 복사</button>
+      <div class="copy-result" id="copy-result"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'neutral',securityLevel:'loose',flowchart:{htmlLabels:true,curve:'basis'}});
+const NS = 'jobStudy::docs::00-platform-architecture::';
+function saveAns(id, val){localStorage.setItem(NS+id,val);const b=document.getElementById('badge-'+id);if(b){b.classList.add('show');setTimeout(()=>b.classList.remove('show'),1800);}}
+function loadAll(){document.querySelectorAll('[id^="ans-"]').forEach(el=>{const k=NS+el.id.replace('ans-','');const s=localStorage.getItem(k);if(s)el.value=s;});}
+function copyForFeedback(){const title=document.title;const qs=document.querySelectorAll('.q-card');let text=`[${title} — Q&A 피드백 요청]\n\n`;qs.forEach((card,i)=>{const num=card.querySelector('.q-num')?.innerText||`Q${i+1}`;const q=card.querySelector('p')?.innerText||'';const ta=card.querySelector('textarea');const ans=ta?ta.value.trim():'';text+=`${num}\n질문: ${q}\n내 답변: ${ans||'(미작성)'}\n\n`;});text+='위 답변들에 대해 시니어 아키텍트 관점에서 피드백 부탁드립니다.';navigator.clipboard.writeText(text).then(()=>{document.getElementById('copy-result').textContent='✓ 클립보드에 복사되었습니다.';setTimeout(()=>document.getElementById('copy-result').textContent='',4000);});}
+const observer=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){document.querySelectorAll('#sidebar a').forEach(a=>a.classList.remove('active'));const link=document.querySelector(`#sidebar a[href="#${e.target.id}"]`);if(link)link.classList.add('active');}});},{rootMargin:'-20% 0px -70% 0px'});
+document.querySelectorAll('section[id]').forEach(s=>observer.observe(s));
+loadAll();
+</script>
+<script src="../assets/qna-sync.js?v=1"></script>
+</body>
+</html>
