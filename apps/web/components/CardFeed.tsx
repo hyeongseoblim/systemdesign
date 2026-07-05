@@ -1,21 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import Link from "next/link";
+import { CardSummary, FeedResponse, TopicArea, getFeed } from "@/lib/api";
 import {
-  CardSummary,
-  FeedResponse,
-  TopicArea,
-  getFeed,
-  AREA_LABELS,
-} from "@/lib/api";
-
-const MODE_LABELS: Record<string, string> = {
-  CONCEPT: "개념",
-  DESIGN: "설계",
-  INTERVIEW: "면접",
-  REVIEW: "리뷰",
-};
+  AREA_META,
+  AreaIcon,
+  MODE_META,
+  ModeIcon,
+  difficultyMeta,
+  tint,
+} from "@/lib/design";
 
 export default function CardFeed({
   initial,
@@ -53,26 +48,45 @@ export default function CardFeed({
   return (
     <>
       <div className="feed">
-        {items.map((c) => (
-          <Link key={c.id} href={`/cards/${c.id}`} className="card">
-            <div className="meta">
-              <span className="badge">{AREA_LABELS[c.area]}</span>
-              <span className="badge mode">{MODE_LABELS[c.mode] ?? c.mode}</span>
-              <span className="diff">난이도 {c.difficulty}/5</span>
-            </div>
-            <h2>{c.title}</h2>
-            {c.summary && <p className="summary">{c.summary}</p>}
-            {c.tags.length > 0 && (
-              <div className="tags">
-                {c.tags.slice(0, 4).map((t) => (
-                  <span key={t} className="tag">
-                    #{t}
-                  </span>
-                ))}
+        {items.map((c) => {
+          const a = AREA_META[c.area];
+          const diff = difficultyMeta(c.difficulty);
+          const cardVars = {
+            "--area": a.color,
+            "--area-tint": tint(a.color),
+          } as CSSProperties;
+          return (
+            <Link key={c.id} href={`/cards/${c.id}`} className="card" style={cardVars}>
+              <div className="meta">
+                <span className="badge area">
+                  <AreaIcon area={c.area} size={12} />
+                  {a.label}
+                </span>
+                <span className="badge mode">
+                  <ModeIcon mode={c.mode} size={11} />
+                  {MODE_META[c.mode].ko}
+                </span>
+                <span
+                  className="badge diff"
+                  style={{ background: diff.color, color: diff.ink }}
+                >
+                  {diff.label}
+                </span>
               </div>
-            )}
-          </Link>
-        ))}
+              <h2>{c.title}</h2>
+              {c.summary && <p className="summary">{c.summary}</p>}
+              {c.tags.length > 0 && (
+                <div className="tags">
+                  {c.tags.slice(0, 3).map((t) => (
+                    <span key={t} className="tag">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </Link>
+          );
+        })}
       </div>
       {cursor && (
         <button className="loadmore" onClick={loadMore} disabled={loading}>
