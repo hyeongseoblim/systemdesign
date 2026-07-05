@@ -26,7 +26,12 @@ export default async function Home({
   return (
     <>
       <header className="topbar">
-        <h1>jobStudy</h1>
+        <div className="row">
+          <h1>오늘의 카드</h1>
+          {initial.items.length > 0 && (
+            <span className="count">{initial.items.length}장</span>
+          )}
+        </div>
         <p>매일 쌓이는 백엔드 · 시스템 디자인 학습 카드</p>
         <nav className="tabs">
           <Link className={`tab ${!activeArea ? "active" : ""}`} href="/">
