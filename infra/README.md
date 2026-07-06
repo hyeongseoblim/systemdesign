@@ -27,15 +27,36 @@ docker compose --env-file .env up -d --build
 curl http://localhost:8080/api/v1/health   # {"status":"UP"}
 ```
 
-### 1-3. HTTPS (Nginx + Cloudflare 권장)
-- Cloudflare에 도메인 연결 → A 레코드를 VM 공인 IP로
-- VM에 Nginx 리버스 프록시(`:443 → :8080`) + Let's Encrypt, 또는 Cloudflare Tunnel 사용
+### 1-3. HTTPS (필수 — Caddy 내장)
+
+> ⚠️ **Vercel 프론트는 HTTPS라서 API가 `http://IP:8080`이면 브라우저가 Mixed Content로 전부 차단한다.**
+> 프론트를 붙이기 전에 반드시 HTTPS를 켜야 한다.
+
+도메인이 없어도 된다 — `sslip.io`(공짜 와일드카드 DNS)로 IP를 도메인처럼 쓸 수 있다:
+
+```bash
+# .env 에 추가 (VM 공인 IP가 140.83.1.2 라면)
+DOMAIN=api.140.83.1.2.sslip.io
+
+# Security List에 80/443 인바운드 열기 (콘솔) + Ubuntu 방화벽
+sudo iptables -I INPUT 6 -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT 6 -p tcp --dport 443 -j ACCEPT
+sudo netfilter-persistent save
+
+# Caddy 포함 재기동 (인증서 자동 발급)
+docker compose --profile https --env-file .env up -d
+curl https://api.140.83.1.2.sslip.io/api/v1/health   # {"status":"UP"}
+```
+
+- 실제 도메인이 있으면 `DOMAIN=api.mydomain.com` + A 레코드만 잡으면 동일하게 동작.
+- HTTPS 확인 후에는 Security List의 **8080 인바운드 규칙을 삭제**해 직접 노출을 막는다 (Caddy만 공개).
 
 ## 2. 프론트 — Vercel
 1. Vercel → New Project → 이 레포 Import
 2. **Root Directory = `apps/web`**
-3. 환경변수 `NEXT_PUBLIC_API_BASE = https://api.<your-domain>` 설정
+3. 환경변수 `NEXT_PUBLIC_API_BASE = https://<DOMAIN>` (위에서 정한 도메인)
 4. Deploy
+5. 배포된 Vercel 주소를 VM `.env`의 `CORS_ORIGINS`에 반영 후 `docker compose --profile https --env-file .env up -d` 재기동
 
 ## 3. CI
 `.github/workflows/ci.yml` — push마다 API(`./gradlew build`) + Web(`npm run build`) 검증.

@@ -1,0 +1,5 @@
+# {$DOMAIN} 으로 들어온 HTTPS 요청을 API 컨테이너로 프록시.
+# 인증서(Let's Encrypt/ZeroSSL)는 Caddy가 자동 발급·갱신한다.
+{$DOMAIN} {
+    reverse_proxy api:8080
+}

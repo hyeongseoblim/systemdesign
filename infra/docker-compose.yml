@@ -37,5 +37,27 @@ services:
       - "8080:8080"
     restart: unless-stopped
 
+  # HTTPS 리버스 프록시. Vercel(HTTPS) 프론트가 API를 호출하려면 필수 (Mixed Content 차단 회피).
+  # 실행: docker compose --profile https --env-file .env up -d
+  caddy:
+    image: caddy:2
+    container_name: jobstudy-caddy
+    profiles: ["https"]
+    depends_on:
+      - api
+    environment:
+      # --profile https 로 띄울 때 .env 의 DOMAIN 필수 (예: api.1.2.3.4.sslip.io)
+      DOMAIN: "${DOMAIN:-}"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
 volumes:
   pgdata:
+  caddy_data:
+  caddy_config:

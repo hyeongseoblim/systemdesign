@@ -4,8 +4,11 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.jobstudy.generation.GenerationProperties
 import org.slf4j.LoggerFactory
+import org.springframework.http.client.JdkClientHttpRequestFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
+import java.net.http.HttpClient
+import java.time.Duration
 
 /** Claude 호출 결과 — 본문 텍스트 + 토큰 사용량 */
 data class ClaudeResult(
@@ -21,8 +24,15 @@ class ClaudeClient(props: GenerationProperties) {
 
     private val log = LoggerFactory.getLogger(javaClass)
     private val claude = props.claude
+
+    // LLM 생성은 느릴 수 있어 read timeout을 넉넉히. 무한 대기는 배치 스레드를 영구 블로킹시키므로 금지.
     private val restClient = RestClient.builder()
         .baseUrl(claude.baseUrl)
+        .requestFactory(
+            JdkClientHttpRequestFactory(
+                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()
+            ).apply { setReadTimeout(Duration.ofSeconds(claude.readTimeoutSeconds)) }
+        )
         .build()
 
     fun isConfigured(): Boolean = claude.apiKey.isNotBlank()

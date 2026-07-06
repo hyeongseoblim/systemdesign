@@ -12,7 +12,7 @@ import com.jobstudy.generation.claude.ClaudeClient
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionTemplate
 import java.text.Normalizer
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -34,6 +34,7 @@ class CardGenerationService(
     private val topicRepository: CurriculumTopicRepository,
     private val logRepository: GenerationLogRepository,
     private val objectMapper: ObjectMapper,
+    private val transactionTemplate: TransactionTemplate,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -72,12 +73,14 @@ class CardGenerationService(
         return BatchResult(attempted, published, drafted, failed)
     }
 
-    /** 단일 주제 생성 — 생성 → 자가검증(게이트2) → 저장. 각 시도를 로그로 남김 */
-    @Transactional
+    /**
+     * 단일 주제 생성 — 생성 → 자가검증(게이트2) → 저장.
+     * LLM 호출(수십 초)은 트랜잭션 밖에서, DB 저장(카드+토픽+로그)만 원자적으로 커밋한다.
+     */
     fun generateOne(topic: CurriculumTopic): GenerationLog {
         var inTok = 0; var outTok = 0
         try {
-            // 1) 생성
+            // 1) 생성 (트랜잭션 밖 — 외부 호출이 DB 커넥션을 점유하지 않도록)
             val gen = claude.complete(
                 GenerationPrompts.generationSystem(topic.area),
                 GenerationPrompts.generationUser(topic.title, topic.mode),
@@ -93,20 +96,22 @@ class CardGenerationService(
             inTok += verify.inputTokens; outTok += verify.outputTokens
             val score = objectMapper.readTree(extractJson(verify.text))["score"].asInt(0)
 
-            // 3) 카드 빌드 + 임계치에 따라 publish / draft
+            // 3) 저장 — 카드/토픽/로그를 한 트랜잭션으로
             val card = buildCard(topic, draft, score)
             if (score >= props.qualityThreshold) card.publish()
-            val saved = cardRepository.save(card)
-            topic.markGenerated(saved.id!!)
-            topicRepository.save(topic)
-
             val outcome = if (score >= props.qualityThreshold) GenerationOutcome.PUBLISHED else GenerationOutcome.DRAFT
+            val savedLog = transactionTemplate.execute {
+                val saved = cardRepository.save(card)
+                topic.markGenerated(saved.id!!)
+                topicRepository.save(topic)
+                logRepository.save(GenerationLog(
+                    area = topic.area, topicId = topic.id, cardId = saved.id,
+                    inputTokens = inTok, outputTokens = outTok,
+                    qualityScore = score.toShort(), outcome = outcome,
+                ))
+            }!!
             log.info("[generation] '${topic.title}' → $outcome (score=$score)")
-            return logRepository.save(GenerationLog(
-                area = topic.area, topicId = topic.id, cardId = saved.id,
-                inputTokens = inTok, outputTokens = outTok,
-                qualityScore = score.toShort(), outcome = outcome,
-            ))
+            return savedLog
         } catch (e: Exception) {
             log.error("[generation] '${topic.title}' 실패: ${e.message}")
             return logRepository.save(GenerationLog(
