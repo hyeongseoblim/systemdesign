@@ -83,3 +83,51 @@ export async function getCard(id: string): Promise<CardDetail> {
   if (!res.ok) throw new Error(`card failed: ${res.status}`);
   return res.json();
 }
+
+// ── interactions (답변/북마크 — 기기 간 동기화) ──
+
+export interface AnswerItem {
+  questionId: string;
+  answer: string | null;
+  updatedAt: string;
+}
+
+export interface Interactions {
+  bookmarked: boolean;
+  answers: AnswerItem[];
+}
+
+export async function getInteractions(cardId: string): Promise<Interactions> {
+  const res = await fetch(`${API_BASE}/api/v1/cards/${cardId}/interactions`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`interactions failed: ${res.status}`);
+  return res.json();
+}
+
+export async function saveAnswer(
+  cardId: string,
+  questionId: string,
+  answer: string
+): Promise<AnswerItem> {
+  const res = await fetch(
+    `${API_BASE}/api/v1/cards/${cardId}/answers/${questionId}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ answer }),
+    }
+  );
+  if (!res.ok) throw new Error(`saveAnswer failed: ${res.status}`);
+  return res.json();
+}
+
+export async function toggleBookmark(
+  cardId: string
+): Promise<{ bookmarked: boolean }> {
+  const res = await fetch(`${API_BASE}/api/v1/cards/${cardId}/bookmark`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error(`bookmark failed: ${res.status}`);
+  return res.json();
+}

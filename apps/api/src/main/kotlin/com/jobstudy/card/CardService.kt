@@ -1,6 +1,7 @@
 package com.jobstudy.card
 
 import com.jobstudy.common.CardSource
+import com.jobstudy.common.CardStatus
 import com.jobstudy.common.LearningMode
 import com.jobstudy.common.TopicArea
 import org.springframework.data.domain.PageRequest
@@ -10,6 +11,7 @@ import java.util.UUID
 
 class CardNotFoundException(id: UUID) : RuntimeException("Card not found: $id")
 class SlugConflictException(slug: String) : RuntimeException("Slug already exists: $slug")
+class InvalidCardStateException(message: String) : RuntimeException(message)
 
 @Service
 class CardService(
@@ -66,5 +68,24 @@ class CardService(
         }
         if (req.publishNow) card.publish()
         return CardDetailResponse.from(cardRepository.save(card))
+    }
+
+    /** 품질 게이트에 걸려 DRAFT 로 보류된 카드를 검토 후 게시 */
+    @Transactional
+    fun publishDraft(id: UUID): CardDetailResponse {
+        val card = cardRepository.findById(id).orElseThrow { CardNotFoundException(id) }
+        if (card.status != CardStatus.DRAFT) {
+            throw InvalidCardStateException("Only DRAFT can be published (current: ${card.status})")
+        }
+        card.publish()
+        return CardDetailResponse.from(card)
+    }
+
+    /** 반려 — 사용자에게 노출되지 않는 ARCHIVED 로 전환 (DRAFT/PUBLISHED 모두 가능) */
+    @Transactional
+    fun archive(id: UUID): CardDetailResponse {
+        val card = cardRepository.findById(id).orElseThrow { CardNotFoundException(id) }
+        card.status = CardStatus.ARCHIVED
+        return CardDetailResponse.from(card)
     }
 }

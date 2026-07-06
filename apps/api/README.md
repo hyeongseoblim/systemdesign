@@ -36,6 +36,9 @@ Flyway가 `V1__init.sql`을 자동 적용한다. (`gradlew` 래퍼 jar가 없으
 | `GET` | `/api/v1/cards?area=&mode=&cursor=&limit=20` | 카드 피드 (published만, keyset 페이지네이션) |
 | `GET` | `/api/v1/cards/{id}` | 카드 상세 |
 | `POST` | `/api/v1/cards` | 카드 수동 생성 (MANUAL) |
+| `GET` | `/api/v1/cards/{id}/interactions` | 답변·북마크 조회 (기기 간 동기화) |
+| `PUT` | `/api/v1/cards/{id}/answers/{questionId}` | 답변 upsert |
+| `POST` | `/api/v1/cards/{id}/bookmark` | 북마크 토글 |
 
 ### 예시
 ```bash
@@ -83,6 +86,8 @@ curl 'http://localhost:8080/api/v1/cards?area=SYSTEM_DESIGN&limit=20'
 |---|---|---|
 | `POST` | `/api/v1/admin/generate` | 배치 수동 트리거 (게이트 모두 적용) |
 | `GET` | `/api/v1/admin/drafts?limit=20` | 검수 대기 draft 목록 |
+| `POST` | `/api/v1/admin/cards/{id}/publish` | draft 검토 후 게시 승격 |
+| `POST` | `/api/v1/admin/cards/{id}/archive` | 반려 (ARCHIVED — 미노출) |
 
 ```bash
 # 키 주입 후 수동 트리거
