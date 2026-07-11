@@ -1,5 +1,5 @@
 # ── build stage ──
-FROM gradle:8.10-jdk21 AS build
+FROM gradle:9-jdk25 AS build
 WORKDIR /app
 # 의존성 캐시 레이어
 COPY build.gradle.kts settings.gradle.kts ./
@@ -9,7 +9,7 @@ COPY src ./src
 RUN gradle bootJar --no-daemon
 
 # ── runtime stage ──
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 COPY --from=build /app/build/libs/*.jar app.jar
 EXPOSE 8080

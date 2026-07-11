@@ -6,7 +6,7 @@
 #   scripts/local-dev.sh status  # 상태 확인
 #   scripts/local-dev.sh db      # Postgres만 기동 (API/웹은 직접 띄울 때)
 #
-# 요구사항: Docker, JDK 21, Node 18.18+ (권장 20+)
+# 요구사항: Docker, JDK 25, Node 18.18+ (권장 20+)
 # 로그: .local/api.log, .local/web.log
 
 set -euo pipefail
@@ -29,11 +29,11 @@ require() {
 
 check_prereqs() {
   require docker "https://docs.docker.com/get-docker/"
-  require java   "JDK 21 설치 (sdkman: sdk install java 21-tem)"
+  require java   "JDK 25 설치 (sdkman: sdk install java 25-tem / brew install --cask temurin@25)"
   require node   "Node 20+ 설치 (https://nodejs.org)"
   local jv
   jv=$(java -version 2>&1 | grep -oE 'version "([0-9]+)' | grep -oE '[0-9]+' | head -1)
-  if [ "${jv:-0}" -lt 21 ]; then red "JDK 21 이상 필요 (현재: ${jv:-unknown})"; exit 1; fi
+  if [ "${jv:-0}" -lt 25 ]; then red "JDK 25 이상 필요 (현재: ${jv:-unknown})"; exit 1; fi
 }
 
 db_up() {

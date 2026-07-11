@@ -11,7 +11,7 @@
 | 도구 | 버전 | 확인 |
 |---|---|---|
 | Docker | 아무 최신 | `docker --version` |
-| JDK | **21** | `java -version` |
+| JDK | **25** | `java -version` |
 | Node.js | 18.18+ (권장 20+) | `node --version` |
 
 > API 는 Gradle Wrapper(`gradlew`)를 쓰므로 Gradle 별도 설치는 불필요하다.
