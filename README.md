@@ -51,11 +51,11 @@ scripts/local-dev.sh down    # 전부 종료
 # PostgreSQL
 cd infra && docker compose -f docker-compose.local.yml up -d
 
-# API (JDK 21 필요)
+# API (JDK 25 필요)
 cd apps/api && ./gradlew bootRun
 # Flyway가 스키마 생성 → ContentSeeder가 59개 카드 적재
 ```
-> **주의**: 프로젝트 툴체인은 **JDK 21**이다(Kotlin 1.9.25). JDK 25 등 상위 버전으로는 컴파일되지 않는다.
+> **주의**: 프로젝트 툴체인은 **JDK 25**다(Gradle 9.6 / Kotlin 2.3 / Spring Boot 3.5). JDK 21~24로는 Gradle 데몬은 뜨지만 툴체인 25를 요구하므로, 로컬에 JDK 25가 없으면 Gradle이 자동 다운로드를 시도한다.
 
 ### 프론트엔드
 ```bash
