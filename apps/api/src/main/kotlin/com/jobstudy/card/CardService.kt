@@ -21,13 +21,12 @@ class CardService(
         val pageSize = limit.coerceIn(1, 50)
         val decoded = Cursor.decode(cursor)
         // limit+1 조회로 다음 페이지 존재 여부 판단
-        val rows = cardRepository.findFeed(
-            area = area,
-            mode = mode,
-            cursorPublishedAt = decoded?.first,
-            cursorId = decoded?.second,
-            pageable = PageRequest.of(0, pageSize + 1),
-        )
+        val pageable = PageRequest.of(0, pageSize + 1)
+        val rows = if (decoded == null) {
+            cardRepository.findFeedFirstPage(area, mode, pageable)
+        } else {
+            cardRepository.findFeedAfter(area, mode, decoded.first, decoded.second, pageable)
+        }
         val hasNext = rows.size > pageSize
         val page = if (hasNext) rows.subList(0, pageSize) else rows
         val nextCursor = if (hasNext) {

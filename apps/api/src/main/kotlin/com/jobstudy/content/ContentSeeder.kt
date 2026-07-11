@@ -17,7 +17,7 @@ import org.yaml.snakeyaml.Yaml
 /**
  * 수동 큐레이션 학습 콘텐츠를 카드로 시드한다.
  *
- * `classpath:content/*.md` 의 프론트매터 + 마크다운 본문을 읽어 [CardService.create] 로
+ * `classpath:content` 아래 `.md` 파일의 프론트매터 + 마크다운 본문을 읽어 [CardService.create] 로
  * 발행(source = MANUAL) 한다. slug 기준 멱등(idempotent) — 이미 존재하는 slug 는 건너뛴다.
  * 따라서 매 부팅마다 안전하게 재실행되며, AI 생성 파이프라인(Phase 2)과 공존한다.
  *

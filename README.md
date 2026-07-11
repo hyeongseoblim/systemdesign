@@ -38,15 +38,22 @@
 
 ## 로컬 실행
 
+> 상세 가이드·트러블슈팅: [docs/local-dev.md](docs/local-dev.md)
+
+### 원샷 (권장)
+```bash
+scripts/local-dev.sh up      # Postgres(도커) + API + 웹 전부 기동 → http://localhost:3000
+scripts/local-dev.sh down    # 전부 종료
+```
+
 ### 백엔드
 ```bash
 # PostgreSQL
-docker run -d --name jobstudy-pg -e POSTGRES_DB=jobstudy \
-  -e POSTGRES_USER=jobstudy -e POSTGRES_PASSWORD=jobstudy -p 5432:5432 postgres:16
+cd infra && docker compose -f docker-compose.local.yml up -d
 
 # API (JDK 21 필요)
 cd apps/api && ./gradlew bootRun
-# Flyway가 스키마 생성 → ContentSeeder가 47개 카드 적재
+# Flyway가 스키마 생성 → ContentSeeder가 59개 카드 적재
 ```
 > **주의**: 프로젝트 툴체인은 **JDK 21**이다(Kotlin 1.9.25). JDK 25 등 상위 버전으로는 컴파일되지 않는다.
 
