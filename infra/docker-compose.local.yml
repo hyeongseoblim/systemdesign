@@ -1,0 +1,25 @@
+# 로컬 개발용 — PostgreSQL만 도커로 띄운다.
+# API는 ./gradlew bootRun, 웹은 npm run dev 로 네이티브 실행(핫 리로드).
+# 사용: cd infra && docker compose -f docker-compose.local.yml up -d
+# (원샷 스크립트: scripts/local-dev.sh 참고)
+services:
+  postgres:
+    image: postgres:16
+    container_name: jobstudy-pg-local
+    environment:
+      POSTGRES_DB: jobstudy
+      POSTGRES_USER: jobstudy
+      POSTGRES_PASSWORD: jobstudy
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata_local:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobstudy"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  pgdata_local:
