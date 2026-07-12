@@ -5,13 +5,13 @@ coach: database-coach
 title: "재고 차감 동시성 심화 — 비관·낙관·원자적 UPDATE·Redis와 Oversell 방지"
 slug: database-07-inventory-concurrency
 difficulty: 4
-summary: "재고 차감 동시성 심화 — 비관·낙관·원자적 UPDATE·Redis와 Oversell 방지"
+summary: "비관적 락·낙관적 락·원자적 조건부 UPDATE·Redis 원자 감소를 성능과 정합성 축으로 비교해 Oversell 없는 재고 차감 전략을 세운다."
 tags:
-  - "비관"
-  - "낙관"
-  - "원자적"
-  - "UPDATE"
-  - "Redis와"
+  - "재고 차감"
+  - "동시성"
+  - "비관적 락"
+  - "낙관적 락"
+  - "Redis"
   - "Oversell"
 questions:
   - "재고 1개에 동시 주문 100건이 들어옵니다. `UPDATE stock SET qty=qty-1 WHERE sku=? AND qty>=1` 한 문장이 왜 Oversell을 막는지, 비관적 락 `SELECT ... FOR UPDATE` 대비 throughput 측면에서 무엇이 더 유리한지 설명하세요."

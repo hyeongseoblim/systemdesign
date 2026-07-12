@@ -57,6 +57,26 @@ export const AREA_LABELS: Record<TopicArea, string> = {
   CS: "CS 기초",
 };
 
+export const MODE_LABELS: Record<LearningMode, string> = {
+  CONCEPT: "개념",
+  DESIGN: "설계",
+  INTERVIEW: "면접",
+  REVIEW: "리뷰",
+};
+
+/** 읽음/완료 상태 — localStorage 키 (기기 로컬 학습 기록) */
+export const readKey = (id: string) => `jobStudy::read::${id}`;
+export const doneKey = (id: string) => `jobStudy::done::${id}`;
+
+/** 요약 등 플레인 텍스트 자리에서 마크다운 문법 제거 */
+export function stripMd(s: string): string {
+  return s
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+}
+
 export async function getFeed(params: {
   area?: TopicArea;
   mode?: LearningMode;

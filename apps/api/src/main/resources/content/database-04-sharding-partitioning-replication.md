@@ -5,12 +5,13 @@ coach: database-coach
 title: "파티셔닝·샤딩·복제 — 수평 확장과 일관성 트레이드오프"
 slug: database-04-sharding-partitioning-replication
 difficulty: 4
-summary: "파티셔닝·샤딩·복제 — 수평 확장과 일관성 트레이드오프"
+summary: "파티셔닝 전략, 샤딩 키 선택, Consistent Hashing, 동기/비동기 복제와 복제 지연까지 — 수평 확장이 만드는 일관성 트레이드오프를 정리한다."
 tags:
-  - "수평"
-  - "확장과"
-  - "일관성"
-  - "트레이드오프"
+  - "파티셔닝"
+  - "샤딩"
+  - "Consistent Hashing"
+  - "복제"
+  - "복제 지연"
 questions:
   - "일별 1억 건 주문이 쌓이는 시스템에서 `user_id` 해시 샤딩과 `order_date` 샤딩의 트레이드오프를 분포·지역성·핫스팟·분석 쿼리 관점에서 비교하고, 최종 선택과 그 이유, 그리고 분석 요구는 어떻게 따로 처리할지 설명하세요."
   - "단순 `hash(key) % N` 샤딩에서 노드를 4대→5대로 늘릴 때 무슨 일이 벌어지나요? 일관성 해시가 이를 어떻게 완화하며 Virtual Node가 왜 필요한지, 실제 어떤 DB가 이 방식을 쓰는지 설명하세요."

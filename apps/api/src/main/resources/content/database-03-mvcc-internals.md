@@ -5,13 +5,14 @@ coach: database-coach
 title: "MVCC 내부 구조 — Undo Log·WAL과 InnoDB vs PostgreSQL"
 slug: database-03-mvcc-internals
 difficulty: 4
-summary: "MVCC 내부 구조 — Undo Log·WAL과 InnoDB vs PostgreSQL"
+summary: "Read View·버전 체인·Undo Log·WAL로 MVCC 내부를 열어보고, InnoDB와 PostgreSQL이 옛 버전을 청소하는 방식(Purge vs VACUUM)의 차이를 비교한다."
 tags:
-  - "Undo"
-  - "Log"
-  - "WAL과"
+  - "MVCC"
+  - "Undo Log"
+  - "WAL"
   - "InnoDB"
   - "PostgreSQL"
+  - "VACUUM"
 questions:
   - "같은 MVCC 엔진(InnoDB)에서 REPEATABLE READ와 READ COMMITTED의 차이가 \"Read View 생성 시점\"으로 설명되는 이유를 서술하고, 각각에서 Non-repeatable read가 발생/방지되는 과정을 버전 체인 관점으로 설명하세요."
   - "WAL이 \"랜덤 쓰기를 순차 쓰기로 바꿔 성능과 내구성을 동시에\" 잡는다는 말을 checkpoint·fsync·group commit 개념을 써서 설명하세요. `innodb_flush_log_at_trx_commit`의 1과 2 차이는 결제/재고 시스템에서 어떤 의미인가요?"

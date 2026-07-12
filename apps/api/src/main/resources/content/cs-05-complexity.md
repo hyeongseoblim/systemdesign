@@ -5,7 +5,7 @@ coach: cs-fundamentals-coach
 title: "복잡도 분석 — 빅오·시간/공간·DP/그리디·자료구조 복잡도표"
 slug: cs-05-complexity
 difficulty: 3
-summary: "복잡도 분석 — 빅오·시간/공간·DP/그리디·자료구조 복잡도표"
+summary: "빅오·오메가·세타, 증가율 위계, 분할상환 분석(Amortized), DP/그리디/분할정복, 자료구조 연산 복잡도표까지 — 복잡도 어휘를 면접 수준으로 벼린다."
 tags:
   - "빅오"
   - "시간"

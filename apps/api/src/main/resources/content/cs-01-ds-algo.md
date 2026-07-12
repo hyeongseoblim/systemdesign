@@ -5,7 +5,7 @@ coach: cs-fundamentals-coach
 title: "자료구조 & 알고리즘 — 복잡도·정렬·면접 패턴"
 slug: cs-01-ds-algo
 difficulty: 3
-summary: "자료구조 & 알고리즘 — 복잡도·정렬·면접 패턴"
+summary: "자료구조 선택 원칙부터 해시·트리·힙·그래프·정렬, 면접 빈출 코딩 패턴까지 — 백엔드 면접에 필요한 알고리즘 감각을 복원한다."
 tags:
   - "복잡도"
   - "정렬"

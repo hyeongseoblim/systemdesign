@@ -5,7 +5,7 @@ coach: cs-fundamentals-coach
 title: "네트워크 — TCP·HTTP·HTTPS/TLS·DNS·CDN"
 slug: cs-03-network
 difficulty: 3
-summary: "네트워크 — TCP·HTTP·HTTPS/TLS·DNS·CDN"
+summary: "TCP 3-way/4-way 핸드셰이크, 혼잡 제어, HTTP 1.1→3 진화, TLS 핸드셰이크, DNS·CDN까지 — 네트워크 면접 단골 경로를 한 장으로 꿴다."
 tags:
   - "TCP"
   - "HTTP"
