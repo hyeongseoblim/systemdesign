@@ -5,13 +5,13 @@ coach: database-coach
 title: "RDBMS vs NoSQL — CAP 관점 선택과 데이터 모델링"
 slug: database-05-rdbms-vs-nosql
 difficulty: 3
-summary: "RDBMS vs NoSQL — CAP 관점 선택과 데이터 모델링"
+summary: "CAP·PACELC 관점에서 RDBMS와 NoSQL 4종을 분류하고, Query-first 모델링 패턴과 선택 가이드를 Trade-off 표로 정리한다."
 tags:
+  - "RDBMS"
+  - "NoSQL"
   - "CAP"
-  - "관점"
-  - "선택과"
-  - "데이터"
-  - "모델링"
+  - "PACELC"
+  - "데이터 모델링"
 questions:
   - "\"CAP 정리에서 셋 중 둘을 고른다\"는 설명이 왜 오해를 부르는지 지적하고, PACELC가 CAP의 어떤 빈틈을 메우는지 설명하세요. DynamoDB와 PostgreSQL을 PACELC 분류로 각각 배치해 보세요."
   - "Cassandra/DynamoDB의 \"Query-first modeling\"이 RDBMS 설계와 무엇이 다른지 설명하고, 데이터를 의도적으로 중복(denormalize) 저장하는 이유를 비용 관점에서 정당화하세요. 핫 파티션 회피책도 1가지 드세요."

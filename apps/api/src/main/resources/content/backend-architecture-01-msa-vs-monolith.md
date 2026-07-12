@@ -7,9 +7,10 @@ slug: backend-architecture-01-msa-vs-monolith
 difficulty: 3
 summary: "\"MSA가 좋다\"는 단정은 면접에서 감점이다. **언제 쪼개고, 언제 합쳐 두는가**의 판단 기준과 Trade-off를 그림으로 정리한다. Deep-dive 주제는 🔥(Deep-dive) 로 표시."
 tags:
-  - "분리"
-  - "기준과"
-  - "마이그레이션"
+  - "MSA"
+  - "Modular Monolith"
+  - "서비스 분리"
+  - "마이그레이션 전략"
 questions:
   - "\"DB를 공유하는 MSA\"가 왜 **Distributed Monolith**인지, 그리고 데이터 소유권(SSOT)을 분리하면 어떤 문제(이중 쓰기 등)가 새로 생기고 어떻게 푸는지 설명해보세요."
   - "각 서비스 가용성이 99.9%인 5개 서비스를 **동기 직렬 체인**으로 호출하면 전체 가용성은? 이 수치를 어떻게 개선할지 구체 패턴 3가지를 제시해보세요."

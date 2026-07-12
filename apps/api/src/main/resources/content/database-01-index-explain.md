@@ -5,12 +5,13 @@ coach: database-coach
 title: "B-Tree 인덱스와 EXPLAIN 실행계획 읽기"
 slug: database-01-index-explain
 difficulty: 3
-summary: "B-Tree 인덱스와 EXPLAIN 실행계획 읽기"
+summary: "B+Tree 구조, 복합 인덱스 선두 컬럼 원칙, 커버링 인덱스, EXPLAIN 실행계획 읽기, 인덱스가 안 타는 8가지 경우까지 — 쿼리 성능의 첫 번째 도구를 정리한다."
 tags:
-  - "B Tree"
-  - "인덱스와"
+  - "B-Tree"
+  - "인덱스"
   - "EXPLAIN"
   - "실행계획"
+  - "커버링 인덱스"
 questions:
   - "`orders(warehouse_id, status, created_at)` 복합 인덱스가 있을 때, `WHERE status='PAID' AND created_at > ?` 쿼리는 이 인덱스를 어떻게 활용(또는 못)하나요? 더 나은 인덱스 설계를 제안하고, 선택도 관점에서 근거를 대보세요."
   - "운송장 추적 API가 `SELECT status, eta FROM waybill WHERE tracking_no=?`를 초당 수만 번 호출합니다. 커버링 인덱스를 적용했을 때 I/O 관점에서 무엇이 달라지는지, 그리고 그 대가(쓰기/저장 비용)는 무엇인지 설명하세요. EXPLAIN에서 무엇을 확인하면 되나요?"

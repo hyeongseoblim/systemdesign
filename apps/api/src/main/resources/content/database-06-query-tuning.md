@@ -5,7 +5,7 @@ coach: database-coach
 title: "쿼리 튜닝 — 슬로우쿼리·N+1·커서 페이지네이션·옵티마이저"
 slug: database-06-query-tuning
 difficulty: 3
-summary: "쿼리 튜닝 — 슬로우쿼리·N+1·커서 페이지네이션·옵티마이저"
+summary: "슬로우쿼리 분석 프로세스, N+1 탐지와 해결, 커서 페이지네이션 전환, 옵티마이저 카디널리티 추정까지 — 실무 쿼리 튜닝 루틴을 만든다."
 tags:
   - "슬로우쿼리"
   - "N+1"

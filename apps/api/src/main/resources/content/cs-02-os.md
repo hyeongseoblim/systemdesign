@@ -5,7 +5,7 @@ coach: cs-fundamentals-coach
 title: "운영체제(OS) — 프로세스·메모리·스케줄링·동기화"
 slug: cs-02-os
 difficulty: 3
-summary: "운영체제(OS) — 프로세스·메모리·스케줄링·동기화"
+summary: "프로세스 vs 스레드, 컨텍스트 스위칭 비용, CPU 스케줄링, 가상 메모리·페이징, 동기화 프리미티브까지 — 백엔드 관점으로 OS를 재정리한다."
 tags:
   - "프로세스"
   - "메모리"

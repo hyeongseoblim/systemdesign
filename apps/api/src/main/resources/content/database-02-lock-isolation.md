@@ -5,10 +5,13 @@ coach: database-coach
 title: "트랜잭션 격리수준과 락"
 slug: database-02-lock-isolation
 difficulty: 3
-summary: "트랜잭션 격리수준과 락"
+summary: "Dirty·Non-repeatable·Phantom 3대 이상현상, 격리수준 4종의 DBMS별 차이, S/X 락 호환성, Gap/Next-key Lock, 데드락 분석까지 한 장으로 잡는다."
 tags:
   - "트랜잭션"
-  - "격리수준과"
+  - "격리수준"
+  - "락"
+  - "Gap Lock"
+  - "데드락"
 questions:
   - "\"MySQL InnoDB의 REPEATABLE READ는 팬텀을 막는다\"는 말은 어디까지 맞나요? 일반 SELECT와 `SELECT ... FOR UPDATE`를 구분해 설명하고, 표준 SQL·PostgreSQL과의 차이도 함께 정리하세요."
   - "`SELECT * FROM orders WHERE status='PENDING' FOR UPDATE`를 실행했는데 다른 트랜잭션의 INSERT까지 막혔습니다. 왜 그런지 Gap/Next-key Lock으로 설명하고, status 컬럼에 인덱스가 없을 때 어떤 추가 문제가 생기는지 설명하세요."

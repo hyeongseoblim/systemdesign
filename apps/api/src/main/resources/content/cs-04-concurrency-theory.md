@@ -5,7 +5,7 @@ coach: cs-fundamentals-coach
 title: "동시성 이론 — 병렬성·락·메모리 모델·Amdahl"
 slug: cs-04-concurrency-theory
 difficulty: 3
-summary: "동시성 이론 — 병렬성·락·메모리 모델·Amdahl"
+summary: "동시성 vs 병렬성, Race Condition, 락 vs CAS, 메모리 모델과 가시성, Actor/CSP 모델, Amdahl의 법칙까지 — 동시성의 이론 지반을 다진다."
 tags:
   - "병렬성"
   - "메모리"
