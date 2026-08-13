@@ -5,6 +5,11 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/jobstudy}
     username: ${DB_USER:jobstudy}
     password: ${DB_PASSWORD:jobstudy}
+    hikari:
+      # 서버리스(Cloud Run) + 매니지드 DB(Neon) 조합에서는 인스턴스가 늘 때마다
+      # 풀이 통째로 복제된다. 무료 티어 커넥션 한도를 넘기지 않도록 작게 잡는다.
+      maximum-pool-size: ${DB_POOL_MAX:10}
+      minimum-idle: ${DB_POOL_MIN:2}
   jpa:
     hibernate:
       ddl-auto: validate

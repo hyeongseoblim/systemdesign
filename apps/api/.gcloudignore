@@ -1,0 +1,9 @@
+# gcloud run deploy --source 로 업로드할 때 제외할 항목.
+# 이 파일이 없으면 gcloud 가 .gitignore 를 대신 쓰는데,
+# build/ .gradle/ 가 수백 MB라 업로드가 느려지고 Cloud Build 캐시도 무의미해진다.
+.gradle/
+build/
+*.log
+.idea/
+.git/
+.gitignore

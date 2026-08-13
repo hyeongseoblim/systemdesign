@@ -7,13 +7,14 @@
 ## 아키텍처
 
 ```
-[사용자] → Vercel (Next.js PWA) → Oracle VM (Spring/Kotlin API + PostgreSQL) → Claude API
-                apps/web                     apps/api                         (AI 카드 생성)
+[사용자] → Vercel (Next.js PWA) → Cloud Run (Spring/Kotlin API) → Neon (PostgreSQL)
+                apps/web                  apps/api                      ↓
+                                                              Claude API (AI 카드 생성)
 ```
 
 - **`apps/api`** — Spring Boot 3.3 / Kotlin / PostgreSQL / Flyway. 학습 카드 REST API + AI 생성 파이프라인(품질 게이트 3종) + 스케줄러.
 - **`apps/web`** — Next.js 15(App Router) 모바일 우선 PWA. 카드 피드·상세(마크다운 + Mermaid 렌더)·오프라인 캐시.
-- **`infra`** — Oracle Free Tier(A1.Flex) + Vercel 배포(0원). `docker-compose.yml`, VM 셋업 스크립트.
+- **`infra`** — Google Cloud Run + Neon + Vercel 배포(0원). 배포 스크립트·가이드는 [infra/README.md](infra/README.md).
 - **`docs`** — 플랫폼 아키텍처 설계 문서(Phase 0).
 
 ## 콘텐츠 모델
@@ -28,7 +29,7 @@
 | `interactions` | 사용자 답변 · 북마크 |
 
 카드 출처는 두 가지다.
-1. **수동(MANUAL)** — `apps/api/src/main/resources/content/*.md`(프론트매터 + 마크다운)를 `ContentSeeder`가 부팅 시 slug 기준 멱등 적재. 현재 **7개 영역 47개 카드** 시드.
+1. **수동(MANUAL)** — `apps/api/src/main/resources/content/*.md`(프론트매터 + 마크다운)를 `ContentSeeder`가 부팅 시 slug 기준 멱등 적재. 현재 **7개 영역 59개 카드** 시드.
 2. **AI 생성(AI_GENERATED)** — 스케줄러가 `curriculum_topics`를 골라 Claude API로 생성, 품질 게이트 통과 시 발행.
 
 ## 학습 영역 (7종)
@@ -77,6 +78,18 @@ docker compose up -d
 | `GET` | `/api/v1/cards/{id}` | 카드 상세(본문 + 질문) |
 | `POST` | `/api/v1/cards` | 카드 수동 생성(MANUAL) |
 | `GET` | `/api/v1/health` | 헬스체크 |
+
+## 배포 (전부 무료)
+
+```bash
+cd infra
+cp .env.cloudrun.example .env.cloudrun && nano .env.cloudrun
+bash deploy-cloudrun.sh
+```
+
+Cloud Run(API) + Neon(PostgreSQL) + Vercel(PWA) 조합이며 HTTPS 는 자동으로 붙는다. AI 생성 배치는 Cloud Run 이 유휴 시 인스턴스를 0으로 내리는 탓에 앱 내부 스케줄러 대신 **GitHub Actions 크론**(`.github/workflows/generate.yml`)이 admin 엔드포인트를 호출한다.
+
+단계별 절차·비용 구조·트러블슈팅은 [infra/README.md](infra/README.md) 참고.
 
 자세한 내용은 [apps/api/README.md](apps/api/README.md), [apps/web/README.md](apps/web/README.md), [infra/README.md](infra/README.md) 참고.
 

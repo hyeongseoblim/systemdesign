@@ -1,1 +1,8 @@
 .local/
+
+# 시크릿 — 예시 파일(*.example)만 커밋한다.
+# infra/.env, infra/.env.cloudrun, apps/web/.env.local 등이 여기에 걸린다.
+.env
+.env.*
+!.env.example
+!.env.*.example
