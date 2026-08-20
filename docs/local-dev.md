@@ -50,7 +50,7 @@ npm ci && npm run dev                      # http://localhost:3000
 
 부팅 순서대로:
 
-1. **Flyway** 가 `db/migration/V1__init.sql`~`V5__curriculum_resolution.sql`을 순서대로 적용한다. 신규 DB에는 커리큘럼 369개가 생성된다(V2 12개 중 중복 7개를 V3에서 제거하고, V4에서 364개를 추가). V5는 각 주제에 `topic_key`와 수동·AI 처리 상태를 부여한다.
+1. **Flyway** 가 `db/migration/V1__init.sql`~`V6__curriculum_resolution.sql`을 순서대로 적용한다. 신규 DB에는 커리큘럼 369개가 생성된다(V2 12개 중 중복 7개를 V3에서 제거하고, V4에서 364개를 추가). V5는 면접 세션 스키마를, V6는 각 주제의 `topic_key`와 수동·AI 처리 상태를 추가한다.
 2. **ContentSeeder** 가 `apps/api/src/main/resources/content/*.md` 를 slug 기준 멱등으로 적재 — 학습 카드 114개가 발행(`source=MANUAL`) 상태로 들어간다. 이 중 `topicKey`가 있는 55개는 커리큘럼을 `MANUAL`로 해결하므로, 신규 DB 부팅 완료 후 AI 생성 대기는 314개다. 재기동해도 중복 생성되지 않는다.
 3. 웹 피드(`/`)가 `GET /api/v1/cards` 로 카드를 노출한다.
 
@@ -65,7 +65,8 @@ npm ci && npm run dev                      # http://localhost:3000
 | `PORT` | `8080` | API 포트 |
 | `CORS_ORIGINS` | `http://localhost:3000` | 웹 포트를 바꿨다면 함께 변경 |
 | `ANTHROPIC_API_KEY` | (빈 값) | **비어 있으면 AI 카드 생성 배치는 자동 스킵** — 로컬 학습 용도로는 없어도 됨 |
-| `GEN_ENABLED` | `false` | 생성 배치 on/off. Cloud Run scale-to-zero 환경에서는 Cloud Scheduler를 구성하기 전까지 `false`로 유지 |
+| `GEN_ENABLED` | `false` | 유료 카드 생성 배치를 명시적으로 켤 때만 `true` |
+| `INTERVIEW_ENABLED` | `false` | 기존 유료 API 면접을 명시적으로 켤 때만 `true` |
 | `ADMIN_TOKEN` | (빈 값) | admin 엔드포인트 쓸 때만 |
 | `jobstudy.seed.content.enabled` | `true` | 카드 시드 끄기 (`-Djobstudy.seed.content.enabled=false`) |
 

@@ -3,10 +3,10 @@ import "./globals.css";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 export const metadata: Metadata = {
-  title: "jobStudy — 백엔드 이직 학습",
+  title: "STUDY WITH JOB — 커리어를 만드는 기술 학습",
   description: "매일 쌓이는 백엔드/시스템 디자인 학습 카드",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "jobStudy" },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "STUDY WITH JOB" },
 };
 
 export const viewport: Viewport = {

@@ -34,7 +34,7 @@ unset DB_URL DB_USER DB_PASSWORD PGPASSWORD
 점검 항목은 다음과 같다.
 
 - 실제 접속 DB·Role·PostgreSQL 버전
-- `flyway_schema_history` 존재 여부와 V1~V5 적용 결과
+- `flyway_schema_history` 존재 여부와 V1~V6 적용 결과
 - MANUAL/AI 및 DRAFT/PUBLISHED별 카드 수
 - `PENDING`, `MANUAL`, `AI_DRAFT`, `AI_PUBLISHED`, `SKIPPED`별 커리큘럼 수
 

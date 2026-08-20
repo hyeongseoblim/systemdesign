@@ -24,10 +24,11 @@ jobStudy/
 │   │   │   ├── card/         # Card CRUD API (feed·detail·create)
 │   │   │   ├── content/      # ContentSeeder — content/*.md → 카드 시드(MANUAL)
 │   │   │   ├── curriculum/   # 생성 대상 주제
-│   │   │   └── generation/   # AI 생성 파이프라인(Claude API + 품질 게이트)
+│   │   │   ├── generation/   # AI 생성 파이프라인(Claude API + 품질 게이트)
+│   │   │   └── interview/    # 대화형 면접 세션·피드백 API
 │   │   └── src/main/resources/
 │   │       ├── content/*.md  # 수동 큐레이션 카드 소스(프론트매터 + 마크다운)
-│   │       └── db/migration/ # Flyway V1~V4: 스키마·생성 파이프라인·52주 커리큘럼
+│   │       └── db/migration/ # Flyway V1~V6: 스키마·커리큘럼·면접·주제 처리 상태
 │   └── web/                  # Next.js 15 PWA — 모바일 카드 피드/상세
 ├── infra/                    # Cloud Run + Neon + Vercel 배포, 로컬 Docker Compose
 └── docs/                     # 플랫폼 아키텍처 설계 문서

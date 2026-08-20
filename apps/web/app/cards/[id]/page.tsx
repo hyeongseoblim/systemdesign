@@ -4,6 +4,7 @@ import QuestionAnswers from "@/components/QuestionAnswers";
 import DifficultyDots from "@/components/DifficultyDots";
 import ReadingProgress from "@/components/ReadingProgress";
 import LearnActions from "@/components/LearnActions";
+import StartInterviewFromCard from "@/components/StartInterviewFromCard";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -64,6 +65,12 @@ export default async function CardPage({
       </div>
       <CardBody md={card.contentMd} />
       <QuestionAnswers cardId={card.id} questions={card.questions} />
+      <StartInterviewFromCard
+        cardId={card.id}
+        area={card.area}
+        title={card.title}
+        difficulty={card.difficulty}
+      />
       <LearnActions cardId={card.id} />
     </article>
   );

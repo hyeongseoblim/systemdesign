@@ -46,9 +46,25 @@ app:
     claude:
       base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com}
       api-key: ${ANTHROPIC_API_KEY:}
-      model: ${ANTHROPIC_MODEL:claude-sonnet-4-6}
+      # 카드 생성(배치) — 호출량이 많고 지연시간이 무관해 Sonnet
+      model: ${ANTHROPIC_MODEL:claude-sonnet-5}
       version: "2023-06-01"
       max-tokens: ${ANTHROPIC_MAX_TOKENS:4096}
+      connect-timeout-seconds: ${ANTHROPIC_CONNECT_TIMEOUT:10}
+      # Opus 는 thinking 때문에 한 턴이 분 단위로 갈 수 있다
+      read-timeout-seconds: ${ANTHROPIC_READ_TIMEOUT:180}
+      max-retries: ${ANTHROPIC_MAX_RETRIES:3}
+  # 면접(대화형) — 생성 배치와 요구 특성도 비용 프로필도 달라 분리한다
+  interview:
+    enabled: ${INTERVIEW_ENABLED:false}
+    model: ${ANTHROPIC_INTERVIEW_MODEL:claude-opus-5}
+    max-tokens: ${ANTHROPIC_INTERVIEW_MAX_TOKENS:16000}
+    # 면접관의 한 턴은 짧은 질문 하나 → 낮게. 마지막 총평만 깊게.
+    turn-effort: ${INTERVIEW_TURN_EFFORT:medium}
+    feedback-effort: ${INTERVIEW_FEEDBACK_EFFORT:high}
+    # 폭주 방지 — 45분 면접이 보통 15~25턴
+    max-turns-per-session: ${INTERVIEW_MAX_TURNS:40}
+    daily-token-limit: ${INTERVIEW_DAILY_TOKENS:300000}
 
 logging:
   level:

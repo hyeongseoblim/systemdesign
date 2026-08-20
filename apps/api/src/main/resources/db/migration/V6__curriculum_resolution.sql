@@ -12,7 +12,7 @@ ALTER TABLE curriculum_topics
 UPDATE curriculum_topics
 SET topic_key = lower(replace(area, '_', '-')) || '-' || lpad(display_order::text, 3, '0');
 
--- V5 이전에 생성된 AI 카드의 처리 상태를 보존한다.
+-- V6 이전에 생성된 AI 카드의 처리 상태를 보존한다.
 UPDATE curriculum_topics
 SET resolution_status = CASE WHEN generated THEN 'AI_DRAFT' ELSE 'PENDING' END,
     resolved_card_id = generated_card_id;

@@ -61,7 +61,7 @@ curl 'http://localhost:8080/api/v1/cards?area=SYSTEM_DESIGN&limit=20'
 
 ## AI 생성 파이프라인
 
-생성 기능을 활성화하면 스케줄러가 Claude API로 학습 카드를 생성한다. Cloud Run은 scale-to-zero 환경에서 내부 스케줄러 실행을 보장하지 않으므로, 운영에서는 Cloud Scheduler가 관리자 생성 엔드포인트를 호출하도록 구성한다. 품질 게이트 3종 적용:
+선택적으로 Claude API로 학습 카드를 생성할 수 있지만, 개인 무료 운영에서는 기본 비활성화한다. Cloud Run은 scale-to-zero 환경에서 내부 스케줄러 실행을 보장하지 않으므로 정기 생성은 외부 스케줄러를 구성한 뒤 활성화한다. 활성화할 경우 품질 게이트 3종을 적용한다:
 
 1. **중복 방지** — `curriculum_topics`에서 `resolution_status=PENDING`인 주제만 생성. 수동 카드가 연결한 주제도 생성 대상에서 제외
 2. **자가 검증** — 생성 직후 2차 LLM 호출로 사실성·구조 평가 → `quality_score`. 임계치(기본 70) 미달이면 `DRAFT`로 보류
@@ -70,9 +70,10 @@ curl 'http://localhost:8080/api/v1/cards?area=SYSTEM_DESIGN&limit=20'
 ### 생성 관련 환경 변수
 | 변수 | 기본값 | 설명 |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | (없음) | **필수** — 없으면 배치 자동 스킵 |
-| `ANTHROPIC_MODEL` | `claude-sonnet-4-6` | 생성 모델 |
-| `GEN_ENABLED` | `false` | 배치 on/off. Cloud Scheduler 준비 전에는 `false` 유지 |
+| `ANTHROPIC_API_KEY` | (없음) | 선택 사항 — 없으면 유료 생성·면접 API 비활성 |
+| `ANTHROPIC_MODEL` | `claude-sonnet-5` | 카드 생성 모델 |
+| `GEN_ENABLED` | `false` | 생성 배치 on/off. 외부 스케줄러 준비 전에는 `false` 유지 |
+| `INTERVIEW_ENABLED` | `false` | 서버 기반 유료 면접 API on/off |
 | `GEN_CRON` | `0 0 9 * * *` | 실행 시각 (cron) |
 | `GEN_ZONE` | `Asia/Seoul` | 타임존 |
 | `GEN_DAILY_CARDS` | `3` | 일일 생성 상한 |

@@ -1,5 +1,5 @@
-// jobStudy PWA service worker — 네트워크 우선 + 오프라인 캐시 fallback
-const CACHE = "jobstudy-v1";
+// STUDY WITH JOB PWA service worker — 네트워크 우선 + 오프라인 캐시 fallback
+const CACHE = "study-with-job-v2";
 const APP_SHELL = ["/", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {

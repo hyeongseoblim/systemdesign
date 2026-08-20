@@ -1,4 +1,4 @@
-# jobStudy — 백엔드 이직 준비 학습 플랫폼
+# STUDY WITH JOB — 백엔드 이직 준비 학습 플랫폼
 
 6년차 백엔드 개발자의 이직 준비를 위한 **모바일 우선 학습 카드 플랫폼**. 시스템 디자인·물류 도메인·백엔드 설계를 카드 단위로 학습하고, AI 생성 파이프라인으로 콘텐츠를 지속 확충한다.
 
@@ -7,13 +7,14 @@
 ## 아키텍처
 
 ```
-[사용자] → Vercel (Next.js PWA) → Cloud Run (Spring/Kotlin API) → Neon PostgreSQL → Claude API
-                apps/web                     apps/api
+[사용자] → Vercel (Next.js PWA) → Cloud Run (Spring/Kotlin API) → Neon PostgreSQL
+                │                           └→ Claude API (선택적 생성·면접 API)
+                └→ ChatGPT 웹 (무료 수동 면접)
 ```
 
 - **`apps/api`** — Spring Boot 3.5 / Kotlin 2.3 / JDK 25 / PostgreSQL / Flyway. 학습 카드 REST API + AI 생성 파이프라인(품질 게이트 3종) + 스케줄러.
 - **`apps/web`** — Next.js 15(App Router) 모바일 우선 PWA. 카드 피드·상세(마크다운 + Mermaid 렌더)·오프라인 캐시.
-- **`infra`** — Cloud Run + Neon + Vercel 배포 설정, 로컬 Docker Compose.
+- **`infra`** — Cloud Run + Neon + Vercel 배포 설정·스크립트, 로컬 전용 Docker Compose.
 - **`docs`** — 플랫폼 아키텍처·로컬 개발·콘텐츠 운영 설계 문서.
 
 ## 콘텐츠 모델
@@ -26,10 +27,15 @@
 | `card_tags` / `card_questions` | 태그 · 이해도 확인 질문 |
 | `curriculum_topics` | AI가 생성할 주제 목록(중복 방지 게이트) |
 | `interactions` | 사용자 답변 · 북마크 |
+| `interview_sessions` / `interview_turns` | 대화형 면접 세션과 턴 기록 · 피드백 · 토큰 사용량 |
 
 카드 출처는 두 가지다.
 1. **수동(MANUAL)** — `apps/api/src/main/resources/content/*.md`(프론트매터 + 마크다운)를 `ContentSeeder`가 부팅 시 slug 기준 멱등 적재. 현재 소스 기준 **7개 영역 114개 카드** 시드.
-2. **AI 생성(AI_GENERATED)** — 활성화된 생성 작업이 `curriculum_topics`를 골라 Claude API로 생성하고, 품질 게이트 통과 시 발행. Cloud Run 운영에서는 Cloud Scheduler를 별도로 구성한다.
+2. **AI 생성(AI_GENERATED)** — 선택적 유료 파이프라인. 기본 비활성화하며, Cloud Run에서 정기 실행하려면 외부 스케줄러와 비용 한도를 먼저 구성한다.
+
+카드가 **읽는 학습**이라면, 면접은 **대답하는 학습**이다. `/interview`에서 영역·주제·난이도를
+고르면 면접 프롬프트를 만들고, 이를 개인 ChatGPT 웹 대화에 붙여넣어 무료로 진행한다.
+기존 서버 기반 면접 API는 별도 설정을 켠 경우에만 Claude API를 호출한다.
 
 ## 학습 영역 (7종)
 
@@ -65,7 +71,7 @@ cd apps/web && cp .env.example .env.local && npm install && npm run dev
 
 ### 한 번에 (Docker Compose)
 ```bash
-cd infra && cp .env.example .env   # DB_PASSWORD / ADMIN_TOKEN / ANTHROPIC_API_KEY 설정
+cd infra && cp .env.example .env   # DB_PASSWORD / ADMIN_TOKEN 설정
 docker compose up -d
 ```
 
@@ -76,7 +82,14 @@ docker compose up -d
 | `GET` | `/api/v1/cards?area=&mode=&cursor=&limit=20` | 카드 피드(published, keyset 페이지네이션) |
 | `GET` | `/api/v1/cards/{id}` | 카드 상세(본문 + 질문) |
 | `POST` | `/api/v1/cards` | 카드 수동 생성(MANUAL) |
+| `GET` | `/api/v1/interviews` | 지난 면접 세션 목록 |
+| `POST` | `/api/v1/interviews` | 면접 시작(영역·주제·난이도) → 면접관 첫 질문 |
+| `GET` | `/api/v1/interviews/{id}` | 세션 상세(전체 대화 + 피드백) |
+| `POST` | `/api/v1/interviews/{id}/answers` | 답변 전송 → 후속 질문 |
+| `POST` | `/api/v1/interviews/{id}/finish` | 면접 종료 → 3축 피드백 생성 |
 | `GET` | `/api/v1/health` | 헬스체크 |
+
+> 기존 유료 면접 API와 카드 생성 배치는 기본 비활성화되어 있다. 사용자 면접은 `/interview`의 ChatGPT 웹 수동 연동을 사용한다.
 
 자세한 내용은 [apps/api/README.md](apps/api/README.md), [apps/web/README.md](apps/web/README.md), [infra/README.md](infra/README.md) 참고.
 

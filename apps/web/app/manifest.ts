@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "jobStudy — 백엔드 이직 학습",
-    short_name: "jobStudy",
+    name: "STUDY WITH JOB — 커리어를 만드는 기술 학습",
+    short_name: "STUDY WITH JOB",
     description: "매일 쌓이는 백엔드/시스템 디자인 학습 카드",
     start_url: "/",
     display: "standalone",
