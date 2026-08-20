@@ -489,6 +489,174 @@ button { font-family: inherit; }
 .qcard textarea:focus { outline: none; border-color: var(--area-c, var(--accent)); }
 .qcard textarea::placeholder { color: var(--faint); }
 
+/* ─────────────────────────────────────────────
+   면접 시뮬레이션 — 시작 화면
+   ───────────────────────────────────────────── */
+.brand-action {
+  margin-left: auto; flex: 0 0 auto;
+  padding: 6px 12px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent); font-size: 12px; font-weight: 700;
+  transition: all 0.16s ease;
+}
+.brand-action:active { transform: scale(0.96); }
+
+.section-title {
+  font-size: 15px; font-weight: 800; letter-spacing: -0.01em;
+  color: var(--text-strong); margin: 34px 0 12px;
+}
+.starter {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; margin-top: 16px;
+  box-shadow: var(--shadow);
+}
+.field-label {
+  display: block; font-size: 12px; font-weight: 700;
+  color: var(--muted); margin: 16px 0 8px;
+}
+.starter > .field-label:first-child { margin-top: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  padding: 7px 12px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--bg);
+  color: var(--muted); font-size: 12.5px; font-weight: 600;
+  font-family: inherit; cursor: pointer; transition: all 0.16s ease;
+}
+.chip:active { transform: scale(0.96); }
+.chip.on {
+  background: color-mix(in srgb, var(--area-c, var(--accent)) 15%, transparent);
+  border-color: color-mix(in srgb, var(--area-c, var(--accent)) 50%, transparent);
+  color: var(--area-c, var(--accent));
+}
+.chips.suggestions { margin-top: 8px; }
+.chip.ghost {
+  background: transparent; border-style: dashed;
+  font-weight: 500; font-size: 12px; text-align: left;
+}
+.topic-input {
+  width: 100%; padding: 11px 13px;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg); color: var(--text);
+  font-family: inherit; font-size: 14.5px; line-height: 1.6; resize: vertical;
+  transition: border-color 0.15s ease;
+}
+.topic-input:focus { outline: none; border-color: var(--area-c, var(--accent)); }
+.topic-input::placeholder { color: var(--faint); }
+
+.primary-btn {
+  width: 100%; padding: 14px; margin-top: 20px;
+  border-radius: var(--radius); border: 1px solid transparent;
+  background: var(--area-c, var(--accent)); color: var(--bg);
+  font-family: inherit; font-size: 14.5px; font-weight: 800;
+  cursor: pointer; transition: all 0.18s ease;
+}
+.primary-btn:active:not(:disabled) { transform: scale(0.985); }
+.primary-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.ghost-btn {
+  padding: 12px 14px;
+  border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--card); color: var(--muted);
+  font-family: inherit; font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: all 0.18s ease;
+}
+.ghost-btn:active:not(:disabled) { transform: scale(0.985); }
+.ghost-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.form-error {
+  margin-top: 12px; padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--c-infra) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-infra) 35%, transparent);
+  color: var(--c-infra); font-size: 12.5px; line-height: 1.6;
+}
+.hint { margin-top: 10px; font-size: 12px; color: var(--faint); line-height: 1.7; }
+.hint.center { text-align: center; padding: 16px 0; }
+
+.badge.status { background: var(--bg); border: 1px solid var(--border); }
+.badge.status.s-ACTIVE {
+  background: color-mix(in srgb, var(--c-dev) 14%, transparent);
+  border-color: color-mix(in srgb, var(--c-dev) 40%, transparent);
+  color: var(--c-dev);
+}
+.badge.status.s-ABANDONED { color: var(--faint); }
+
+/* ─────────────────────────────────────────────
+   면접 시뮬레이션 — 대화
+   ───────────────────────────────────────────── */
+.chat { margin-top: 22px; display: flex; flex-direction: column; gap: 18px; }
+.turn { display: flex; flex-direction: column; gap: 5px; max-width: 92%; }
+.turn.candidate { align-self: flex-end; align-items: flex-end; }
+.turn .who {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.02em;
+  color: var(--faint); padding: 0 4px;
+}
+.turn.interviewer .who { color: var(--area-c, var(--accent)); }
+.bubble {
+  padding: 13px 15px; border-radius: var(--radius);
+  font-size: 14.5px; line-height: 1.75;
+  white-space: pre-wrap; word-break: break-word;
+}
+.turn.interviewer .bubble {
+  background: var(--card); border: 1px solid var(--border);
+  border-top-left-radius: 6px; color: var(--text);
+  box-shadow: var(--shadow);
+}
+.turn.candidate .bubble {
+  background: color-mix(in srgb, var(--area-c, var(--accent)) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--area-c, var(--accent)) 28%, transparent);
+  border-top-right-radius: 6px; color: var(--text);
+}
+
+/* 면접관이 생각 중 */
+.bubble.thinking { display: flex; gap: 5px; align-items: center; padding: 16px 18px; }
+.bubble.thinking i {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--faint); animation: blink 1.3s infinite ease-in-out;
+}
+.bubble.thinking i:nth-child(2) { animation-delay: 0.18s; }
+.bubble.thinking i:nth-child(3) { animation-delay: 0.36s; }
+@keyframes blink {
+  0%, 60%, 100% { opacity: 0.25; }
+  30% { opacity: 1; }
+}
+
+.feedback {
+  margin-top: 12px; padding: 18px 16px 6px;
+  background: var(--card); border: 1px solid var(--border-strong);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.feedback > h2 {
+  font-size: 17px; font-weight: 800; letter-spacing: -0.01em;
+  color: var(--text-strong); margin-bottom: 4px;
+}
+.feedback .content { font-size: 14.5px; }
+.feedback .usage {
+  margin: 18px 0 12px; padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 11.5px; color: var(--faint);
+}
+
+/* 카드 상세 → 면접 진입 */
+.card-interview { margin-top: 30px; }
+.ghost-btn.wide { width: 100%; padding: 14px; font-size: 14.5px; }
+.card-interview .hint { text-align: center; }
+
+.composer { margin-top: 8px; }
+.composer textarea {
+  width: 100%; padding: 12px 14px;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg); color: var(--text);
+  font-family: inherit; font-size: 14.5px; line-height: 1.7; resize: vertical;
+  transition: border-color 0.15s ease;
+}
+.composer textarea:focus { outline: none; border-color: var(--area-c, var(--accent)); }
+.composer textarea::placeholder { color: var(--faint); }
+.composer textarea:disabled { opacity: 0.6; }
+.composer-actions { display: flex; gap: 8px; margin-top: 10px; }
+.composer-actions .primary-btn { margin-top: 0; flex: 1 1 auto; }
+.composer-actions .ghost-btn { flex: 0 0 auto; }
+
 /* 모션 최소화 존중 */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

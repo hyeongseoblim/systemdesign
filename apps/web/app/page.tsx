@@ -42,6 +42,9 @@ export default async function Home({
         <div className="brand">
           <h1>jobStudy</h1>
           <p>백엔드 · 시스템 디자인 학습 카드</p>
+          <Link href="/interview" className="brand-action">
+            🎙️ 면접 보기
+          </Link>
         </div>
         <nav className="tabs">
           <Link

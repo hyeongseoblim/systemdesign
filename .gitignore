@@ -1,1 +1,3 @@
 .local/
+.env.cloudrun
+infra/.env.cloudrun

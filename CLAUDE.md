@@ -29,7 +29,7 @@ jobStudy/
 │   │       ├── content/*.md  # 수동 큐레이션 카드 소스(프론트매터 + 마크다운)
 │   │       └── db/migration/ # Flyway V1__init.sql, V2__generation.sql
 │   └── web/                  # Next.js 15 PWA — 모바일 카드 피드/상세
-├── infra/                    # Oracle Free Tier + Vercel 배포 (docker-compose, 스크립트)
+├── infra/                    # GCP Always Free + Vercel 배포 (docker-compose, 스크립트)
 └── docs/                     # 플랫폼 아키텍처 설계 문서
 ```
 
