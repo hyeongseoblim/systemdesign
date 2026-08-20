@@ -276,3 +276,13 @@ flowchart TB
 > **🎯 면접 정리 — 한 문장**
 >
 > "TMS는 운송장(Waybill)을 **허브 경유로 IN_TRANSIT이 반복되는 상태 머신** 으로 관리하고, 네트워크는 **허브앤스포크(비용·N링크) vs P2P(속도·N²링크)의 Trade-off** 이며, 한 화물은 **집화→간선→환적→지선→말단** Leg를 통과하고, 배차는 **NP-hard VRP의 휴리스틱 최적화** 이며, TrackingEvent는 **Kafka Fan-out + 멱등성 + occurredAt 정렬** 로 처리한다."
+
+```json
+{
+  "waybillId": "W-42",
+  "eventId": "scan-hub-a-9381",
+  "status": "IN_TRANSIT",
+  "facilityId": "HUB-A",
+  "occurredAt": "2026-08-20T12:30:00Z"
+}
+```

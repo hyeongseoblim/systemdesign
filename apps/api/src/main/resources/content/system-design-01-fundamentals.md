@@ -247,3 +247,9 @@ flowchart TB
 > **🎯 면접 포인트 — Error Budget**
 >
 > "SLO를 100%로 잡으면 되지 않나요?"는 함정 답. 100%는 **혁신 속도 0** (배포 자체가 위험)을 뜻한다. **Error Budget = 1 − SLO** 를 "허용된 실패 예산"으로 쓰는 사고가 핵심. 신뢰성과 배포 속도의 Trade-off를 수치로 관리한다고 말하면 시니어 인상. 🔥(Deep-dive)
+
+```text
+monthly_minutes = 30 * 24 * 60 = 43,200
+99.9% SLO error budget  = 43.2 minutes
+99.99% SLO error budget = 4.32 minutes
+```

@@ -188,3 +188,11 @@ flowchart LR
 ```
 
 *배차 로직 Canary + 피처 플래그 — 폭발 반경을 권역·비율로 이중 제한*
+
+```yaml
+release-gates:
+  error_rate: "< 1%"
+  p99_latency: "< 500ms"
+  canary_duration: "30m"
+  rollback: automatic
+```

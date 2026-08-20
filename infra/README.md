@@ -22,6 +22,10 @@ Oracle 인스턴스를 만들 수 없는 현재 기본 구성이다. 개인 프�
 | Image | Artifact Registry | 저장 이미지/레이어를 0.5GB 안팎으로 관리 |
 | Secret | Secret Manager | 활성 secret/version 수와 access 무료 한도 관리 |
 
+상세한 수동 구성과 최소 권한 절차는 [Cloud Run 운영 가이드](cloudrun/README.md), 이미 생성한 DB의
+Flyway·카드·커리큘럼 상태 확인은 [Neon 읽기 전용 점검](neon/README.md)을 따른다.
+`docker-compose.yml`은 운영 배포가 아니라 로컬 통합 확인용이다.
+
 Spring의 내부 스케줄러는 인스턴스가 0으로 내려가면 실행이 보장되지 않는다. Cloud Run에서는
 `GEN_ENABLED=false`로 배포하고, 필요할 때 admin API를 수동 호출한다. 정기 생성은 추후
 GitHub Actions 일일 스케줄로 옮길 수 있다.

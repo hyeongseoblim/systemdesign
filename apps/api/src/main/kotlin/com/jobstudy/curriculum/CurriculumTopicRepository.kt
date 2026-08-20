@@ -6,8 +6,13 @@ import java.util.UUID
 
 interface CurriculumTopicRepository : JpaRepository<CurriculumTopic, UUID> {
 
-    /** 품질 게이트 1 — 아직 생성 안 된 주제를 순서대로 (중복 방지) */
-    fun findByGeneratedFalseOrderByDisplayOrderAsc(pageable: Pageable): List<CurriculumTopic>
+    /** 품질 게이트 1 — 수동·AI 어느 쪽에서도 아직 해결하지 않은 주제를 순서대로 조회 */
+    fun findByResolutionStatusOrderByDisplayOrderAscIdAsc(
+        resolutionStatus: CurriculumResolutionStatus,
+        pageable: Pageable,
+    ): List<CurriculumTopic>
 
-    fun countByGeneratedFalse(): Long
+    fun countByResolutionStatus(resolutionStatus: CurriculumResolutionStatus): Long
+
+    fun findByTopicKey(topicKey: String): CurriculumTopic?
 }

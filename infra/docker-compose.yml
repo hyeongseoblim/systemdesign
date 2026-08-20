@@ -1,12 +1,5 @@
-# GCP e2-micro(2 shared vCPU / 1GB RAM)에서 API + PostgreSQL 실행.
-# 사용: cd infra && docker compose --env-file .env up -d
-#
-# 1GB 안에 OS·Docker·Postgres·JVM 을 전부 넣어야 해서 메모리 배분이 빡빡하다.
-# 대략의 예산 (스왑 2GB 를 안전판으로 깔아둔 상태 기준):
-#   OS + Docker 데몬  ~250MB
-#   Postgres          ~200MB (mem_limit)
-#   API(JVM)          ~512MB (mem_limit, 힙은 그 안에서 60%)
-# 한 쪽을 키우면 다른 쪽이 OOM 으로 죽는다. 값을 올릴 때는 반드시 같이 계산할 것.
+# 로컬에서 API + PostgreSQL을 함께 확인할 때 사용
+# 사용: cd infra && docker compose up -d --build
 services:
   postgres:
     image: postgres:16-alpine

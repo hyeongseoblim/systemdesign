@@ -194,3 +194,9 @@ sequenceDiagram
 > **🎯 마무리 한 줄 (면접 클로징)**
 >
 > "기본은 **중앙 Redis + Lua 원자 연산 + Sliding Window Counter** 로 정확도·메모리·경계버스트를 균형 있게 잡고, Redis는 Cluster로 SPOF를 제거하며 Limiter 장애 시 **fail-open** 으로 본 서비스 가용성을 보호합니다. 배차처럼 순간 버스트가 정상인 경로만 **Token Bucket** 으로 예외 처리합니다." — Trade-off를 한 호흡에 정리하면 합격 시그널.
+
+```text
+key = tenant_id + route + time_bucket
+decision = atomic(increment(key), set_expiry_if_new)
+if limiter unavailable: apply route-specific fail-open/fail-closed policy
+```

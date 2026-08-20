@@ -231,3 +231,10 @@ flowchart LR
 ## Q&A 연습
 
 아래 질문에 직접 답변을 작성하세요. 자동 저장되며 피드백 요청 시 복사할 수 있습니다.
+
+```bash
+# 프로세스의 스레드·메모리·열린 파일 확인 예
+ps -L -p <pid>
+cat /proc/<pid>/status
+ls /proc/<pid>/fd | wc -l
+```

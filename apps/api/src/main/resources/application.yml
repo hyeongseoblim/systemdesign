@@ -5,6 +5,12 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/jobstudy}
     username: ${DB_USER:jobstudy}
     password: ${DB_PASSWORD:jobstudy}
+    hikari:
+      # Cloud Run/Neon의 소형 인스턴스에 맞춘 보수적인 연결 풀 기본값
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:5}
+      minimum-idle: ${DB_POOL_MIN_IDLE:0}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:10000}
+      idle-timeout: ${DB_POOL_IDLE_TIMEOUT_MS:30000}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -26,6 +32,8 @@ app:
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:3000}
   generation:
+    # Cloud Run이 scale-to-zero인 동안에는 @Scheduled 작업이 실행되지 않는다.
+    # 자동 생성은 Cloud Scheduler를 별도 구성한 뒤 명시적으로 켠다.
     enabled: ${GEN_ENABLED:false}
     # 매일 09:00 KST 배치 (초 분 시 일 월 요일)
     cron: ${GEN_CRON:0 0 9 * * *}

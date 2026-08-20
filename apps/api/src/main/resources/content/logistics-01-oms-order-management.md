@@ -224,3 +224,13 @@ sequenceDiagram
 > **🎯 면접 정리 — 한 문장**
 >
 > "OMS는 멀티 채널 주문을 **상태 머신** 으로 관리하고, 할당은 **비용·SLA 최적화** 문제이며, 분할출고로 **Order↔Shipment가 1:N** 이 되고, 결제는 **Auth/Capture 분리 + Saga** 로 일관성을 맞춘다."
+
+```json
+{
+  "orderId": "O-20260820-42",
+  "from": "ALLOCATED",
+  "to": "PARTIALLY_SHIPPED",
+  "version": 7,
+  "reason": "shipment:S-1 dispatched"
+}
+```

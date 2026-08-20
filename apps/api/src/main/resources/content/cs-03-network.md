@@ -214,3 +214,9 @@ flowchart LR
 ## Q&A 연습
 
 아래 질문에 직접 답변을 작성하세요. 자동 저장되며 피드백 요청 시 복사할 수 있습니다.
+
+```bash
+dig +trace example.com
+curl -v --http2 https://example.com
+ss -tan state time-wait
+```

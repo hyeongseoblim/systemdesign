@@ -13,7 +13,7 @@ FROM eclipse-temurin:25-jre
 WORKDIR /app
 COPY --from=build /app/build/libs/*.jar app.jar
 EXPOSE 8080
-# 컨테이너 메모리에 맞춘 JVM 기본값. 실제 배포에서는 docker-compose.yml 이 덮어쓴다.
-# MaxRAMPercentage 는 컨테이너 한도 기준이라 mem_limit 과 반드시 같이 봐야 한다.
+# 컨테이너 메모리에 맞춘 JVM 기본값. Cloud Run·Docker Compose에서 필요하면 덮어쓴다.
+# MaxRAMPercentage는 컨테이너 한도 기준이므로 배포 메모리와 함께 조정한다.
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=60 -XX:+UseSerialGC -Xss512k -XX:MaxMetaspaceSize=128m"
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

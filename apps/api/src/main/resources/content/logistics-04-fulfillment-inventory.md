@@ -240,3 +240,9 @@ sequenceDiagram
 > **🎯 면접 정리 — 한 문장**
 >
 > "풀필먼트는 **자체 FC·3PL·드랍쉬핑** 의 CapEx/마진/통제 Trade-off로 선택되고, 재고 정합성은 **전산-실물 차이를 Cycle count로 보정** 하며, 멀티 창고 할당은 **원자적 Reserve + Saga 보상** 으로 오버셀을 막고, 안전재고는 **변동성 기반 ROP(재주문점)** 로 결품과 과잉재고를 균형 잡는다."
+
+```text
+Available = On-hand - Reserved - Safety Stock
+ROP       = Lead-time Demand + Safety Stock
+Fill Rate = fulfilled order lines / requested order lines
+```

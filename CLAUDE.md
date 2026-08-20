@@ -19,17 +19,18 @@ jobStudy/
 ├── README.md                 # 프로젝트 개요·실행법
 ├── .claude/agents/           # 주제별 코치 에이전트 (7종)
 ├── apps/
-│   ├── api/                  # Spring Boot 3.3 / Kotlin / PostgreSQL / Flyway
+│   ├── api/                  # Spring Boot 3.5 / Kotlin 2.3 / JDK 25 / PostgreSQL / Flyway
 │   │   ├── src/main/kotlin/com/jobstudy/
 │   │   │   ├── card/         # Card CRUD API (feed·detail·create)
 │   │   │   ├── content/      # ContentSeeder — content/*.md → 카드 시드(MANUAL)
 │   │   │   ├── curriculum/   # 생성 대상 주제
-│   │   │   └── generation/   # AI 생성 파이프라인(Claude API + 품질 게이트)
+│   │   │   ├── generation/   # AI 생성 파이프라인(Claude API + 품질 게이트)
+│   │   │   └── interview/    # 대화형 면접 세션·피드백 API
 │   │   └── src/main/resources/
 │   │       ├── content/*.md  # 수동 큐레이션 카드 소스(프론트매터 + 마크다운)
-│   │       └── db/migration/ # Flyway V1__init.sql, V2__generation.sql
+│   │       └── db/migration/ # Flyway V1~V6: 스키마·커리큘럼·면접·주제 처리 상태
 │   └── web/                  # Next.js 15 PWA — 모바일 카드 피드/상세
-├── infra/                    # GCP Always Free + Vercel 배포 (docker-compose, 스크립트)
+├── infra/                    # Cloud Run + Neon + Vercel 배포, 로컬 Docker Compose
 └── docs/                     # 플랫폼 아키텍처 설계 문서
 ```
 
@@ -120,6 +121,7 @@ mode: CONCEPT              # LearningMode enum (CONCEPT/DESIGN/INTERVIEW/REVIEW)
 coach: system-design-coach
 title: "제목"
 slug: system-design-01-fundamentals   # 전역 유일. 관례: <area-dash>-<번호>-<주제>
+topicKey: system-design-101  # curriculum_topics 연결 시 선택. 형식: <area>-<display_order 3자리>
 difficulty: 3             # 1(입문)~5(시니어)
 summary: "카드 부제 한 줄"
 tags: ["Scalability", "Availability"]
@@ -129,12 +131,16 @@ questions:                # 이해도 확인 질문 3개 권장
 <마크다운 본문>
 ```
 
+`topicKey`는 52주 커리큘럼 주제를 수동 카드로 해결할 때만 넣는다. `ContentSeeder`는 신규 카드 생성 또는 기존 slug 재확인 시 해당 주제를 `MANUAL` 상태로 연결한다. 독립 카드에는 생략한다.
+
 ### 본문 필수 요소
 1. **Mermaid 다이어그램**: ` ```mermaid ` 코드펜스. `flowchart`/`sequenceDiagram`/`stateDiagram`/`classDiagram`/`erDiagram` 중 주제에 맞게 최소 1개 이상. (PWA가 렌더)
 2. **비교표**: 마크다운 표로 Trade-off 정리.
 3. **Callout**: blockquote(`> **면접 포인트** ...`)로 면접 포인트·실무 함정·팁 구분.
 4. **코드블록**: 언어 지정 코드펜스(` ```kotlin `, ` ```sql `).
 5. **질문**: 프론트매터 `questions` 에 3개. (사용자 답변은 `interactions` 테이블에 저장)
+
+작성 후 `scripts/check-content.sh`로 slug/topicKey 중복, 프론트매터, 난이도, 태그·질문 수, Mermaid·표·callout 존재 여부를 검사한다.
 
 ### 시드 → 적재 흐름
 `content/*.md` 작성 → (로컬) `apps/api` 실행 시 Flyway 마이그레이션 후 `ContentSeeder` 가 자동 적재 → PWA(`apps/web`)에서 카드 피드로 노출. `jobstudy.seed.content.enabled=false` 로 시드 비활성화 가능.

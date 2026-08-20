@@ -205,3 +205,11 @@ flowchart TB
 > **⚠️ 실무 함정 — 재고는 "차감 정합성"이 먼저**
 >
 > 샤딩·복제로 분산하더라도 **재고 차감은 Oversell(초과판매)이 나면 안 되므로** 강한 일관성 경로가 필요하다. Read replica에서 가용재고를 읽고 차감하면 lag로 오버셀이 난다 — 차감은 Leader/원자적 조건부 UPDATE 또는 Redis 원자 감소로, 조회만 replica로 분리하는 게 정석. (앞 챕터 03의 LB·Gateway와 함께 04의 복제·샤딩이 한 시스템에서 맞물린다.)
+
+```sql
+UPDATE inventory
+SET quantity = quantity - :qty
+WHERE sku_id = :sku_id
+  AND quantity >= :qty;
+-- affected rows = 0이면 재고 부족
+```

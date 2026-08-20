@@ -8,13 +8,14 @@
 
 ```
 [사용자] → Vercel (Next.js PWA) → Cloud Run (Spring/Kotlin API) → Neon PostgreSQL
-                ↘ ChatGPT 웹 (사용자가 직접 여는 무료 수동 면접)
+                │                           └→ Claude API (선택적 생성·면접 API)
+                └→ ChatGPT 웹 (무료 수동 면접)
 ```
 
-- **`apps/api`** — Spring Boot 3.3 / Kotlin / PostgreSQL / Flyway. 학습 카드 REST API + AI 생성 파이프라인(품질 게이트 3종) + 스케줄러.
+- **`apps/api`** — Spring Boot 3.5 / Kotlin 2.3 / JDK 25 / PostgreSQL / Flyway. 학습 카드 REST API + AI 생성 파이프라인(품질 게이트 3종) + 스케줄러.
 - **`apps/web`** — Next.js 15(App Router) 모바일 우선 PWA. 카드 피드·상세(마크다운 + Mermaid 렌더)·오프라인 캐시.
-- **`infra`** — Cloud Run + Neon Free + Vercel 배포. 로컬용 Docker Compose와 배포 스크립트.
-- **`docs`** — 플랫폼 아키텍처 설계 문서(Phase 0).
+- **`infra`** — Cloud Run + Neon + Vercel 배포 설정·스크립트, 로컬 전용 Docker Compose.
+- **`docs`** — 플랫폼 아키텍처·로컬 개발·콘텐츠 운영 설계 문서.
 
 ## 콘텐츠 모델
 
@@ -29,12 +30,12 @@
 | `interview_sessions` / `interview_turns` | 대화형 면접 세션과 턴 기록 · 피드백 · 토큰 사용량 |
 
 카드 출처는 두 가지다.
-1. **수동(MANUAL)** — `apps/api/src/main/resources/content/*.md`(프론트매터 + 마크다운)를 `ContentSeeder`가 부팅 시 slug 기준 멱등 적재. 현재 **7개 영역 47개 카드** 시드.
-2. **AI 생성(AI_GENERATED)** — 과거 생성된 카드와 선택적 유료 파이프라인. 개인 무료 운영에서는 기본 비활성화.
+1. **수동(MANUAL)** — `apps/api/src/main/resources/content/*.md`(프론트매터 + 마크다운)를 `ContentSeeder`가 부팅 시 slug 기준 멱등 적재. 현재 소스 기준 **7개 영역 114개 카드** 시드.
+2. **AI 생성(AI_GENERATED)** — 선택적 유료 파이프라인. 기본 비활성화하며, Cloud Run에서 정기 실행하려면 외부 스케줄러와 비용 한도를 먼저 구성한다.
 
 카드가 **읽는 학습**이라면, 면접은 **대답하는 학습**이다. `/interview`에서 영역·주제·난이도를
 고르면 면접 프롬프트를 만들고, 이를 개인 ChatGPT 웹 대화에 붙여넣어 무료로 진행한다.
-STUDY WITH JOB 서버는 면접 내용을 전송하거나 유료 LLM API를 호출하지 않는다.
+기존 서버 기반 면접 API는 별도 설정을 켠 경우에만 Claude API를 호출한다.
 
 ## 학습 영역 (7종)
 
@@ -58,7 +59,7 @@ cd infra && docker compose -f docker-compose.local.yml up -d
 
 # API (JDK 25 필요)
 cd apps/api && ./gradlew bootRun
-# Flyway가 스키마 생성 → ContentSeeder가 59개 카드 적재
+# Flyway가 스키마 생성 → ContentSeeder가 114개 카드 적재
 ```
 > **주의**: 프로젝트 툴체인은 **JDK 25**다(Gradle 9.6 / Kotlin 2.3 / Spring Boot 3.5). JDK 21~24로는 Gradle 데몬은 뜨지만 툴체인 25를 요구하므로, 로컬에 JDK 25가 없으면 Gradle이 자동 다운로드를 시도한다.
 
@@ -91,6 +92,8 @@ docker compose up -d
 > 기존 유료 면접 API와 카드 생성 배치는 기본 비활성화되어 있다. 사용자 면접은 `/interview`의 ChatGPT 웹 수동 연동을 사용한다.
 
 자세한 내용은 [apps/api/README.md](apps/api/README.md), [apps/web/README.md](apps/web/README.md), [infra/README.md](infra/README.md) 참고.
+
+카드 확장 목표, 중복 방지 모델, 작성·검수 절차는 [콘텐츠 확장 설계](docs/content-expansion-plan.md)를 따른다.
 
 ## 라이선스
 

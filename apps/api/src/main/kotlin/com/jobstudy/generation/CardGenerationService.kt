@@ -8,6 +8,7 @@ import com.jobstudy.card.CardRepository
 import com.jobstudy.common.CardSource
 import com.jobstudy.curriculum.CurriculumTopic
 import com.jobstudy.curriculum.CurriculumTopicRepository
+import com.jobstudy.curriculum.CurriculumResolutionStatus
 import com.jobstudy.generation.claude.ClaudeClient
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.PageRequest
@@ -52,7 +53,10 @@ class CardGenerationService(
         }
 
         // 품질 게이트 1 — 미생성 주제만 선택
-        val topics = topicRepository.findByGeneratedFalseOrderByDisplayOrderAsc(PageRequest.of(0, remaining))
+        val topics = topicRepository.findByResolutionStatusOrderByDisplayOrderAscIdAsc(
+            CurriculumResolutionStatus.PENDING,
+            PageRequest.of(0, remaining),
+        )
         if (topics.isEmpty()) return BatchResult(0, 0, 0, 0, "no pending topics")
 
         var published = 0; var drafted = 0; var failed = 0; var attempted = 0
@@ -97,7 +101,7 @@ class CardGenerationService(
             val card = buildCard(topic, draft, score)
             if (score >= props.qualityThreshold) card.publish()
             val saved = cardRepository.save(card)
-            topic.markGenerated(saved.id!!)
+            topic.resolveWithAi(saved.id!!, published = score >= props.qualityThreshold)
             topicRepository.save(topic)
 
             val outcome = if (score >= props.qualityThreshold) GenerationOutcome.PUBLISHED else GenerationOutcome.DRAFT

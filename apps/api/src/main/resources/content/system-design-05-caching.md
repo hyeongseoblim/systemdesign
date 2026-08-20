@@ -252,3 +252,9 @@ sequenceDiagram
 > **💡 팁 — 추적 캐시는 "이벤트가 쓰고, 조회가 읽는다"**
 >
 > 추적 상태는 변경 빈도가 조회 빈도보다 훨씬 낮다. 그래서 **상태 변경 이벤트(Kafka)가 발생할 때만 캐시를 갱신(write-through 변형)** 하고, 폭주하는 조회는 전부 캐시 hit로 처리하는 게 정석. 동시 만료 stampede 방지를 위해 키별 TTL에 jitter를 준다.
+
+```text
+ttl = base_ttl + random(0, jitter)
+cache_key = "shipment:" + waybill_id + ":v" + projection_version
+negative_ttl << normal_ttl
+```

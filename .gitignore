@@ -1,3 +1,6 @@
 .local/
+infra/.env
+apps/web/.env.local
+infra/cloudrun/secrets.env
 .env.cloudrun
 infra/.env.cloudrun
