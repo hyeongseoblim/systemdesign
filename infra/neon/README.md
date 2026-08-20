@@ -38,4 +38,4 @@ unset DB_URL DB_USER DB_PASSWORD PGPASSWORD
 - MANUAL/AI 및 DRAFT/PUBLISHED별 카드 수
 - `PENDING`, `MANUAL`, `AI_DRAFT`, `AI_PUBLISHED`, `SKIPPED`별 커리큘럼 수
 
-신규 코드가 배포되고 `ContentSeeder`가 한 번 실행된 DB라면 수동 카드 71개와 `MANUAL` 커리큘럼 12개가 기준선이다. AI 생성 이력이 있으면 `PENDING` 수는 소스 기준선 357개보다 적을 수 있다.
+신규 코드가 배포되고 `ContentSeeder`가 한 번 실행된 DB라면 수동 카드 100개와 `MANUAL` 커리큘럼 41개가 기준선이다. AI 생성 이력이 있으면 `PENDING` 수는 소스 기준선 328개보다 적을 수 있다.

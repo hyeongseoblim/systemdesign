@@ -96,7 +96,7 @@ curl -X POST http://localhost:8080/api/v1/admin/generate
 
 ## 콘텐츠 운영
 
-수동 카드의 소스는 `src/main/resources/content/*.md`이며, 부팅 시 `ContentSeeder`가 slug 기준으로 멱등 적재한다. 소스 기준 현재 71개 카드가 있다. 선택적인 `topicKey` 프론트매터를 넣으면 해당 커리큘럼 주제가 `MANUAL` 상태로 연결되어 AI 중복 생성을 막는다.
+수동 카드의 소스는 `src/main/resources/content/*.md`이며, 부팅 시 `ContentSeeder`가 slug 기준으로 멱등 적재한다. 소스 기준 현재 100개 카드가 있다. 선택적인 `topicKey` 프론트매터를 넣으면 해당 커리큘럼 주제가 `MANUAL` 상태로 연결되어 AI 중복 생성을 막는다.
 
 콘텐츠 계약은 저장소 루트에서 `scripts/check-content.sh`로 검사한다.
 
