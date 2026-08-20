@@ -31,3 +31,16 @@ enum class CardSource {
     AI_GENERATED,
     MANUAL,
 }
+
+/** 면접 세션 상태 */
+enum class InterviewStatus {
+    ACTIVE,
+    COMPLETED,
+    ABANDONED,
+}
+
+/** 면접 대화의 화자 */
+enum class TurnRole {
+    INTERVIEWER,
+    CANDIDATE,
+}

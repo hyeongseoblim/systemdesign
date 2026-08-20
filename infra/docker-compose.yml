@@ -1,13 +1,28 @@
-# Oracle A1.Flex VM에서 API + PostgreSQL 실행
-# 사용: cd infra && docker compose up -d --build
+# GCP e2-micro(2 shared vCPU / 1GB RAM)에서 API + PostgreSQL 실행.
+# 사용: cd infra && docker compose --env-file .env up -d
+#
+# 1GB 안에 OS·Docker·Postgres·JVM 을 전부 넣어야 해서 메모리 배분이 빡빡하다.
+# 대략의 예산 (스왑 2GB 를 안전판으로 깔아둔 상태 기준):
+#   OS + Docker 데몬  ~250MB
+#   Postgres          ~200MB (mem_limit)
+#   API(JVM)          ~512MB (mem_limit, 힙은 그 안에서 60%)
+# 한 쪽을 키우면 다른 쪽이 OOM 으로 죽는다. 값을 올릴 때는 반드시 같이 계산할 것.
 services:
   postgres:
-    image: postgres:16
+    image: postgres:16-alpine
     container_name: jobstudy-pg
     environment:
       POSTGRES_DB: jobstudy
       POSTGRES_USER: jobstudy
       POSTGRES_PASSWORD: ${DB_PASSWORD:-jobstudy}
+    # 혼자 쓰는 부하라 기본값(shared_buffers 128MB)은 과하다. 절반으로 줄여 JVM 에 양보한다.
+    command: >
+      postgres
+      -c shared_buffers=48MB
+      -c max_connections=25
+      -c work_mem=2MB
+      -c maintenance_work_mem=32MB
+      -c effective_cache_size=256MB
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -15,9 +30,14 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    mem_limit: 200m
     restart: unless-stopped
 
   api:
+    # e2-micro 에서 Gradle 빌드는 OOM 나거나 30분 넘게 걸린다.
+    # 이미지는 로컬/CI 에서 만들어 레지스트리에 올리고 VM 은 pull 만 한다.
+    # (IMAGE 미지정 시 아래 build 로 폴백 — 메모리 넉넉한 곳에서만 쓸 것)
+    image: ${API_IMAGE:-jobstudy-api:local}
     build:
       context: ../apps/api
     container_name: jobstudy-api
@@ -31,10 +51,28 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
       ADMIN_TOKEN: ${ADMIN_TOKEN:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      # 카드 생성(배치)과 면접(대화형)은 요구 특성이 달라 모델을 분리한다.
+      # 값을 비워 두면 application.yml 의 기본값이 쓰인다.
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
+      ANTHROPIC_INTERVIEW_MODEL: ${ANTHROPIC_INTERVIEW_MODEL:-claude-opus-5}
+      ANTHROPIC_INTERVIEW_MAX_TOKENS: ${ANTHROPIC_INTERVIEW_MAX_TOKENS:-16000}
+      # 면접 비용 통제 — 공개 배포 시 외부 호출이 그대로 요금이 되므로 캡이 필수.
+      # 턴은 낮은 effort, 마지막 총평만 높게.
+      INTERVIEW_TURN_EFFORT: ${INTERVIEW_TURN_EFFORT:-medium}
+      INTERVIEW_FEEDBACK_EFFORT: ${INTERVIEW_FEEDBACK_EFFORT:-high}
+      INTERVIEW_MAX_TURNS: ${INTERVIEW_MAX_TURNS:-40}
+      INTERVIEW_DAILY_TOKENS: ${INTERVIEW_DAILY_TOKENS:-300000}
       GEN_ENABLED: ${GEN_ENABLED:-true}
+      # 컨테이너 한도(512m) 대비 힙 60% → ~307MB. 나머지는 메타스페이스·스레드 스택·GC 오버헤드.
+      # SerialGC 는 1 코어급에서 G1 보다 오버헤드가 작다.
+      JAVA_OPTS: >-
+        -XX:MaxRAMPercentage=60
+        -XX:+UseSerialGC
+        -Xss512k
+        -XX:MaxMetaspaceSize=128m
     ports:
       - "8080:8080"
+    mem_limit: 512m
     restart: unless-stopped
 
 volumes:

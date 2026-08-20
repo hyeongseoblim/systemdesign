@@ -103,3 +103,115 @@ export async function getCard(id: string): Promise<CardDetail> {
   if (!res.ok) throw new Error(`card failed: ${res.status}`);
   return res.json();
 }
+
+// ── 면접 세션 ──
+
+export type InterviewStatus = "ACTIVE" | "COMPLETED" | "ABANDONED";
+export type TurnRole = "INTERVIEWER" | "CANDIDATE";
+
+export interface InterviewTurn {
+  id: string;
+  role: TurnRole;
+  content: string;
+  turnOrder: number;
+  createdAt: string;
+}
+
+export interface InterviewUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+}
+
+export interface InterviewSummary {
+  id: string;
+  area: TopicArea;
+  topic: string;
+  difficulty: number;
+  coach: string | null;
+  status: InterviewStatus;
+  turnCount: number;
+  startedAt: string;
+  endedAt: string | null;
+}
+
+export interface InterviewDetail {
+  id: string;
+  area: TopicArea;
+  topic: string;
+  difficulty: number;
+  coach: string | null;
+  status: InterviewStatus;
+  cardId: string | null;
+  turns: InterviewTurn[];
+  feedbackMd: string | null;
+  usage: InterviewUsage;
+  startedAt: string;
+  endedAt: string | null;
+}
+
+export const STATUS_LABELS: Record<InterviewStatus, string> = {
+  ACTIVE: "진행 중",
+  COMPLETED: "완료",
+  ABANDONED: "중단",
+};
+
+/** 백엔드는 에러를 RFC 7807 ProblemDetail로 준다. detail 필드를 메시지로 승격. */
+async function jsonOrThrow<T>(res: Response, fallback: string): Promise<T> {
+  if (res.ok) return res.json();
+  let detail = `${fallback} (${res.status})`;
+  try {
+    const body = await res.json();
+    if (body?.detail) detail = body.detail;
+  } catch {
+    // ProblemDetail이 아니면 기본 메시지 유지
+  }
+  throw new Error(detail);
+}
+
+export async function listInterviews(limit = 20): Promise<InterviewSummary[]> {
+  const res = await fetch(`${API_BASE}/api/v1/interviews?limit=${limit}`, {
+    cache: "no-store",
+  });
+  return jsonOrThrow(res, "면접 목록을 불러오지 못했습니다");
+}
+
+export async function getInterview(id: string): Promise<InterviewDetail> {
+  const res = await fetch(`${API_BASE}/api/v1/interviews/${id}`, {
+    cache: "no-store",
+  });
+  return jsonOrThrow(res, "면접을 불러오지 못했습니다");
+}
+
+export async function startInterview(body: {
+  area: TopicArea;
+  topic: string;
+  difficulty: number;
+  cardId?: string;
+}): Promise<InterviewDetail> {
+  const res = await fetch(`${API_BASE}/api/v1/interviews`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return jsonOrThrow(res, "면접을 시작하지 못했습니다");
+}
+
+export async function sendAnswer(
+  id: string,
+  answer: string
+): Promise<InterviewDetail> {
+  const res = await fetch(`${API_BASE}/api/v1/interviews/${id}/answers`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ answer }),
+  });
+  return jsonOrThrow(res, "답변을 전송하지 못했습니다");
+}
+
+export async function finishInterview(id: string): Promise<InterviewDetail> {
+  const res = await fetch(`${API_BASE}/api/v1/interviews/${id}/finish`, {
+    method: "POST",
+  });
+  return jsonOrThrow(res, "피드백을 생성하지 못했습니다");
+}
