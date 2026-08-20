@@ -234,3 +234,10 @@ read-heavy를 흡수하는 방어선. 자동완성 응답은 개인화만 없다
 > **🎯 마무리 한 줄 (면접 클로징)**
 >
 > "읽기와 쓰기를 분리해 **집계 파이프라인이 prefix별 top-K를 미리 만들고**, 서빙은 **in-memory Trie 노드의 top-K를 O(prefix)로 조회**합니다. 앞단은 CDN·Redis 다층 캐시로 read-heavy를 흡수하고, prefix 글자로 샤딩하되 hot prefix는 복제·엣지 캐시로 방어합니다. 트렌드는 **배치 + 스트리밍 병합**에 어뷰징 필터를 얹어 신선도와 안정성을 함께 잡습니다." — read/write 분리와 다층 방어를 한 호흡에 정리하면 합격 시그널.
+
+```text
+for query in aggregated_queries:
+  for prefix in prefixes(query.text):
+    topK[prefix].offer(query.text, query.score)
+serve(prefix) = cache.get(prefix) ?: trie.node(prefix).topK
+```

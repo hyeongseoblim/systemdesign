@@ -225,3 +225,11 @@ flowchart LR
 > **💡 실무 적용 — Event Storming**
 >
 > 도메인 전문가와 함께 **도메인 이벤트(주황 포스트잇) → 커맨드(파랑) → Aggregate(노랑) → Bounded Context** 순으로 워크샵하면 경계가 자연히 드러난다. 04(Saga)·03(Event-Driven)이 이 결과물 위에 세워진다.
+
+```text
+Event Storming 기록 예
+Command: 주문 확정
+Aggregate: Order
+Event: OrderConfirmed
+Policy: 주문 확정 시 재고 예약 요청
+```

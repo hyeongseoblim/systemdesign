@@ -207,3 +207,10 @@ sequenceDiagram
 > **🎯 면접 정리 — 한 문장**
 >
 > "역물류는 정방향과 **별도 상태 머신** 으로 모델링하되 `ReturnCompleted` 이벤트로 정방향에 합류시키고, **검수(QC)를 모든 분기의 게이트** 로 두며, 환불·재고 환원은 **Saga + 멱등키 + 보류 재고 격리** 로 일관성을 맞춘다."
+
+```text
+REQUESTED -> COLLECTED -> RECEIVED -> INSPECTED
+                                      ├─ RESTOCKABLE -> RESTOCKED
+                                      ├─ REPAIRABLE  -> REPAIR
+                                      └─ DISPOSAL    -> DISPOSED
+```

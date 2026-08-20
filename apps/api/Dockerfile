@@ -13,6 +13,6 @@ FROM eclipse-temurin:25-jre
 WORKDIR /app
 COPY --from=build /app/build/libs/*.jar app.jar
 EXPOSE 8080
-# 컨테이너 메모리에 맞춘 JVM 힙 (Oracle A1.Flex 여유롭지만 보수적으로)
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=70"
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+# Cloud Run 1GiB 인스턴스용 힙. 남는 메모리는 JVM 메타스페이스/네이티브 버퍼에 사용한다.
+ENV JAVA_TOOL_OPTIONS="-Xms128m -Xmx640m -XX:+ExitOnOutOfMemoryError"
+ENTRYPOINT ["java", "-jar", "app.jar"]

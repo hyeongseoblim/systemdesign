@@ -291,3 +291,9 @@ sequenceDiagram
 > **💡 연결 — 이 빌딩블록이 어떻게 합쳐지나**
 >
 > 라스트마일 추적: **GeoDNS** 로 가까운 리전 → 지도 타일·아이콘은 **CDN** → 추적 API는 **L7 LB → API Gateway** (인증·Rate limit) → 외부는 REST, 내부 이벤트 Fan-out은 **gRPC 스트리밍 + Kafka** . 한 시스템 안에서 모든 빌딩블록이 자기 자리를 갖는다.
+
+```bash
+dig tracking.example.com
+curl -v --resolve tracking.example.com:443:203.0.113.10 \
+  https://tracking.example.com/api/v1/shipments/W-42
+```

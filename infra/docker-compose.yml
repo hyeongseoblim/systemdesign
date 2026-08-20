@@ -1,4 +1,4 @@
-# Oracle A1.Flex VM에서 API + PostgreSQL 실행
+# 로컬에서 API + PostgreSQL을 함께 확인할 때 사용
 # 사용: cd infra && docker compose up -d --build
 services:
   postgres:
@@ -32,7 +32,7 @@ services:
       ADMIN_TOKEN: ${ADMIN_TOKEN:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
-      GEN_ENABLED: ${GEN_ENABLED:-true}
+      GEN_ENABLED: ${GEN_ENABLED:-false}
     ports:
       - "8080:8080"
     restart: unless-stopped

@@ -7,14 +7,14 @@
 ## 아키텍처
 
 ```
-[사용자] → Vercel (Next.js PWA) → Oracle VM (Spring/Kotlin API + PostgreSQL) → Claude API
-                apps/web                     apps/api                         (AI 카드 생성)
+[사용자] → Vercel (Next.js PWA) → Cloud Run (Spring/Kotlin API) → Neon PostgreSQL → Claude API
+                apps/web                     apps/api
 ```
 
-- **`apps/api`** — Spring Boot 3.3 / Kotlin / PostgreSQL / Flyway. 학습 카드 REST API + AI 생성 파이프라인(품질 게이트 3종) + 스케줄러.
+- **`apps/api`** — Spring Boot 3.5 / Kotlin 2.3 / JDK 25 / PostgreSQL / Flyway. 학습 카드 REST API + AI 생성 파이프라인(품질 게이트 3종) + 스케줄러.
 - **`apps/web`** — Next.js 15(App Router) 모바일 우선 PWA. 카드 피드·상세(마크다운 + Mermaid 렌더)·오프라인 캐시.
-- **`infra`** — Oracle Free Tier(A1.Flex) + Vercel 배포(0원). `docker-compose.yml`, VM 셋업 스크립트.
-- **`docs`** — 플랫폼 아키텍처 설계 문서(Phase 0).
+- **`infra`** — Cloud Run + Neon + Vercel 배포 설정, 로컬 Docker Compose.
+- **`docs`** — 플랫폼 아키텍처·로컬 개발·콘텐츠 운영 설계 문서.
 
 ## 콘텐츠 모델
 
@@ -28,8 +28,8 @@
 | `interactions` | 사용자 답변 · 북마크 |
 
 카드 출처는 두 가지다.
-1. **수동(MANUAL)** — `apps/api/src/main/resources/content/*.md`(프론트매터 + 마크다운)를 `ContentSeeder`가 부팅 시 slug 기준 멱등 적재. 현재 **7개 영역 47개 카드** 시드.
-2. **AI 생성(AI_GENERATED)** — 스케줄러가 `curriculum_topics`를 골라 Claude API로 생성, 품질 게이트 통과 시 발행.
+1. **수동(MANUAL)** — `apps/api/src/main/resources/content/*.md`(프론트매터 + 마크다운)를 `ContentSeeder`가 부팅 시 slug 기준 멱등 적재. 현재 소스 기준 **7개 영역 71개 카드** 시드.
+2. **AI 생성(AI_GENERATED)** — 활성화된 생성 작업이 `curriculum_topics`를 골라 Claude API로 생성하고, 품질 게이트 통과 시 발행. Cloud Run 운영에서는 Cloud Scheduler를 별도로 구성한다.
 
 ## 학습 영역 (7종)
 
@@ -53,7 +53,7 @@ cd infra && docker compose -f docker-compose.local.yml up -d
 
 # API (JDK 25 필요)
 cd apps/api && ./gradlew bootRun
-# Flyway가 스키마 생성 → ContentSeeder가 59개 카드 적재
+# Flyway가 스키마 생성 → ContentSeeder가 71개 카드 적재
 ```
 > **주의**: 프로젝트 툴체인은 **JDK 25**다(Gradle 9.6 / Kotlin 2.3 / Spring Boot 3.5). JDK 21~24로는 Gradle 데몬은 뜨지만 툴체인 25를 요구하므로, 로컬에 JDK 25가 없으면 Gradle이 자동 다운로드를 시도한다.
 
@@ -79,6 +79,8 @@ docker compose up -d
 | `GET` | `/api/v1/health` | 헬스체크 |
 
 자세한 내용은 [apps/api/README.md](apps/api/README.md), [apps/web/README.md](apps/web/README.md), [infra/README.md](infra/README.md) 참고.
+
+카드 확장 목표, 중복 방지 모델, 작성·검수 절차는 [콘텐츠 확장 설계](docs/content-expansion-plan.md)를 따른다.
 
 ## 라이선스
 

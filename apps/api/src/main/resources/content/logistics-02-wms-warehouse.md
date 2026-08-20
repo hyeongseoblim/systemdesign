@@ -197,3 +197,11 @@ Oversell은 "재고보다 많이 파는" 사고다. 백엔드 면접에서 가�
 > **🎯 면접 정리 — 한 문장**
 >
 > "WMS는 재고를 **On-hand/Reserved/Available** 로 분해해 관리하고, **Reserve→Commit→Ship** 3단계로 점유하며(예약엔 TTL), Oversell은 **원자적 조건부 UPDATE** (극한 경합 시 Redis 원자 감소)로 막고, 시스템·실물 차이는 **Cycle count** 로 보정한다."
+
+```sql
+UPDATE inventory
+SET available = available - :qty,
+    reserved = reserved + :qty,
+    version = version + 1
+WHERE sku_id = :sku AND available >= :qty;
+```

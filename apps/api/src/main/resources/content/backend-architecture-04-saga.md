@@ -246,3 +246,10 @@ sequenceDiagram
 > **🎯 면접 포인트 (압박 질문)**
 >
 > "Saga 중간에 오케스트레이터가 죽으면?" → 상태를 DB에 영속화했으니 재시작 후 마지막 상태부터 복구. "보상도 실패하면?" → 재시도 + DLQ + 알림 → 최후엔 수동 개입. 이 두 질문에 막힘없이 답하면 시니어 신호. 🔥(Deep-dive)
+
+```text
+CREATED -> PAYMENT_AUTHORIZED -> INVENTORY_RESERVED -> CONFIRMED
+              |                       |
+              v                       v
+       PAYMENT_CANCELLED       INVENTORY_RELEASED
+```

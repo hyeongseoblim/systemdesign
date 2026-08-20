@@ -190,3 +190,10 @@ flowchart LR
 > **🎯 면접 포인트 (단골)**
 >
 > "운송추적 시스템을 설계해보라"에서 CQRS는 거의 정답 키워드. 상태 전이(쓰기)와 조회 폭주(읽기)를 분리하고, 읽기를 Redis/ES로 빼서 독립 확장. 단, **최종 일관성 지연을 고객에게 어떻게 보일지(UX)** 까지 답하면 시니어. 🔥(Deep-dive)
+
+```sql
+SELECT event_id, aggregate_version, event_type, payload
+FROM event_store
+WHERE aggregate_id = :id
+ORDER BY aggregate_version;
+```

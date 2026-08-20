@@ -227,3 +227,10 @@ flowchart LR
 > **⚠️ 실무 함정 — 평균만 보고 큐를 뺀다**
 >
 > 평균 500 쓰기 QPS만 보면 "DB 직접 쓰기로 충분"이라 착각한다. 하지만 배송 피크·기사 앱 오프라인 동기화(지하·산간 후 재접속 시 누적 이벤트 일괄 전송) 때 순간 폭주가 발생 → **큐로 버퍼링** 해야 DB가 보호된다. 평균이 아닌 **버스트** 를 봐야 한다.
+
+```text
+peak_qps       = DAU × actions_per_day × peak_factor / 86,400
+daily_storage  = events_per_day × bytes_per_event × replication_factor
+queue_backlog  = ingress_rate - processing_rate
+drain_seconds  = backlog / spare_processing_rate
+```

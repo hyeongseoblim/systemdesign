@@ -250,3 +250,10 @@ flowchart LR
 > **🎯 면접 포인트 — 물류 추적 설계 단골**
 >
 > "수천만 TrackingEvent를 어떻게 처리?"에서 핵심은 (1) **송장 키 파티셔닝** 으로 한 송장의 상태 순서 보장, (2) 기사 앱 오프라인 재접속의 **중복 전송** 을 멱등 소비로 흡수, (3) **Consumer Lag 모니터링** 으로 알림 지연 SLA 관리, (4) 키 쏠림(특정 메가허브 폭주)으로 인한 **Hot partition** 대응. 네 가지를 Trade-off와 함께 엮어야 시니어답다.
+
+```properties
+message.key=waybillId
+enable.idempotence=true
+acks=all
+max.in.flight.requests.per.connection=5
+```

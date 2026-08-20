@@ -241,3 +241,9 @@ sequenceDiagram
 > **🎯 면접 포인트 (종합)**
 >
 > 이 장의 세 핵심 — ① Dual-write는 Outbox로 ② 중복은 멱등(Inbox/Key)으로 ③ Exactly-once delivery는 불가, Effectively-once processing이 목표 — 를 한 문장으로 엮어 답하면 분산 시스템 정합성에 대한 시니어 이해를 보여준다.
+
+```sql
+INSERT INTO consumer_inbox(consumer, event_id, processed_at)
+VALUES (:consumer, :eventId, now())
+ON CONFLICT (consumer, event_id) DO NOTHING;
+```

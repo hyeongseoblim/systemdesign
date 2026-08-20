@@ -313,3 +313,10 @@ flowchart TB
 > **🎯 실제 사례**
 >
 > **네이버 단축 URL(me2.do)** , **카카오 단축 URL** , 글로벌 **bit.ly** 모두 통계·관리 기능 때문에 사실상 302 계열 + 자체 키 풀/카운터 기반. bit.ly는 클릭 분석이 제품의 핵심 가치라 301로는 사업이 성립하지 않는다 — "통계 → 302" 인과를 보여주는 좋은 예시.
+
+```text
+id = next_distributed_id()
+short_key = base62(id)
+store(short_key -> normalized_url)
+redirect: validate -> lookup -> emit_click_event -> 302
+```

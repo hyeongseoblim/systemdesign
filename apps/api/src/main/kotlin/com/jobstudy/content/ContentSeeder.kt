@@ -58,6 +58,7 @@ class ContentSeeder(
 
         for (res in resources.sortedBy { it.filename }) {
             val name = res.filename ?: "(unknown)"
+            var parsedRequest: CreateCardRequest? = null
             try {
                 val text = res.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
                 val req = parse(text)
@@ -66,10 +67,17 @@ class ContentSeeder(
                     failed++
                     continue
                 }
+                parsedRequest = req
                 cardService.create(req)
                 created++
             } catch (e: SlugConflictException) {
-                skipped++
+                try {
+                    parsedRequest?.topicKey?.let { cardService.linkExistingManualCard(parsedRequest.slug, it) }
+                    skipped++
+                } catch (linkError: Exception) {
+                    log.warn("[seed] 기존 카드 커리큘럼 연결 실패: {} — {}", name, linkError.message)
+                    failed++
+                }
             } catch (e: Exception) {
                 log.warn("[seed] 카드 생성 실패: {} — {}", name, e.message)
                 failed++
@@ -80,7 +88,7 @@ class ContentSeeder(
     }
 
     /** `---` 프론트매터 + 마크다운 본문을 [CreateCardRequest] 로 변환. 형식 불량이면 null. */
-    private fun parse(raw: String): CreateCardRequest? {
+    internal fun parse(raw: String): CreateCardRequest? {
         val text = raw.replace("\r\n", "\n").trimStart('\uFEFF', '\n', ' ')
         val match = FRONT_MATTER.find(text) ?: return null
 
@@ -106,6 +114,7 @@ class ContentSeeder(
             tags = asStringList(fm["tags"]),
             questions = asStringList(fm["questions"]),
             publishNow = true,
+            topicKey = fm["topicKey"]?.toString()?.trim().orEmptyNull(),
         )
     }
 

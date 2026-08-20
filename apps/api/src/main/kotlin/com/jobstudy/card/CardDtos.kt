@@ -101,6 +101,8 @@ data class CreateCardRequest(
     val tags: List<String> = emptyList(),
     val questions: List<String> = emptyList(),
     val publishNow: Boolean = false,
+    /** 수동 카드가 해결하는 커리큘럼 주제. 없으면 독립 카드로 생성한다. */
+    @field:Size(max = 160) val topicKey: String? = null,
 )
 
 /** (publishedAt, id) 복합 커서를 base64 문자열로 인코딩/디코딩 */

@@ -202,3 +202,13 @@ flowchart TB
 > **💡 물류 맥락**
 >
 > 운송장 상태 변화( `PickedUp` → `InTransit` → `Delivered` )는 이벤트 기반의 교과서. 기사 앱 오프라인 동기화·중복 스캔 때문에 **멱등 + 순서 키(orderId 파티셔닝)** 가 필수다.
+
+```json
+{
+  "eventId": "01J...",
+  "aggregateId": "waybill-42",
+  "aggregateVersion": 17,
+  "type": "Delivered",
+  "occurredAt": "2026-08-20T09:00:00Z"
+}
+```

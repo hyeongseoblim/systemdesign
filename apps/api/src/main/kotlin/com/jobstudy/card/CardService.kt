@@ -3,6 +3,7 @@ package com.jobstudy.card
 import com.jobstudy.common.CardSource
 import com.jobstudy.common.LearningMode
 import com.jobstudy.common.TopicArea
+import com.jobstudy.curriculum.CurriculumTopicRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -14,6 +15,7 @@ class SlugConflictException(slug: String) : RuntimeException("Slug already exist
 @Service
 class CardService(
     private val cardRepository: CardRepository,
+    private val topicRepository: CurriculumTopicRepository,
 ) {
 
     @Transactional(readOnly = true)
@@ -64,6 +66,23 @@ class CardService(
             card.addQuestion(CardQuestion(question = q, displayOrder = i.toShort()))
         }
         if (req.publishNow) card.publish()
-        return CardDetailResponse.from(cardRepository.save(card))
+        val saved = cardRepository.save(card)
+        req.topicKey?.let { resolveTopicManually(it, saved.id!!) }
+        return CardDetailResponse.from(saved)
+    }
+
+    /** 시더가 기존 slug를 다시 만났을 때 새 topicKey 연결만 안전하게 보강한다. */
+    @Transactional
+    fun linkExistingManualCard(slug: String, topicKey: String) {
+        val card = cardRepository.findBySlug(slug) ?: throw IllegalArgumentException("Card not found by slug: $slug")
+        require(card.source == CardSource.MANUAL) { "Only MANUAL cards can resolve a topic manually: $slug" }
+        resolveTopicManually(topicKey, card.id!!)
+    }
+
+    private fun resolveTopicManually(topicKey: String, cardId: UUID) {
+        val topic = topicRepository.findByTopicKey(topicKey)
+            ?: throw IllegalArgumentException("Curriculum topic not found: $topicKey")
+        topic.resolveManually(cardId)
+        topicRepository.save(topic)
     }
 }

@@ -277,3 +277,10 @@ flowchart TB
 > **💡 정량 근거 — 주문 폭주 대응**
 >
 > 블랙프라이데이·새벽 오픈 같은 주문 폭주(평소 500 QPS → 피크 5,000 QPS)에서, OMS를 ECS Fargate로 두면 **Target Tracking 오토스케일** 로 CPU 70% 기준 수 분 내 Task를 4~10배로 늘린다. 그 사이 SNS/SQS가 다운스트림(재고·추적)의 **버퍼** 역할을 해 워커가 천천히 따라잡아도 주문 접수는 안 막힌다. 동기 호출 체인이었다면 한 곳 느려질 때 전체가 타임아웃으로 무너진다.
+
+```text
+VPC
+├─ public subnet: ALB, NAT Gateway
+├─ private app subnet: ECS/EKS workload
+└─ isolated data subnet: RDS/ElastiCache
+```

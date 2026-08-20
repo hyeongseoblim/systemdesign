@@ -202,3 +202,11 @@ flowchart TB
 | `latest` 태그 사용 | 어떤 이미지인지 불명, 롤백 불가 | 불변 태그(커밋 SHA) 사용 |
 | graceful shutdown 누락 | 배포 중 진행 요청 끊김 | `preStop` + `terminationGracePeriod` |
 | PVC를 Deployment에 | 여러 Pod이 같은 볼륨 경합 | 상태 있으면 StatefulSet |
+
+```yaml
+resources:
+  requests: { cpu: "250m", memory: "256Mi" }
+  limits: { memory: "512Mi" }
+readinessProbe:
+  httpGet: { path: /api/v1/health, port: 8080 }
+```

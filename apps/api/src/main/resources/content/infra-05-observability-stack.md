@@ -166,3 +166,12 @@ flowchart LR
 ```
 
 *3 Pillars 연계 디버깅 — trace_id가 메트릭·트레이스·로그를 하나로 꿰뚫는다*
+
+```json
+{
+  "level": "ERROR",
+  "trace_id": "4bf92f...",
+  "service": "order-api",
+  "error_code": "INVENTORY_TIMEOUT"
+}
+```
