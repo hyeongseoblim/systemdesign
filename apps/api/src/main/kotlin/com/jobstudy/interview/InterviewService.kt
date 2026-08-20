@@ -132,6 +132,11 @@ class InterviewService(
 
     /** API 키 + 일일 토큰 예산을 함께 확인한다. */
     private fun requireAvailable() {
+        if (!props.enabled) {
+            throw InterviewUnavailableException(
+                "API 면접은 비활성화되었습니다. STUDY WITH JOB의 무료 ChatGPT 웹 면접을 이용하세요.",
+            )
+        }
         if (!claude.isConfigured()) {
             throw InterviewUnavailableException(
                 "ANTHROPIC_API_KEY 가 설정되지 않아 면접을 진행할 수 없습니다.",

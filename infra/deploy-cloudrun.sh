@@ -119,7 +119,7 @@ gcloud run deploy "$SERVICE" \
   --min=0 \
   --max=1 \
   --timeout=300 \
-  --set-env-vars="^@^CORS_ORIGINS=$CORS_ORIGINS@GEN_ENABLED=false@GEN_DAILY_CARDS=${GEN_DAILY_CARDS:-1}@GEN_DAILY_TOKENS=${GEN_DAILY_TOKENS:-50000}@INTERVIEW_MAX_TURNS=${INTERVIEW_MAX_TURNS:-20}@INTERVIEW_DAILY_TOKENS=${INTERVIEW_DAILY_TOKENS:-100000}@JAVA_OPTS=-XX:MaxRAMPercentage=60 -XX:+UseSerialGC -Xss512k -XX:MaxMetaspaceSize=192m" \
+  --set-env-vars="^@^CORS_ORIGINS=$CORS_ORIGINS@GEN_ENABLED=false@INTERVIEW_ENABLED=false@GEN_DAILY_CARDS=${GEN_DAILY_CARDS:-1}@GEN_DAILY_TOKENS=${GEN_DAILY_TOKENS:-50000}@INTERVIEW_MAX_TURNS=${INTERVIEW_MAX_TURNS:-20}@INTERVIEW_DAILY_TOKENS=${INTERVIEW_DAILY_TOKENS:-100000}@JAVA_OPTS=-XX:MaxRAMPercentage=60 -XX:+UseSerialGC -Xss512k -XX:MaxMetaspaceSize=192m" \
   --set-secrets="DB_URL=jobstudy-db-url:latest,DB_USER=jobstudy-db-user:latest,DB_PASSWORD=jobstudy-db-password:latest,ADMIN_TOKEN=jobstudy-admin-token:latest${ANTHROPIC_SECRET}"
 
 SERVICE_URL="$(gcloud run services describe "$SERVICE" --region="$GCP_REGION" --format='value(status.url)')"

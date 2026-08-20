@@ -37,7 +37,7 @@ GitHub Actions 일일 스케줄로 옮길 수 있다.
 
 ```bash
 cp infra/.env.cloudrun.example infra/.env.cloudrun
-# infra/.env.cloudrun에 GCP/Neon/Vercel/Claude 값을 입력
+# infra/.env.cloudrun에 GCP/Neon/Vercel 값을 입력 (무료 운영은 Claude 값 제외)
 bash infra/deploy-cloudrun.sh
 ```
 

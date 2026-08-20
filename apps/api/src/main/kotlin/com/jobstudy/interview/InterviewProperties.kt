@@ -8,6 +8,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  */
 @ConfigurationProperties(prefix = "app.interview")
 data class InterviewProperties(
+    /** 무료 수동 ChatGPT 웹 모드가 기본. 명시적으로 켠 환경에서만 유료 API 면접을 허용한다. */
+    val enabled: Boolean = false,
+
     /** 압박 질문의 품질이 곧 학습 가치라 대화형은 상위 모델을 쓴다. */
     val model: String = "claude-opus-5",
 

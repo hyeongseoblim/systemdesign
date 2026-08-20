@@ -1,4 +1,4 @@
-# jobStudy — 백엔드 이직 준비 학습 플랫폼
+# STUDY WITH JOB — 백엔드 이직 준비 학습 플랫폼
 
 6년차 백엔드 개발자의 이직 준비를 위한 **모바일 우선 학습 카드 플랫폼**. 시스템 디자인·물류 도메인·백엔드 설계를 카드 단위로 학습하고, AI 생성 파이프라인으로 콘텐츠를 지속 확충한다.
 
@@ -8,7 +8,7 @@
 
 ```
 [사용자] → Vercel (Next.js PWA) → Cloud Run (Spring/Kotlin API) → Neon PostgreSQL
-                apps/web                  apps/api                   ↘ Claude API
+                ↘ ChatGPT 웹 (사용자가 직접 여는 무료 수동 면접)
 ```
 
 - **`apps/api`** — Spring Boot 3.3 / Kotlin / PostgreSQL / Flyway. 학습 카드 REST API + AI 생성 파이프라인(품질 게이트 3종) + 스케줄러.
@@ -30,12 +30,11 @@
 
 카드 출처는 두 가지다.
 1. **수동(MANUAL)** — `apps/api/src/main/resources/content/*.md`(프론트매터 + 마크다운)를 `ContentSeeder`가 부팅 시 slug 기준 멱등 적재. 현재 **7개 영역 47개 카드** 시드.
-2. **AI 생성(AI_GENERATED)** — 스케줄러가 `curriculum_topics`를 골라 Claude API로 생성, 품질 게이트 통과 시 발행.
+2. **AI 생성(AI_GENERATED)** — 과거 생성된 카드와 선택적 유료 파이프라인. 개인 무료 운영에서는 기본 비활성화.
 
-카드가 **읽는 학습**이라면, 면접 세션은 **대답하는 학습**이다. `/interview` 에서 영역·주제·난이도를
-고르면 면접관이 문제를 던지고 답변마다 후속 질문으로 압박한 뒤, 종료 시 3축 피드백을 남긴다.
-Messages API는 stateless라 매 턴 전체 히스토리를 재전송하므로, system 블록과 마지막 턴에
-프롬프트 캐싱을 걸어 누적 입력 토큰 비용을 낮춘다(`ClaudeClient.converse`).
+카드가 **읽는 학습**이라면, 면접은 **대답하는 학습**이다. `/interview`에서 영역·주제·난이도를
+고르면 면접 프롬프트를 만들고, 이를 개인 ChatGPT 웹 대화에 붙여넣어 무료로 진행한다.
+STUDY WITH JOB 서버는 면접 내용을 전송하거나 유료 LLM API를 호출하지 않는다.
 
 ## 학습 영역 (7종)
 
@@ -71,7 +70,7 @@ cd apps/web && cp .env.example .env.local && npm install && npm run dev
 
 ### 한 번에 (Docker Compose)
 ```bash
-cd infra && cp .env.example .env   # DB_PASSWORD / ADMIN_TOKEN / ANTHROPIC_API_KEY 설정
+cd infra && cp .env.example .env   # DB_PASSWORD / ADMIN_TOKEN 설정
 docker compose up -d
 ```
 
@@ -89,7 +88,7 @@ docker compose up -d
 | `POST` | `/api/v1/interviews/{id}/finish` | 면접 종료 → 3축 피드백 생성 |
 | `GET` | `/api/v1/health` | 헬스체크 |
 
-> 면접 API는 `ANTHROPIC_API_KEY` 가 필요하다. 미설정 시 503과 함께 안내 메시지를 반환한다.
+> 기존 유료 면접 API와 카드 생성 배치는 기본 비활성화되어 있다. 사용자 면접은 `/interview`의 ChatGPT 웹 수동 연동을 사용한다.
 
 자세한 내용은 [apps/api/README.md](apps/api/README.md), [apps/web/README.md](apps/web/README.md), [infra/README.md](infra/README.md) 참고.
 

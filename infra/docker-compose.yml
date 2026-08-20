@@ -62,7 +62,8 @@ services:
       INTERVIEW_FEEDBACK_EFFORT: ${INTERVIEW_FEEDBACK_EFFORT:-high}
       INTERVIEW_MAX_TURNS: ${INTERVIEW_MAX_TURNS:-40}
       INTERVIEW_DAILY_TOKENS: ${INTERVIEW_DAILY_TOKENS:-300000}
-      GEN_ENABLED: ${GEN_ENABLED:-true}
+      GEN_ENABLED: ${GEN_ENABLED:-false}
+      INTERVIEW_ENABLED: ${INTERVIEW_ENABLED:-false}
       # 컨테이너 한도(512m) 대비 힙 60% → ~307MB. 나머지는 메타스페이스·스레드 스택·GC 오버헤드.
       # SerialGC 는 1 코어급에서 G1 보다 오버헤드가 작다.
       JAVA_OPTS: >-

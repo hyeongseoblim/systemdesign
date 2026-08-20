@@ -40,6 +40,13 @@ export default function CardFeed({
   const [readSet, setReadSet] = useState<Set<string>>(new Set());
   const sentinelRef = useRef<HTMLDivElement>(null);
 
+  // 필터 내비게이션에서 서버 데이터가 바뀌면 이전 필터의 클라이언트 상태를 폐기한다.
+  useEffect(() => {
+    setItems(initial.items);
+    setCursor(initial.nextCursor);
+    setLoading(false);
+  }, [initial, area, mode]);
+
   // 기기 로컬 읽음 기록 (hydration 이후 반영)
   useEffect(() => {
     const read = new Set<string>();
@@ -78,17 +85,21 @@ export default function CardFeed({
 
   if (items.length === 0) {
     return (
-      <p className="empty">
+      <div className="empty">
         <span className="glyph">🗂️</span>
-        아직 학습 카드가 없습니다.
-        <br />
-        생성 배치가 돌면 여기에 쌓입니다.
-      </p>
+        <strong>조건에 맞는 학습 카드가 없습니다.</strong>
+        <p>다른 카테고리나 학습 모드를 선택해 보세요.</p>
+        {(area || mode) && <Link href="/" className="reset-filter">필터 초기화</Link>}
+      </div>
     );
   }
 
   return (
     <>
+      <div className="feed-toolbar">
+        <p><strong>{items.length}</strong>개 카드 표시 중</p>
+        {(area || mode) && <Link href="/" className="reset-filter">필터 초기화</Link>}
+      </div>
       <div className="feed">
         {items.map((c) => {
           const isRead = readSet.has(c.id);

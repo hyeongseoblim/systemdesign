@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { AREA_LABELS, startInterview, TopicArea } from "@/lib/api";
+import { AREA_LABELS, TopicArea } from "@/lib/api";
+import { buildChatGptInterviewPrompt } from "@/lib/chatgptInterview";
 
 const AREAS = Object.keys(AREA_LABELS) as TopicArea[];
 
@@ -53,26 +53,42 @@ const DIFFICULTIES = [
   { level: 5, label: "스태프" },
 ];
 
-export default function InterviewStarter() {
-  const router = useRouter();
-  const [area, setArea] = useState<TopicArea>("SYSTEM_DESIGN");
-  const [topic, setTopic] = useState("");
-  const [difficulty, setDifficulty] = useState(4);
-  const [busy, setBusy] = useState(false);
+export default function InterviewStarter({
+  initialArea = "SYSTEM_DESIGN",
+  initialTopic = "",
+  initialDifficulty = 4,
+}: {
+  initialArea?: TopicArea;
+  initialTopic?: string;
+  initialDifficulty?: number;
+}) {
+  const [area, setArea] = useState<TopicArea>(initialArea);
+  const [topic, setTopic] = useState(initialTopic);
+  const [difficulty, setDifficulty] = useState(initialDifficulty);
+  const [prompt, setPrompt] = useState("");
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function start() {
+  function prepare() {
     const trimmed = topic.trim();
-    if (!trimmed || busy) return;
-    setBusy(true);
+    if (!trimmed) return;
+    setPrompt(buildChatGptInterviewPrompt({ area, topic: trimmed, difficulty }));
+    setCopied(false);
     setError(null);
+  }
+
+  async function copyPrompt() {
+    if (!prompt) return;
     try {
-      const session = await startInterview({ area, topic: trimmed, difficulty });
-      router.push(`/interview/${session.id}`);
+      await navigator.clipboard.writeText(prompt);
+      setCopied(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "면접을 시작하지 못했습니다");
-      setBusy(false);
+      setError(e instanceof Error ? e.message : "프롬프트를 복사하지 못했습니다");
     }
+  }
+
+  function openChatGpt() {
+    window.open("https://chatgpt.com/", "_blank", "noopener,noreferrer");
   }
 
   return (
@@ -133,14 +149,43 @@ export default function InterviewStarter() {
 
       <button
         className="primary-btn"
-        onClick={start}
-        disabled={busy || !topic.trim()}
+        onClick={prepare}
+        disabled={!topic.trim()}
       >
-        {busy ? "면접관을 부르는 중…" : "면접 시작"}
+        무료 면접 프롬프트 만들기
       </button>
       <p className="hint">
-        면접관은 답을 먼저 주지 않습니다. 막히면 힌트를 요청하세요.
+        API를 호출하지 않습니다. 프롬프트를 개인 ChatGPT 대화에 붙여넣어 진행합니다.
       </p>
+
+      {prompt && (
+        <div className="handoff">
+          <div className="handoff-head">
+            <strong>면접 프롬프트가 준비됐습니다</strong>
+            <span>API 비용 0원</span>
+          </div>
+          <textarea
+            className="prompt-preview"
+            value={prompt}
+            readOnly
+            rows={10}
+            aria-label="ChatGPT 면접 프롬프트"
+          />
+          <ol className="handoff-steps">
+            <li>프롬프트를 복사합니다.</li>
+            <li>ChatGPT를 열어 새 대화에 붙여넣습니다.</li>
+            <li>면접이 끝나면 “면접 종료”라고 입력해 피드백을 받습니다.</li>
+          </ol>
+          <div className="handoff-actions">
+            <button className="ghost-btn" type="button" onClick={copyPrompt}>
+              {copied ? "✓ 복사됨" : "프롬프트 복사"}
+            </button>
+            <button className="primary-btn" type="button" onClick={openChatGpt}>
+              ChatGPT 웹 열기 ↗
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

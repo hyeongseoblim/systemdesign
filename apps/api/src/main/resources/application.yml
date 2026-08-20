@@ -26,7 +26,7 @@ app:
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:3000}
   generation:
-    enabled: ${GEN_ENABLED:true}
+    enabled: ${GEN_ENABLED:false}
     # 매일 09:00 KST 배치 (초 분 시 일 월 요일)
     cron: ${GEN_CRON:0 0 9 * * *}
     zone: ${GEN_ZONE:Asia/Seoul}
@@ -48,6 +48,7 @@ app:
       max-retries: ${ANTHROPIC_MAX_RETRIES:3}
   # 면접(대화형) — 생성 배치와 요구 특성도 비용 프로필도 달라 분리한다
   interview:
+    enabled: ${INTERVIEW_ENABLED:false}
     model: ${ANTHROPIC_INTERVIEW_MODEL:claude-opus-5}
     max-tokens: ${ANTHROPIC_INTERVIEW_MAX_TOKENS:16000}
     # 면접관의 한 턴은 짧은 질문 하나 → 낮게. 마지막 총평만 깊게.

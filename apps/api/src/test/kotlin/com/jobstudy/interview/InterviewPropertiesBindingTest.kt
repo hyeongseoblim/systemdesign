@@ -32,6 +32,7 @@ class InterviewPropertiesBindingTest {
         runner.run { ctx ->
             val props = ctx.getBean(InterviewProperties::class.java)
 
+            assertEquals(false, props.enabled)
             // 대화형은 상위 모델
             assertEquals("claude-opus-5", props.model)
             // 턴은 낮게, 총평만 깊게 — 이게 뒤집히면 매 턴 thinking 비용이 새어나간다

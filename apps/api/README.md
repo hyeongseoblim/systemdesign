@@ -60,7 +60,7 @@ curl 'http://localhost:8080/api/v1/cards?area=SYSTEM_DESIGN&limit=20'
 
 ## AI 생성 파이프라인 (Phase 2)
 
-매일 스케줄러가 Claude API로 학습 카드를 자동 생성한다. 품질 게이트 3종 적용:
+선택적으로 Claude API로 학습 카드를 생성할 수 있지만, 개인 무료 운영에서는 기본 비활성화된다. 활성화할 경우 품질 게이트 3종을 적용한다:
 
 1. **중복 방지** — `curriculum_topics`에서 `generated=false`인 주제만 생성
 2. **자가 검증** — 생성 직후 2차 LLM 호출로 사실성·구조 평가 → `quality_score`. 임계치(기본 70) 미달이면 `DRAFT`로 보류
@@ -69,9 +69,9 @@ curl 'http://localhost:8080/api/v1/cards?area=SYSTEM_DESIGN&limit=20'
 ### 생성 관련 환경 변수
 | 변수 | 기본값 | 설명 |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | (없음) | **필수** — 없으면 배치 자동 스킵 |
+| `ANTHROPIC_API_KEY` | (없음) | 선택 사항 — 무료 운영에서는 설정하지 않음 |
 | `ANTHROPIC_MODEL` | `claude-sonnet-4-6` | 생성 모델 |
-| `GEN_ENABLED` | `true` | 배치 on/off |
+| `GEN_ENABLED` | `false` | 유료 카드 생성 배치 on/off |
 | `GEN_CRON` | `0 0 9 * * *` | 실행 시각 (cron) |
 | `GEN_ZONE` | `Asia/Seoul` | 타임존 |
 | `GEN_DAILY_CARDS` | `3` | 일일 생성 상한 |

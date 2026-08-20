@@ -40,47 +40,71 @@ export default async function Home({
     <>
       <header className="topbar">
         <div className="brand">
-          <h1>jobStudy</h1>
-          <p>백엔드 · 시스템 디자인 학습 카드</p>
+          <Link href="/" className="brand-home" aria-label="STUDY WITH JOB 홈">
+            <span className="brand-mark" aria-hidden="true">S</span>
+            <span className="brand-copy">
+              <h1>STUDY WITH JOB</h1>
+              <p>커리어를 만드는 기술 학습</p>
+            </span>
+          </Link>
           <Link href="/interview" className="brand-action">
-            🎙️ 면접 보기
+            <span aria-hidden="true">●</span>
+            AI 면접
           </Link>
         </div>
-        <nav className="tabs">
-          <Link
-            className={`tab t-all ${!activeArea ? "active" : ""}`}
-            href={feedHref(undefined, activeMode)}
-          >
-            전체
-          </Link>
-          {AREAS.map((a) => (
-            <Link
-              key={a}
-              className={`tab a-${a} ${activeArea === a ? "active" : ""}`}
-              href={feedHref(a, activeMode)}
-            >
-              {AREA_LABELS[a]}
-            </Link>
-          ))}
-        </nav>
-        <nav className="tabs sub">
-          <Link
-            className={`tab ${!activeMode ? "active" : ""}`}
-            href={feedHref(activeArea, undefined)}
-          >
-            모든 모드
-          </Link>
-          {MODES.map((m) => (
-            <Link
-              key={m}
-              className={`tab ${activeMode === m ? "active" : ""}`}
-              href={feedHref(activeArea, m)}
-            >
-              {MODE_LABELS[m]}
-            </Link>
-          ))}
-        </nav>
-        <ActiveTabScroller />
+        <div className="filter-panel" aria-label="학습 카드 필터">
+          <div className="filter-group">
+            <div className="filter-heading">
+              <span>카테고리</span>
+              <strong>{activeArea ? AREA_LABELS[activeArea] : "전체"}</strong>
+            </div>
+            <nav className="tabs" aria-label="카테고리 필터">
+              <Link
+                className={`tab t-all ${!activeArea ? "active" : ""}`}
+                href={feedHref(undefined, activeMode)}
+                aria-current={!activeArea ? "page" : undefined}
+              >
+                전체
+              </Link>
+              {AREAS.map((a) => (
+                <Link
+                  key={a}
+                  className={`tab a-${a} ${activeArea === a ? "active" : ""}`}
+                  href={feedHref(a, activeMode)}
+                  aria-current={activeArea === a ? "page" : undefined}
+                >
+                  {AREA_LABELS[a]}
+                </Link>
+              ))}
+            </nav>
+          </div>
+          <div className="filter-group mode-filter">
+            <div className="filter-heading">
+              <span>학습 모드</span>
+              <strong>{activeMode ? MODE_LABELS[activeMode] : "모든 모드"}</strong>
+            </div>
+            <nav className="tabs sub" aria-label="학습 모드 필터">
+              <Link
+                className={`tab ${!activeMode ? "active" : ""}`}
+                href={feedHref(activeArea, undefined)}
+                aria-current={!activeMode ? "page" : undefined}
+              >
+                모든 모드
+              </Link>
+              {MODES.map((m) => (
+                <Link
+                  key={m}
+                  className={`tab ${activeMode === m ? "active" : ""}`}
+                  href={feedHref(activeArea, m)}
+                  aria-current={activeMode === m ? "page" : undefined}
+                >
+                  {MODE_LABELS[m]}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </div>
+        <ActiveTabScroller filterKey={`${activeArea ?? "ALL"}:${activeMode ?? "ALL"}`} />
       </header>
 
       {error ? (
@@ -91,7 +115,12 @@ export default async function Home({
           백엔드가 실행 중인지 확인하세요.
         </p>
       ) : (
-        <CardFeed initial={initial} area={activeArea} mode={activeMode} />
+        <CardFeed
+          key={`${activeArea ?? "ALL"}:${activeMode ?? "ALL"}`}
+          initial={initial}
+          area={activeArea}
+          mode={activeMode}
+        />
       )}
     </>
   );

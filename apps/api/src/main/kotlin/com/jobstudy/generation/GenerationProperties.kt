@@ -4,7 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties(prefix = "app.generation")
 data class GenerationProperties(
-    val enabled: Boolean = true,
+    val enabled: Boolean = false,
     val cron: String = "0 0 9 * * *",
     val zone: String = "Asia/Seoul",
     val dailyCardLimit: Int = 3,

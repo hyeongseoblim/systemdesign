@@ -65,7 +65,8 @@ npm ci && npm run dev                      # http://localhost:3000
 | `PORT` | `8080` | API 포트 |
 | `CORS_ORIGINS` | `http://localhost:3000` | 웹 포트를 바꿨다면 함께 변경 |
 | `ANTHROPIC_API_KEY` | (빈 값) | **비어 있으면 AI 카드 생성 배치는 자동 스킵** — 로컬 학습 용도로는 없어도 됨 |
-| `GEN_ENABLED` | `true` | 생성 배치 자체를 끄려면 `false` |
+| `GEN_ENABLED` | `false` | 유료 카드 생성 배치를 명시적으로 켤 때만 `true` |
+| `INTERVIEW_ENABLED` | `false` | 기존 유료 API 면접을 명시적으로 켤 때만 `true` |
 | `ADMIN_TOKEN` | (빈 값) | admin 엔드포인트 쓸 때만 |
 | `jobstudy.seed.content.enabled` | `true` | 카드 시드 끄기 (`-Djobstudy.seed.content.enabled=false`) |
 

@@ -1,28 +1,29 @@
 import Link from "next/link";
-import {
-  listInterviews,
-  AREA_LABELS,
-  STATUS_LABELS,
-  InterviewSummary,
-} from "@/lib/api";
+import { TopicArea, AREA_LABELS } from "@/lib/api";
 import InterviewStarter from "@/components/InterviewStarter";
-import DifficultyDots from "@/components/DifficultyDots";
 
-export default async function InterviewHome() {
-  let past: InterviewSummary[] = [];
-  let error: string | null = null;
-  try {
-    past = await listInterviews(10);
-  } catch (e) {
-    error = e instanceof Error ? e.message : "불러오기 실패";
-  }
+const AREAS = Object.keys(AREA_LABELS) as TopicArea[];
+
+export default async function InterviewHome({
+  searchParams,
+}: {
+  searchParams: Promise<{ area?: string; topic?: string; difficulty?: string }>;
+}) {
+  const params = await searchParams;
+  const initialArea = AREAS.includes(params.area as TopicArea)
+    ? (params.area as TopicArea)
+    : "SYSTEM_DESIGN";
+  const parsedDifficulty = Number(params.difficulty);
+  const initialDifficulty = Number.isInteger(parsedDifficulty) && parsedDifficulty >= 1 && parsedDifficulty <= 5
+    ? parsedDifficulty
+    : 4;
 
   return (
     <>
       <header className="topbar">
         <div className="brand">
           <h1>면접 시뮬레이션</h1>
-          <p>답하고, 압박받고, 피드백 받기</p>
+          <p>ChatGPT 웹으로 무료 연습</p>
         </div>
       </header>
 
@@ -30,46 +31,16 @@ export default async function InterviewHome() {
         ← 카드 피드로
       </Link>
 
-      <InterviewStarter />
+      <div className="cost-note">
+        <strong>별도 API 키나 결제가 필요하지 않습니다.</strong>
+        <p>면접 대화와 기록은 사용자의 ChatGPT 계정에서 관리됩니다.</p>
+      </div>
 
-      <h2 className="section-title">지난 면접</h2>
-      {error ? (
-        <p className="empty">
-          <span className="glyph">📡</span>
-          API에 연결할 수 없습니다.
-        </p>
-      ) : past.length === 0 ? (
-        <p className="empty">
-          <span className="glyph">🎙️</span>
-          아직 진행한 면접이 없습니다.
-        </p>
-      ) : (
-        <div className="feed">
-          {past.map((s) => (
-            <Link
-              key={s.id}
-              href={`/interview/${s.id}`}
-              className={`card a-${s.area}`}
-            >
-              <div className="meta">
-                <span className="badge">{AREA_LABELS[s.area]}</span>
-                <span className={`badge status s-${s.status}`}>
-                  {STATUS_LABELS[s.status]}
-                </span>
-                <DifficultyDots level={s.difficulty} />
-              </div>
-              <h2>{s.topic}</h2>
-              <p className="summary">
-                {s.turnCount}턴 ·{" "}
-                {new Date(s.startedAt).toLocaleDateString("ko-KR", {
-                  month: "long",
-                  day: "numeric",
-                })}
-              </p>
-            </Link>
-          ))}
-        </div>
-      )}
+      <InterviewStarter
+        initialArea={initialArea}
+        initialTopic={params.topic ?? ""}
+        initialDifficulty={initialDifficulty}
+      />
     </>
   );
 }
