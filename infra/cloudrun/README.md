@@ -81,6 +81,8 @@ curl "$API_URL/api/v1/cards?limit=1"
 
 첫 요청에서는 컨테이너와 Neon이 모두 깨어나므로 응답이 늦을 수 있다.
 
+API가 한 번 정상 기동한 뒤에는 [Neon 읽기 전용 점검](../neon/README.md)으로 V1~V5 적용 여부와 카드·커리큘럼 수를 확인한다.
+
 ## 5. Vercel 연결
 
 Vercel에서 Root Directory를 `apps/web`으로 설정하고 다음 환경 변수를 추가한다.

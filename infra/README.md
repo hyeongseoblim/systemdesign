@@ -12,6 +12,8 @@
 
 전체 절차는 [cloudrun/README.md](cloudrun/README.md)를 따른다. 배포 스크립트는 [cloudrun/deploy.sh](cloudrun/deploy.sh)다.
 
+이미 만들어진 Neon DB의 Flyway·카드·커리큘럼 상태는 [Neon 읽기 전용 점검](neon/README.md)을 따른다.
+
 ## 로컬 Docker Compose
 
 `docker-compose.yml`은 운영 DB가 아니라 로컬에서 API와 PostgreSQL을 함께 확인할 때만 쓴다.
