@@ -28,7 +28,7 @@
 | `interactions` | 사용자 답변 · 북마크 |
 
 카드 출처는 두 가지다.
-1. **수동(MANUAL)** — `apps/api/src/main/resources/content/*.md`(프론트매터 + 마크다운)를 `ContentSeeder`가 부팅 시 slug 기준 멱등 적재. 현재 소스 기준 **7개 영역 100개 카드** 시드.
+1. **수동(MANUAL)** — `apps/api/src/main/resources/content/*.md`(프론트매터 + 마크다운)를 `ContentSeeder`가 부팅 시 slug 기준 멱등 적재. 현재 소스 기준 **7개 영역 114개 카드** 시드.
 2. **AI 생성(AI_GENERATED)** — 활성화된 생성 작업이 `curriculum_topics`를 골라 Claude API로 생성하고, 품질 게이트 통과 시 발행. Cloud Run 운영에서는 Cloud Scheduler를 별도로 구성한다.
 
 ## 학습 영역 (7종)
@@ -53,7 +53,7 @@ cd infra && docker compose -f docker-compose.local.yml up -d
 
 # API (JDK 25 필요)
 cd apps/api && ./gradlew bootRun
-# Flyway가 스키마 생성 → ContentSeeder가 100개 카드 적재
+# Flyway가 스키마 생성 → ContentSeeder가 114개 카드 적재
 ```
 > **주의**: 프로젝트 툴체인은 **JDK 25**다(Gradle 9.6 / Kotlin 2.3 / Spring Boot 3.5). JDK 21~24로는 Gradle 데몬은 뜨지만 툴체인 25를 요구하므로, 로컬에 JDK 25가 없으면 Gradle이 자동 다운로드를 시도한다.
 
