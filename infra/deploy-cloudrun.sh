@@ -68,12 +68,17 @@ put_secret() {
   local name="$1"
   local value="$2"
   local new_version
-  if ! gcloud secrets describe "$name" >/dev/null 2>&1; then
+  if gcloud secrets describe "$name" >/dev/null 2>&1; then
+    if [ "$(gcloud secrets versions access latest --secret="$name")" = "$value" ]; then
+      echo "Secret 값 변경 없음: $name"
+      return
+    fi
+  else
     gcloud secrets create "$name" --replication-policy=automatic
   fi
   new_version="$(printf '%s' "$value" | gcloud secrets versions add "$name" --data-file=- --format='value(name)')"
   new_version="${new_version##*/}"
-  # Secret Manager 무료 한도는 활성 버전 수 기준이다. latest만 남겨 배포 반복 시 누적을 막는다.
+  # 이전 버전은 롤백 확인 전까지 비활성화한다. Disabled도 과금 대상이므로 배포 검증 후 파기한다.
   while IFS= read -r old_version; do
     [ -z "$old_version" ] && continue
     [ "$old_version" = "$new_version" ] && continue
@@ -82,8 +87,6 @@ put_secret() {
 }
 
 echo "==> Secret Manager 갱신"
-put_secret jobstudy-db-url "$DB_URL"
-put_secret jobstudy-db-user "$DB_USER"
 put_secret jobstudy-db-password "$DB_PASSWORD"
 put_secret jobstudy-admin-token "$ADMIN_TOKEN"
 if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
@@ -119,8 +122,8 @@ gcloud run deploy "$SERVICE" \
   --min=0 \
   --max=1 \
   --timeout=300 \
-  --set-env-vars="^@^CORS_ORIGINS=$CORS_ORIGINS@GEN_ENABLED=false@INTERVIEW_ENABLED=false@GEN_DAILY_CARDS=${GEN_DAILY_CARDS:-1}@GEN_DAILY_TOKENS=${GEN_DAILY_TOKENS:-50000}@INTERVIEW_MAX_TURNS=${INTERVIEW_MAX_TURNS:-20}@INTERVIEW_DAILY_TOKENS=${INTERVIEW_DAILY_TOKENS:-100000}@JAVA_OPTS=-XX:MaxRAMPercentage=60 -XX:+UseSerialGC -Xss512k -XX:MaxMetaspaceSize=192m" \
-  --set-secrets="DB_URL=jobstudy-db-url:latest,DB_USER=jobstudy-db-user:latest,DB_PASSWORD=jobstudy-db-password:latest,ADMIN_TOKEN=jobstudy-admin-token:latest${ANTHROPIC_SECRET}"
+  --set-env-vars="^@^DB_URL=$DB_URL@DB_USER=$DB_USER@CORS_ORIGINS=$CORS_ORIGINS@GEN_ENABLED=false@INTERVIEW_ENABLED=false@GEN_DAILY_CARDS=${GEN_DAILY_CARDS:-1}@GEN_DAILY_TOKENS=${GEN_DAILY_TOKENS:-50000}@INTERVIEW_MAX_TURNS=${INTERVIEW_MAX_TURNS:-20}@INTERVIEW_DAILY_TOKENS=${INTERVIEW_DAILY_TOKENS:-100000}@JAVA_OPTS=-XX:MaxRAMPercentage=60 -XX:+UseSerialGC -Xss512k -XX:MaxMetaspaceSize=192m" \
+  --set-secrets="DB_PASSWORD=jobstudy-db-password:latest,ADMIN_TOKEN=jobstudy-admin-token:latest${ANTHROPIC_SECRET}"
 
 SERVICE_URL="$(gcloud run services describe "$SERVICE" --region="$GCP_REGION" --format='value(status.url)')"
 echo "==> 헬스 체크: $SERVICE_URL/api/v1/health"
