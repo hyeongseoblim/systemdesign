@@ -64,6 +64,14 @@ export const MODE_LABELS: Record<LearningMode, string> = {
   REVIEW: "리뷰",
 };
 
+/** 피드에서 각 학습 모드의 목적을 즉시 이해할 수 있도록 짧게 안내한다. */
+export const MODE_GUIDES: Record<LearningMode, string> = {
+  CONCEPT: "핵심 원리 이해",
+  DESIGN: "설계 판단 연습",
+  INTERVIEW: "말로 설명 연습",
+  REVIEW: "기억 회상 · 복습",
+};
+
 /** 읽음/완료 상태 — localStorage 키 (기기 로컬 학습 기록) */
 export const readKey = (id: string) => `jobStudy::read::${id}`;
 export const doneKey = (id: string) => `jobStudy::done::${id}`;

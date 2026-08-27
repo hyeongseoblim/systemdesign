@@ -11,11 +11,37 @@ export default function QuestionAnswers({
   cardId: string;
   questions: QuestionItem[];
 }) {
+  const [answered, setAnswered] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const stored = new Set<string>();
+    for (const question of questions) {
+      const key = `jobStudy::ans::${cardId}::${question.id}`;
+      if ((localStorage.getItem(key) ?? "").trim()) stored.add(question.id);
+    }
+    setAnswered(stored);
+  }, [cardId, questions]);
+
+  function updateAnswered(qid: string, hasAnswer: boolean) {
+    setAnswered((current) => {
+      const next = new Set(current);
+      if (hasAnswer) next.add(qid);
+      else next.delete(qid);
+      return next;
+    });
+  }
+
   if (questions.length === 0) return null;
   return (
     <div className="qsection">
-      <h3>이해도 확인</h3>
-      <p className="qhint">답변은 이 기기에 자동 저장됩니다. 말로 설명하듯 써보세요.</p>
+      <div className="qsection-head">
+        <span>STEP 2</span>
+        <div>
+          <h2>기억에서 꺼내보기</h2>
+          <p className="qhint">본문을 보지 않고, 동료에게 설명하듯 답해보세요.</p>
+        </div>
+        <strong>{answered.size}/{questions.length} 작성</strong>
+      </div>
       {questions.map((q, i) => (
         <AnswerCard
           key={q.id}
@@ -23,6 +49,7 @@ export default function QuestionAnswers({
           qid={q.id}
           index={i}
           question={q.question}
+          onAnsweredChange={updateAnswered}
         />
       ))}
     </div>
@@ -34,11 +61,13 @@ function AnswerCard({
   qid,
   index,
   question,
+  onAnsweredChange,
 }: {
   cardId: string;
   qid: string;
   index: number;
   question: string;
+  onAnsweredChange: (qid: string, hasAnswer: boolean) => void;
 }) {
   const storageKey = `jobStudy::ans::${cardId}::${qid}`;
   const [value, setValue] = useState("");
@@ -52,6 +81,7 @@ function AnswerCard({
   function onChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setValue(e.target.value);
     localStorage.setItem(storageKey, e.target.value);
+    onAnsweredChange(qid, !!e.target.value.trim());
     setSaved(true);
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setSaved(false), 1200);
@@ -67,8 +97,13 @@ function AnswerCard({
       <textarea
         value={value}
         onChange={onChange}
-        placeholder="답변을 입력하세요…"
+        placeholder="내 언어로 핵심을 설명해 보세요…"
+        aria-label={`Q${index + 1} 답변`}
       />
+      <div className="answer-foot">
+        <span>이 기기에 자동 저장</span>
+        <span>{value.trim().length}자</span>
+      </div>
     </div>
   );
 }

@@ -105,6 +105,8 @@ body {
   font-size: 15px;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+  background-image:
+    radial-gradient(circle at 50% -20%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 32rem);
 }
 a { color: inherit; text-decoration: none; }
 button { font-family: inherit; }
@@ -115,6 +117,7 @@ button { font-family: inherit; }
   margin: 0 auto;
   padding: 0 20px calc(64px + env(safe-area-inset-bottom));
 }
+.app:has(.home-topbar) { max-width: 1080px; }
 
 /* ─────────────────────────────────────────────
    상단 바 + 필터
@@ -129,6 +132,7 @@ button { font-family: inherit; }
   padding: calc(16px + env(safe-area-inset-top)) 0 12px;
   border-bottom: 1px solid var(--border);
 }
+.home-topbar { position: relative; }
 .brand { display: flex; align-items: center; gap: 12px; }
 .brand-home { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
 .brand-mark {
@@ -152,15 +156,11 @@ button { font-family: inherit; }
 }
 .filter-group + .filter-group { margin-top: 8px; }
 .filter-heading {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center;
   min-height: 22px; gap: 10px;
   font-size: 11px; color: var(--faint);
 }
 .filter-heading span { font-weight: 700; letter-spacing: 0.03em; }
-.filter-heading strong {
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  color: var(--text); font-size: 11px; font-weight: 700;
-}
 
 .tabs {
   display: flex; gap: 6px; overflow-x: auto;
@@ -170,7 +170,7 @@ button { font-family: inherit; }
 }
 .tabs::-webkit-scrollbar { display: none; }
 .tab {
-  min-height: 40px; flex: 0 0 auto; font-size: 13px; font-weight: 650;
+  min-height: 44px; flex: 0 0 auto; font-size: 13px; font-weight: 650;
   display: inline-flex; align-items: center; justify-content: center;
   padding: 8px 14px; border-radius: 999px;
   background: var(--card); border: 1px solid var(--border);
@@ -184,7 +184,7 @@ button { font-family: inherit; }
   color: #fff;
 }
 .tab.active.t-all { background: var(--text-strong); border-color: var(--text-strong); color: var(--bg); }
-.tabs.sub .tab { min-height: 38px; font-size: 12px; padding: 7px 12px; }
+.tabs.sub .tab { min-height: 44px; font-size: 12px; padding: 7px 12px; }
 .tabs.sub .tab.active {
   background: color-mix(in srgb, var(--accent) 14%, var(--card));
   border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
@@ -197,20 +197,49 @@ button { font-family: inherit; }
    ───────────────────────────────────────────── */
 .feed-toolbar {
   display: flex; align-items: center; justify-content: space-between;
-  min-height: 38px; margin-top: 10px; gap: 12px;
+  min-height: 58px; margin-top: 8px; gap: 16px;
   color: var(--faint); font-size: 12px;
 }
-.feed-toolbar strong { color: var(--text); font-size: 13px; }
+.feed-context { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.feed-context > span {
+  color: var(--faint); font-size: 10.5px; font-weight: 750;
+  letter-spacing: 0.04em;
+}
+.feed-context > strong {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--text-strong); font-size: 14px; line-height: 1.4;
+}
+.feed-context i { margin: 0 6px; color: var(--faint); font-style: normal; }
+.feed-tools { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.result-count {
+  display: inline-flex; align-items: baseline; gap: 2px;
+  min-height: 34px; padding: 5px 10px; border-radius: 9px;
+  color: var(--faint); background: var(--card);
+  border: 1px solid var(--border);
+}
+.result-count strong { color: var(--text); font-size: 13px; }
 .reset-filter {
   display: inline-flex; align-items: center; justify-content: center;
-  min-height: 34px; padding: 5px 10px; border-radius: 9px;
+  min-height: 42px; padding: 7px 11px; border-radius: 10px;
   color: var(--accent); font-size: 12px; font-weight: 700;
   background: color-mix(in srgb, var(--accent) 9%, transparent);
 }
-.feed { display: flex; flex-direction: column; gap: 12px; }
+.study-overview {
+  display: flex; align-items: center; gap: 14px;
+  margin: -2px 0 12px; padding: 9px 12px;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  color: var(--muted); font-size: 11.5px;
+}
+.study-overview span { display: inline-flex; align-items: center; gap: 5px; }
+.study-overview strong { color: var(--text-strong); font-size: 12px; }
+.state-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+.state-dot.reading { background: var(--accent); }
+.state-dot.complete { background: var(--c-dev); }
+.feed { display: grid; grid-template-columns: 1fr; gap: 12px; }
 
 .card {
-  position: relative; display: block;
+  position: relative; display: flex; flex-direction: column;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -225,6 +254,9 @@ button { font-family: inherit; }
   background: var(--area-c, var(--accent));
   opacity: 0.9;
 }
+.card.state-complete::before { background: var(--c-dev); }
+.card.state-complete { border-color: color-mix(in srgb, var(--c-dev) 28%, var(--border)); }
+.card.state-reading { border-color: color-mix(in srgb, var(--accent) 24%, var(--border)); }
 .card:active { transform: scale(0.985); background: var(--card-hover); }
 @media (hover: hover) {
   .card:hover {
@@ -249,35 +281,59 @@ button { font-family: inherit; }
   background: color-mix(in srgb, var(--muted) 12%, transparent);
   color: var(--muted);
 }
-.read-check {
-  font-size: 11px; font-weight: 700; color: var(--c-dev);
+.study-state {
+  font-size: 10.5px; font-weight: 750; color: var(--faint);
   display: inline-flex; align-items: center; gap: 3px;
+}
+.study-state.reading { color: var(--accent); }
+.study-state.complete { color: var(--c-dev); }
+.study-state.new {
+  padding: 1px 6px; border-radius: 999px;
+  background: color-mix(in srgb, var(--faint) 10%, transparent);
 }
 
 /* 난이도 도트 */
-.diff { display: inline-flex; gap: 3px; margin-left: auto; align-items: center; }
-.diff i {
+.diff { display: inline-flex; gap: 6px; margin-left: auto; align-items: center; }
+.diff-label { color: var(--faint); font-size: 10.5px; font-weight: 650; white-space: nowrap; }
+.diff-dots { display: inline-flex; gap: 3px; align-items: center; }
+.diff-dots i {
   width: 5px; height: 5px; border-radius: 50%;
   background: var(--border-strong);
 }
-.diff i.on { background: var(--area-c, var(--accent)); }
+.diff-dots i.on { background: var(--area-c, var(--accent)); }
 
 .card h2 {
   font-size: 16.5px; font-weight: 700; line-height: 1.42;
   letter-spacing: -0.01em; color: var(--text-strong); margin-bottom: 5px;
 }
-.card.is-read h2 { color: var(--muted); }
+.card.state-complete h2 { color: color-mix(in srgb, var(--text-strong) 82%, var(--muted)); }
 .card .summary {
   font-size: 13.5px; color: var(--muted); line-height: 1.6;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; }
+.learning-cue {
+  display: flex; align-items: center; gap: 7px;
+  margin-top: 10px; color: var(--text); font-size: 12px; font-weight: 650;
+}
+.learning-cue span {
+  color: var(--faint); font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: auto; padding-top: 11px; }
 .tag {
   font-size: 11px; color: var(--faint);
   background: var(--bg); border: 1px solid var(--border);
   padding: 1.5px 8px; border-radius: 6px;
 }
+.card-cta {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border);
+  color: var(--area-c, var(--accent)); font-size: 12.5px; font-weight: 750;
+}
+.card.state-complete .card-cta { color: var(--c-dev); }
+.card-cta b { font-size: 16px; line-height: 1; transition: transform 0.15s ease; }
+@media (hover: hover) { .card:hover .card-cta b { transform: translateX(3px); } }
 
 /* 스켈레톤 */
 .skel {
@@ -336,20 +392,80 @@ button { font-family: inherit; }
   font-size: 23px; font-weight: 800; line-height: 1.38;
   letter-spacing: -0.02em; color: var(--text-strong); margin: 10px 0 8px;
 }
+.detail-hero {
+  position: relative; overflow: hidden;
+  padding: 20px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow);
+}
+.detail-hero::before {
+  content: ""; position: absolute; inset: 0 auto 0 0; width: 4px;
+  background: var(--area-c, var(--accent));
+}
 .detail .lede { font-size: 14.5px; color: var(--muted); line-height: 1.7; margin-bottom: 14px; }
 .detail .meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .byline {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  padding: 12px 0; margin: 14px 0 6px;
-  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  padding: 12px 0 0; margin: 14px 0 0;
+  border-top: 1px solid var(--border);
   font-size: 12.5px; color: var(--muted);
 }
 .byline .coach { font-weight: 600; color: var(--text); }
-.byline .dot::before { content: "·"; color: var(--faint); }
+.byline > span + span::before { content: "·"; color: var(--faint); margin-right: 10px; }
+
+.study-roadmap {
+  margin-top: 14px; padding: 13px 15px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--card) 70%, transparent);
+}
+.roadmap-title {
+  display: block; margin-bottom: 9px; color: var(--faint);
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.05em;
+}
+.study-roadmap ol { display: grid; grid-template-columns: repeat(3, 1fr); list-style: none; }
+.study-roadmap ol.two-steps { grid-template-columns: repeat(2, 1fr); }
+.study-roadmap li { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.study-roadmap li + li { padding-left: 12px; border-left: 1px solid var(--border); }
+.study-roadmap b {
+  width: 22px; height: 22px; flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 7px; background: color-mix(in srgb, var(--area-c, var(--accent)) 14%, transparent);
+  color: var(--area-c, var(--accent)); font-size: 10.5px;
+}
+.study-roadmap li span {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--muted); font-size: 11.5px; font-weight: 650;
+}
+
+.study-section { margin-top: 38px; }
+.study-section-head,
+.qsection-head,
+.learn-actions-copy,
+.card-interview-copy {
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.study-section-head > span,
+.qsection-head > span,
+.learn-actions-copy > span,
+.card-interview-copy > span {
+  flex: 0 0 auto; margin-top: 2px; padding: 4px 7px;
+  border-radius: 7px; background: color-mix(in srgb, var(--area-c, var(--accent)) 14%, transparent);
+  color: var(--area-c, var(--accent)); font-size: 9.5px; font-weight: 850; letter-spacing: 0.04em;
+}
+.study-section-head h2,
+.qsection-head h2,
+.learn-actions-copy h2,
+.card-interview-copy h2 {
+  color: var(--text-strong); font-size: 17px; line-height: 1.45; letter-spacing: -0.01em;
+}
+.study-section-head p,
+.learn-actions-copy p,
+.card-interview-copy p {
+  margin-top: 2px; color: var(--muted); font-size: 12.5px; line-height: 1.6;
+}
 
 /* 본문 타이포 */
 .content { font-size: 15.5px; line-height: 1.8; }
-.content > :first-child { margin-top: 20px; }
+.content > :first-child { margin-top: 18px; }
 .content h1, .content h2, .content h3 {
   line-height: 1.4; letter-spacing: -0.01em; color: var(--text-strong);
   scroll-margin-top: 20px;
@@ -484,9 +600,20 @@ button { font-family: inherit; }
 /* ─────────────────────────────────────────────
    학습 액션 + 이해도 확인
    ───────────────────────────────────────────── */
-.learn-actions { margin-top: 30px; }
+.learn-actions {
+  margin-top: 34px; padding: 18px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--card); box-shadow: var(--shadow);
+}
+.learn-actions.is-done {
+  border-color: color-mix(in srgb, var(--c-dev) 42%, var(--border));
+  background: color-mix(in srgb, var(--c-dev) 8%, var(--card));
+}
+.learn-actions.is-done .learn-actions-copy > span {
+  background: color-mix(in srgb, var(--c-dev) 15%, transparent); color: var(--c-dev);
+}
 .done-btn {
-  width: 100%; padding: 14px;
+  width: 100%; min-height: 48px; padding: 12px 14px; margin-top: 15px;
   border-radius: var(--radius); border: 1px solid var(--border);
   background: var(--card); color: var(--muted);
   font-size: 14.5px; font-weight: 700; cursor: pointer;
@@ -498,13 +625,17 @@ button { font-family: inherit; }
   color: var(--c-dev);
 }
 .done-btn:active { transform: scale(0.985); }
+.undo-hint { margin-top: 7px; text-align: center; color: var(--faint); font-size: 10.5px; }
 
-.qsection { margin-top: 34px; }
-.qsection > h3 {
-  font-size: 17px; font-weight: 800; letter-spacing: -0.01em;
-  color: var(--text-strong); margin-bottom: 4px;
+.qsection { margin-top: 38px; }
+.qsection-head { margin-bottom: 14px; }
+.qsection-head > div { min-width: 0; }
+.qsection-head > strong {
+  margin-left: auto; flex: 0 0 auto; padding: 5px 8px;
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--area-c, var(--accent)); font-size: 10.5px;
 }
-.qsection > .qhint { font-size: 12.5px; color: var(--faint); margin-bottom: 14px; }
+.qsection-head .qhint { color: var(--muted); font-size: 12.5px; line-height: 1.6; }
 .qcard {
   background: var(--card); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 15px 16px; margin-bottom: 12px;
@@ -534,13 +665,17 @@ button { font-family: inherit; }
 }
 .qcard textarea:focus { outline: none; border-color: var(--area-c, var(--accent)); }
 .qcard textarea::placeholder { color: var(--faint); }
+.answer-foot {
+  display: flex; justify-content: space-between; gap: 12px;
+  margin-top: 6px; color: var(--faint); font-size: 10.5px;
+}
 
 /* ─────────────────────────────────────────────
    면접 시뮬레이션 — 시작 화면
    ───────────────────────────────────────────── */
 .brand-action {
   margin-left: auto; flex: 0 0 auto;
-  min-height: 40px; display: inline-flex; align-items: center; gap: 6px;
+  min-height: 44px; display: inline-flex; align-items: center; gap: 6px;
   padding: 7px 13px; border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
@@ -556,6 +691,41 @@ button { font-family: inherit; }
   .brand h1 { font-size: 15px; }
   .brand p { font-size: 10.5px; }
   .brand-action { padding-inline: 10px; font-size: 11.5px; }
+  .feed-toolbar { min-height: 62px; }
+  .feed-context > strong { font-size: 13.5px; }
+  .result-count { display: none; }
+  .study-overview { justify-content: space-between; gap: 8px; }
+  .study-overview span { gap: 4px; }
+  .detail-hero { padding: 17px 16px 16px 19px; }
+  .study-roadmap ol { grid-template-columns: 1fr; gap: 8px; }
+  .study-roadmap li + li { padding: 8px 0 0; border-left: 0; border-top: 1px solid var(--border); }
+  .study-roadmap li span { white-space: normal; }
+  .qsection-head { flex-wrap: wrap; }
+  .qsection-head > strong { margin-left: 42px; }
+}
+
+@media (min-width: 760px) {
+  .home-topbar { padding-top: calc(20px + env(safe-area-inset-top)); }
+  .filter-panel { padding-top: 12px; }
+  .filter-group {
+    display: grid; grid-template-columns: 88px minmax(0, 1fr);
+    align-items: center; gap: 12px;
+  }
+  .filter-group + .filter-group { margin-top: 6px; }
+  .filter-heading { min-height: 40px; }
+  .tabs {
+    min-width: 0; margin: 0; padding: 3px 0;
+    scroll-padding-inline: 0;
+  }
+  .feed { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .card { min-height: 294px; padding: 17px 19px 16px 22px; }
+  .card .summary { -webkit-line-clamp: 3; }
+  .loadmore { max-width: 420px; display: block; margin-inline: auto; }
+}
+
+@media (min-width: 920px) {
+  .card { min-height: 276px; }
+  .card h2 { font-size: 17px; }
 }
 
 .section-title {
@@ -732,10 +902,18 @@ button { font-family: inherit; }
 }
 
 /* 카드 상세 → 면접 진입 */
-.card-interview { margin-top: 30px; }
+.card-interview {
+  margin-top: 16px; padding: 18px;
+  border: 1px dashed color-mix(in srgb, var(--area-c, var(--accent)) 42%, var(--border));
+  border-radius: var(--radius); background: color-mix(in srgb, var(--area-c, var(--accent)) 5%, transparent);
+}
+.card-interview-copy > span { white-space: nowrap; }
 .ghost-btn.wide { width: 100%; padding: 14px; font-size: 14.5px; }
-.card-interview .ghost-btn.wide { display: flex; align-items: center; justify-content: center; }
-.card-interview .hint { text-align: center; }
+.card-interview .ghost-btn.wide {
+  min-height: 48px; display: flex; align-items: center; justify-content: center;
+  margin-top: 15px; border-color: color-mix(in srgb, var(--area-c, var(--accent)) 38%, var(--border));
+  color: var(--area-c, var(--accent));
+}
 
 .composer { margin-top: 8px; }
 .composer textarea {

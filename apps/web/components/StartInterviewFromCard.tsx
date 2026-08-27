@@ -10,11 +10,13 @@ export default function StartInterviewFromCard({
   area,
   title,
   difficulty,
+  step = 4,
 }: {
   cardId: string;
   area: TopicArea;
   title: string;
   difficulty: number;
+  step?: number;
 }) {
   void cardId;
   const query = new URLSearchParams({
@@ -24,13 +26,17 @@ export default function StartInterviewFromCard({
   });
 
   return (
-    <div className="card-interview">
+    <section className="card-interview">
+      <div className="card-interview-copy">
+        <span>OPTIONAL · STEP {step}</span>
+        <div>
+          <h2>말로 설명하며 실전 점검</h2>
+          <p>읽은 직후 카드를 덮고 답하면 기억에 더 오래 남습니다.</p>
+        </div>
+      </div>
       <Link className="ghost-btn wide" href={`/interview?${query.toString()}`}>
-        이 주제로 ChatGPT 면접 보기 ↗
+        이 주제로 무료 면접 연습 ↗
       </Link>
-      <p className="hint">
-        읽은 직후가 가장 잘 기억날 때입니다. 카드를 덮고 답해 보세요.
-      </p>
-    </div>
+    </section>
   );
 }

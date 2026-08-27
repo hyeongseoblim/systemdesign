@@ -38,7 +38,7 @@ export default async function Home({
 
   return (
     <>
-      <header className="topbar">
+      <header className="topbar home-topbar">
         <div className="brand">
           <Link href="/" className="brand-home" aria-label="STUDY WITH JOB 홈">
             <span className="brand-mark" aria-hidden="true">S</span>
@@ -56,7 +56,6 @@ export default async function Home({
           <div className="filter-group">
             <div className="filter-heading">
               <span>카테고리</span>
-              <strong>{activeArea ? AREA_LABELS[activeArea] : "전체"}</strong>
             </div>
             <nav className="tabs" aria-label="카테고리 필터">
               <Link
@@ -81,7 +80,6 @@ export default async function Home({
           <div className="filter-group mode-filter">
             <div className="filter-heading">
               <span>학습 모드</span>
-              <strong>{activeMode ? MODE_LABELS[activeMode] : "모든 모드"}</strong>
             </div>
             <nav className="tabs sub" aria-label="학습 모드 필터">
               <Link
