@@ -7,7 +7,8 @@ export type TopicArea =
   | "BACKEND_ARCHITECTURE"
   | "DATABASE"
   | "INFRA"
-  | "CS";
+  | "CS"
+  | "AI";
 
 export type LearningMode = "CONCEPT" | "DESIGN" | "INTERVIEW" | "REVIEW";
 
@@ -55,6 +56,7 @@ export const AREA_LABELS: Record<TopicArea, string> = {
   DATABASE: "데이터베이스",
   INFRA: "인프라",
   CS: "CS 기초",
+  AI: "AI · LLM",
 };
 
 export const MODE_LABELS: Record<LearningMode, string> = {

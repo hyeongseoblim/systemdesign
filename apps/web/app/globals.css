@@ -25,6 +25,7 @@
   --c-db: #fbbf24;      /* 데이터베이스 */
   --c-infra: #fb7185;   /* 인프라 */
   --c-cs: #2dd4bf;      /* CS 기초 */
+  --c-ai: #e879f9;      /* AI · LLM */
 
   /* Callout */
   --co-interview: #38bdf8;
@@ -64,6 +65,7 @@
     --c-db: #d97706;
     --c-infra: #e11d48;
     --c-cs: #0d9488;
+    --c-ai: #c026d3;
 
     --co-interview: #0284c7;
     --co-warn: #d97706;
@@ -89,6 +91,7 @@
 .a-DATABASE { --area-c: var(--c-db); }
 .a-INFRA { --area-c: var(--c-infra); }
 .a-CS { --area-c: var(--c-cs); }
+.a-AI { --area-c: var(--c-ai); }
 
 /* ─────────────────────────────────────────────
    베이스

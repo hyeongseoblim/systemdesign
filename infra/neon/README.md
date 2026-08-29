@@ -34,8 +34,8 @@ unset DB_URL DB_USER DB_PASSWORD PGPASSWORD
 점검 항목은 다음과 같다.
 
 - 실제 접속 DB·Role·PostgreSQL 버전
-- `flyway_schema_history` 존재 여부와 V1~V6 적용 결과
+- `flyway_schema_history` 존재 여부와 V1~V7 적용 결과
 - MANUAL/AI 및 DRAFT/PUBLISHED별 카드 수
 - `PENDING`, `MANUAL`, `AI_DRAFT`, `AI_PUBLISHED`, `SKIPPED`별 커리큘럼 수
 
-신규 코드가 배포되고 `ContentSeeder`가 한 번 실행된 DB라면 수동 카드 114개와 `MANUAL` 커리큘럼 55개가 기준선이다. AI 생성 이력이 있으면 `PENDING` 수는 소스 기준선 314개보다 적을 수 있다.
+신규 코드가 배포되고 `ContentSeeder`가 한 번 실행된 DB라면 수동 카드 129개와 `MANUAL` 커리큘럼 70개가 기준선이다. AI 생성 이력이 있으면 `PENDING` 수는 소스 기준선 314개보다 적을 수 있다.

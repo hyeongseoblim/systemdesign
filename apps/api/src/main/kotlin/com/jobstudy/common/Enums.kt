@@ -1,6 +1,6 @@
 package com.jobstudy.common
 
-/** 학습 영역 — CLAUDE.md의 7개 코치 영역 */
+/** 학습 영역 — CLAUDE.md의 8개 코치 영역 */
 enum class TopicArea {
     SYSTEM_DESIGN,
     LOGISTICS,
@@ -9,6 +9,7 @@ enum class TopicArea {
     DATABASE,
     INFRA,
     CS,
+    AI,
 }
 
 /** 학습 모드 — 기존 슬래시 커맨드 4종 계승 */

@@ -1,6 +1,6 @@
 # STUDY WITH JOB — 백엔드 이직 준비 학습 플랫폼
 
-6년차 백엔드 개발자의 이직 준비를 위한 **모바일 우선 학습 카드 플랫폼**. 시스템 디자인·물류 도메인·백엔드 설계를 카드 단위로 학습하고, AI 생성 파이프라인으로 콘텐츠를 지속 확충한다.
+6년차 백엔드 개발자의 이직 준비를 위한 **모바일 우선 학습 카드 플랫폼**. 시스템 디자인·물류 도메인·백엔드 설계·AI/LLM을 카드 단위로 학습한다.
 
 > 정적 HTML 학습 노트에서 출발해, **API + PWA + AI 생성** 구조로 전환한 프로젝트다.
 
@@ -30,16 +30,16 @@
 | `interview_sessions` / `interview_turns` | 대화형 면접 세션과 턴 기록 · 피드백 · 토큰 사용량 |
 
 카드 출처는 두 가지다.
-1. **수동(MANUAL)** — `apps/api/src/main/resources/content/*.md`(프론트매터 + 마크다운)를 `ContentSeeder`가 부팅 시 slug 기준 멱등 적재. 현재 소스 기준 **7개 영역 114개 카드** 시드.
+1. **수동(MANUAL)** — `apps/api/src/main/resources/content/*.md`(프론트매터 + 마크다운)를 `ContentSeeder`가 부팅 시 slug 기준 멱등 적재. 현재 소스 기준 **8개 영역 129개 카드** 시드.
 2. **AI 생성(AI_GENERATED)** — 선택적 유료 파이프라인. 기본 비활성화하며, Cloud Run에서 정기 실행하려면 외부 스케줄러와 비용 한도를 먼저 구성한다.
 
 카드가 **읽는 학습**이라면, 면접은 **대답하는 학습**이다. `/interview`에서 영역·주제·난이도를
 고르면 면접 프롬프트를 만들고, 이를 개인 ChatGPT 웹 대화에 붙여넣어 무료로 진행한다.
 기존 서버 기반 면접 API는 별도 설정을 켠 경우에만 Claude API를 호출한다.
 
-## 학습 영역 (7종)
+## 학습 영역 (8종)
 
-시스템 디자인 · 물류 도메인 · 백엔드 개발 · 백엔드 아키텍처 · 데이터베이스 · 인프라 · CS 기초.
+시스템 디자인 · 물류 도메인 · 백엔드 개발 · 백엔드 아키텍처 · 데이터베이스 · 인프라 · CS 기초 · AI/LLM.
 각 영역별 **코치 에이전트**(`.claude/agents/`)와 학습 모드(`/interview` `/concept` `/design` `/review`)가 정의되어 있다. 상세는 [CLAUDE.md](CLAUDE.md) 참고.
 
 ## 로컬 실행
@@ -59,7 +59,7 @@ cd infra && docker compose -f docker-compose.local.yml up -d
 
 # API (JDK 25 필요)
 cd apps/api && ./gradlew bootRun
-# Flyway가 스키마 생성 → ContentSeeder가 114개 카드 적재
+# Flyway가 스키마 생성 → ContentSeeder가 129개 카드 적재
 ```
 > **주의**: 프로젝트 툴체인은 **JDK 25**다(Gradle 9.6 / Kotlin 2.3 / Spring Boot 3.5). JDK 21~24로는 Gradle 데몬은 뜨지만 툴체인 25를 요구하므로, 로컬에 JDK 25가 없으면 Gradle이 자동 다운로드를 시도한다.
 

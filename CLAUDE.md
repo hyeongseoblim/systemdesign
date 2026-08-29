@@ -7,6 +7,7 @@
 - **시스템 디자인(System Design)**: 대규모 분산 시스템 설계 면접 대비 (최우선 목표)
 - **물류 도메인(Logistics Domain)**: TMS/WMS/OMS, 풀필먼트, 라스트마일, 배차/라우팅 등 도메인 지식
 - **백엔드 개발/설계(Backend Development & Architecture)**: 구현, 아키텍처, API 설계, 동시성
+- **AI/LLM**: Transformer, RAG, Agent, MCP, 평가·보안·추론 서빙
 - **보조 영역**: 데이터베이스, 인프라/DevOps, CS 기초
 
 ## 디렉토리 구조 (모노레포)
@@ -17,7 +18,7 @@
 jobStudy/
 ├── CLAUDE.md                 # 본 파일
 ├── README.md                 # 프로젝트 개요·실행법
-├── .claude/agents/           # 주제별 코치 에이전트 (7종)
+├── .claude/agents/           # 주제별 코치 에이전트 (8종)
 ├── apps/
 │   ├── api/                  # Spring Boot 3.5 / Kotlin 2.3 / JDK 25 / PostgreSQL / Flyway
 │   │   ├── src/main/kotlin/com/jobstudy/
@@ -28,7 +29,7 @@ jobStudy/
 │   │   │   └── interview/    # 대화형 면접 세션·피드백 API
 │   │   └── src/main/resources/
 │   │       ├── content/*.md  # 수동 큐레이션 카드 소스(프론트매터 + 마크다운)
-│   │       └── db/migration/ # Flyway V1~V6: 스키마·커리큘럼·면접·주제 처리 상태
+│   │       └── db/migration/ # Flyway V1~V7: 스키마·커리큘럼·면접·주제 처리 상태
 │   └── web/                  # Next.js 15 PWA — 모바일 카드 피드/상세
 ├── infra/                    # Cloud Run + Neon + Vercel 배포, 로컬 Docker Compose
 └── docs/                     # 플랫폼 아키텍처 설계 문서
@@ -77,7 +78,7 @@ jobStudy/
 
 ## 에이전트 사용 가이드
 
-`.claude/agents/` 에 주제별 코치 7종이 정의되어 있다.
+`.claude/agents/` 에 주제별 코치 8종이 정의되어 있다.
 
 | 코치 | 호출 상황 |
 |---|---|
@@ -88,6 +89,7 @@ jobStudy/
 | `database-coach` | 인덱스·실행계획·락·격리수준, 샤딩·파티셔닝, RDBMS/NoSQL 선택 |
 | `infra-coach` | AWS, K8s, IaC, CI/CD, 모니터링·관측성, SRE 기본 |
 | `cs-fundamentals-coach` | 자료구조·알고리즘, OS, 네트워크(TCP/HTTP/TLS), 동시성 이론 |
+| `ai-coach` | Transformer·LLM, RAG, Embedding, Agent·MCP, 평가·보안·추론 서빙 |
 
 ### 협업 패턴
 한 문제에 여러 영역이 얽히면 **여러 코치를 병행 호출**한다. 예시:
@@ -116,7 +118,7 @@ jobStudy/
 ### 파일 형식
 ```markdown
 ---
-area: SYSTEM_DESIGN        # TopicArea enum (SYSTEM_DESIGN/LOGISTICS/BACKEND_DEV/BACKEND_ARCHITECTURE/DATABASE/INFRA/CS)
+area: SYSTEM_DESIGN        # TopicArea enum (SYSTEM_DESIGN/LOGISTICS/BACKEND_DEV/BACKEND_ARCHITECTURE/DATABASE/INFRA/CS/AI)
 mode: CONCEPT              # LearningMode enum (CONCEPT/DESIGN/INTERVIEW/REVIEW)
 coach: system-design-coach
 title: "제목"

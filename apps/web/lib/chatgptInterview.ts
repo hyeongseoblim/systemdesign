@@ -18,7 +18,13 @@ export function buildChatGptInterviewPrompt({
   difficulty: number;
 }): string {
   const systemDesign = area === "SYSTEM_DESIGN" || area === "LOGISTICS";
-  const stages = systemDesign
+  const stages = area === "AI"
+    ? `1. 문제 요구사항과 성공 지표
+2. 데이터, 검색, 프롬프트 흐름
+3. 평가 세트와 품질·지연·비용 기준
+4. 서빙, Fallback, 관측성
+5. Prompt Injection과 데이터·도구 권한`
+    : systemDesign
     ? `1. 요구사항 명확화
 2. 용량 추정
 3. API와 데이터 모델

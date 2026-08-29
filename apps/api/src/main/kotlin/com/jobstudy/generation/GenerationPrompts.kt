@@ -14,6 +14,7 @@ object GenerationPrompts {
         TopicArea.DATABASE -> "database-coach"
         TopicArea.INFRA -> "infra-coach"
         TopicArea.CS -> "cs-fundamentals-coach"
+        TopicArea.AI -> "ai-coach"
     }
 
     private fun modeGuide(mode: LearningMode): String = when (mode) {

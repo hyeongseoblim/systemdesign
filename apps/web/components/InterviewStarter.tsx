@@ -43,6 +43,11 @@ const SUGGESTIONS: Record<TopicArea, string[]> = {
     "HTTPS 핸드셰이크와 성능 최적화",
     "데드락 탐지와 회피",
   ],
+  AI: [
+    "사내 문서 RAG 검색·답변 시스템 설계",
+    "LLM Agent 도구 호출의 권한과 실패 처리",
+    "LLM 품질 평가와 비용·지연 최적화",
+  ],
 };
 
 const DIFFICULTIES = [

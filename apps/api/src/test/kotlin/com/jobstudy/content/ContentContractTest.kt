@@ -61,7 +61,7 @@ class ContentContractTest {
         val deletedBlock = deletedSql.substringAfter("AND title IN (").substringBefore(");")
         val deletedTitles = SQL_STRING.findAll(deletedBlock).map { it.groupValues[1] }.toSet()
 
-        return listOf("V2__generation.sql", "V4__curriculum_year_plan.sql")
+        return listOf("V2__generation.sql", "V4__curriculum_year_plan.sql", "V7__ai_curriculum.sql")
             .flatMap { migration ->
                 val sql = resolver.getResource("classpath:db/migration/$migration")
                     .inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }

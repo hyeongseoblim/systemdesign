@@ -15,6 +15,7 @@ object InterviewPrompts {
     /** 영역별 권장 진행 시간 — 면접관이 페이스를 조절하는 기준 */
     private fun timeBudget(area: TopicArea): String = when (area) {
         TopicArea.SYSTEM_DESIGN, TopicArea.LOGISTICS -> "45분"
+        TopicArea.AI -> "30~40분"
         else -> "15~20분"
     }
 
@@ -27,6 +28,14 @@ object InterviewPrompts {
             4. High-level 아키텍처 — 약 10분
             5. Deep-dive (병목·일관성·장애 전파) — 약 15분
             6. Trade-off 정리 — 약 5분
+        """.trimIndent()
+
+        TopicArea.AI -> """
+            1. 모델·문제 요구사항과 성공 지표 정의 — 약 5분
+            2. 데이터·검색·프롬프트 흐름 설계 — 약 10분
+            3. 평가 세트와 품질·지연·비용 기준 — 약 5분
+            4. 서빙·Fallback·관측성 Deep-dive — 약 10분
+            5. 안전성·Prompt Injection·데이터 경계 — 약 5분
         """.trimIndent()
 
         else -> """
