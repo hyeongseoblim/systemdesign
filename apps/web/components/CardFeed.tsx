@@ -7,10 +7,12 @@ import {
   FeedResponse,
   TopicArea,
   LearningMode,
+  DifficultyLevel,
   getFeed,
   AREA_LABELS,
   MODE_LABELS,
   MODE_GUIDES,
+  DIFFICULTY_LABELS,
   readKey,
   doneKey,
   stripMd,
@@ -31,10 +33,14 @@ export default function CardFeed({
   initial,
   area,
   mode,
+  difficulty,
+  shuffleSeed,
 }: {
   initial: FeedResponse;
   area?: TopicArea;
   mode?: LearningMode;
+  difficulty?: DifficultyLevel;
+  shuffleSeed: number;
 }) {
   const [items, setItems] = useState<CardSummary[]>(initial.items);
   const [cursor, setCursor] = useState<string | null>(initial.nextCursor);
@@ -48,7 +54,7 @@ export default function CardFeed({
     setItems(initial.items);
     setCursor(initial.nextCursor);
     setLoading(false);
-  }, [initial, area, mode]);
+  }, [initial, area, mode, difficulty, shuffleSeed]);
 
   // 기기 로컬 읽음 기록 (hydration 이후 반영)
   useEffect(() => {
@@ -66,7 +72,7 @@ export default function CardFeed({
     if (!cursor || loading) return;
     setLoading(true);
     try {
-      const res = await getFeed({ area, mode, cursor, limit: 20 });
+      const res = await getFeed({ area, mode, difficulty, shuffleSeed, cursor, limit: 20 });
       setItems((prev) => [...prev, ...res.items]);
       setCursor(res.nextCursor);
     } finally {
@@ -94,8 +100,8 @@ export default function CardFeed({
       <div className="empty">
         <span className="glyph">🗂️</span>
         <strong>조건에 맞는 학습 카드가 없습니다.</strong>
-        <p>다른 카테고리나 학습 모드를 선택해 보세요.</p>
-        {(area || mode) && <Link href="/" className="reset-filter">필터 초기화</Link>}
+        <p>다른 카테고리, 학습 모드나 난이도를 선택해 보세요.</p>
+        {(area || mode || difficulty) && <Link href="/" className="reset-filter">필터 초기화</Link>}
       </div>
     );
   }
@@ -108,6 +114,7 @@ export default function CardFeed({
   const filterParams = new URLSearchParams();
   if (area) filterParams.set("area", area);
   if (mode) filterParams.set("mode", mode);
+  if (difficulty) filterParams.set("difficulty", String(difficulty));
   const filterQuery = filterParams.toString();
   const filterSuffix = filterQuery ? `?${filterQuery}` : "";
 
@@ -115,16 +122,18 @@ export default function CardFeed({
     <>
       <div className="feed-toolbar">
         <div className="feed-context">
-          <span>학습 카드</span>
+          <span>학습 카드 · 랜덤 순서</span>
           <strong>
             {area ? AREA_LABELS[area] : "전체 카테고리"}
             <i aria-hidden="true">·</i>
             {mode ? MODE_LABELS[mode] : "모든 모드"}
+            <i aria-hidden="true">·</i>
+            {difficulty ? DIFFICULTY_LABELS[difficulty] : "모든 난이도"}
           </strong>
         </div>
         <div className="feed-tools">
           <span className="result-count"><strong>{items.length}</strong>개</span>
-          {(area || mode) && <Link href="/" className="reset-filter">필터 초기화</Link>}
+          {(area || mode || difficulty) && <Link href="/" className="reset-filter">필터 초기화</Link>}
         </div>
       </div>
       <div className="study-overview" aria-label="현재 목록 학습 현황">

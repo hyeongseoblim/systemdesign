@@ -7,6 +7,8 @@ import com.jobstudy.curriculum.CurriculumResolutionStatus
 import com.jobstudy.curriculum.CurriculumTopic
 import com.jobstudy.curriculum.CurriculumTopicRepository
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.any
 import org.mockito.Mockito.mock
@@ -80,5 +82,36 @@ class CardServiceTest {
 
         assertEquals(CurriculumResolutionStatus.MANUAL, topic.resolutionStatus)
         assertEquals(cardId, topic.resolvedCardId)
+    }
+
+    @Test
+    fun `seeded shuffle is stable and paginates without duplicates`() {
+        val cards = (1..5).map(::publishedCard)
+        `when`(cardRepository.findShuffledFeedCandidates(null, null, 4)).thenReturn(cards)
+
+        val first = service.feed(null, null, 4, 20260904, null, 2)
+        val repeated = service.feed(null, null, 4, 20260904, null, 2)
+        val second = service.feed(null, null, 4, 20260904, first.nextCursor, 2)
+        val third = service.feed(null, null, 4, 20260904, second.nextCursor, 2)
+
+        assertEquals(first.items.map { it.id }, repeated.items.map { it.id })
+        assertNotNull(first.nextCursor)
+        assertNotNull(second.nextCursor)
+        assertNull(third.nextCursor)
+        val pagedIds = (first.items + second.items + third.items).map { it.id }
+        assertEquals(cards.map { it.id }.toSet(), pagedIds.toSet())
+        assertEquals(cards.size, pagedIds.distinct().size)
+    }
+
+    private fun publishedCard(index: Int): Card = Card(
+        area = TopicArea.SYSTEM_DESIGN,
+        mode = LearningMode.CONCEPT,
+        title = "card-$index",
+        slug = "card-$index",
+        contentMd = "# card-$index",
+        difficulty = 4,
+    ).also {
+        it.id = UUID.nameUUIDFromBytes("card-$index".toByteArray())
+        it.publish()
     }
 }

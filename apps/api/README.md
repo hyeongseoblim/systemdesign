@@ -34,7 +34,7 @@ Flyway가 `V1__init.sql`부터 현재 마이그레이션까지 자동 적용한�
 | 메서드 | 경로 | 설명 |
 |---|---|---|
 | `GET` | `/api/v1/health` | 헬스체크 |
-| `GET` | `/api/v1/cards?area=&mode=&cursor=&limit=20` | 카드 피드 (published만, keyset 페이지네이션) |
+| `GET` | `/api/v1/cards?area=&mode=&difficulty=&shuffleSeed=&cursor=&limit=20` | 카드 피드 (영역·모드·난이도 필터, 결정적 랜덤/기본 keyset 페이지네이션) |
 | `GET` | `/api/v1/cards/{id}` | 카드 상세 |
 | `POST` | `/api/v1/cards` | 카드 수동 생성 (MANUAL) |
 
@@ -56,7 +56,7 @@ curl -X POST http://localhost:8080/api/v1/cards \
   }'
 
 # 피드 조회
-curl 'http://localhost:8080/api/v1/cards?area=SYSTEM_DESIGN&limit=20'
+curl 'http://localhost:8080/api/v1/cards?area=SYSTEM_DESIGN&difficulty=4&shuffleSeed=20260904&limit=20'
 ```
 
 ## AI 생성 파이프라인

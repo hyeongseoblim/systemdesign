@@ -13,7 +13,7 @@ export default async function CardPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ area?: string; mode?: string }>;
+  searchParams: Promise<{ area?: string; mode?: string; difficulty?: string }>;
 }) {
   const { id } = await params;
   const origin = await searchParams;
@@ -39,6 +39,9 @@ export default async function CardPage({
   }
   if (origin.mode && Object.prototype.hasOwnProperty.call(MODE_LABELS, origin.mode)) {
     backParams.set("mode", origin.mode);
+  }
+  if (["1", "2", "3", "4", "5"].includes(origin.difficulty ?? "")) {
+    backParams.set("difficulty", origin.difficulty!);
   }
   const backQuery = backParams.toString();
   const backHref = backQuery ? `/?${backQuery}` : "/";

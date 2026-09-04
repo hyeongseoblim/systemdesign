@@ -29,9 +29,9 @@ class CurriculumMigrationTest {
                     """.trimIndent(),
                 ).use { rows ->
                     rows.next()
-                    assertEquals(369, rows.getInt("total"))
-                    assertEquals(369, rows.getInt("unique_keys"))
-                    assertEquals(369, rows.getInt("pending"))
+                    assertEquals(384, rows.getInt("total"))
+                    assertEquals(384, rows.getInt("unique_keys"))
+                    assertEquals(384, rows.getInt("pending"))
                 }
             }
         }

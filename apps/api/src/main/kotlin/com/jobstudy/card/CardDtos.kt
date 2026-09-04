@@ -125,3 +125,26 @@ object Cursor {
         }.getOrNull()
     }
 }
+
+data class ShuffleCursorValue(val seed: Int, val offset: Int)
+
+/** 랜덤 피드가 같은 순서를 유지하도록 (seed, offset)을 담는 커서. */
+object ShuffleCursor {
+    fun encode(seed: Int, offset: Int): String {
+        val raw = "shuffle:$seed:$offset"
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(raw.toByteArray())
+    }
+
+    fun decode(cursor: String?): ShuffleCursorValue? {
+        if (cursor.isNullOrBlank()) return null
+        return runCatching {
+            val raw = String(Base64.getUrlDecoder().decode(cursor))
+            val parts = raw.split(":")
+            require(parts.size == 3 && parts[0] == "shuffle")
+            val seed = parts[1].toInt()
+            val offset = parts[2].toInt()
+            require(offset >= 0)
+            ShuffleCursorValue(seed, offset)
+        }.getOrNull()
+    }
+}

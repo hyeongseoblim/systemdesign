@@ -79,7 +79,7 @@ docker compose up -d
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| `GET` | `/api/v1/cards?area=&mode=&cursor=&limit=20` | 카드 피드(published, keyset 페이지네이션) |
+| `GET` | `/api/v1/cards?area=&mode=&difficulty=&shuffleSeed=&cursor=&limit=20` | 카드 피드(영역·모드·난이도 필터, 결정적 랜덤/기본 keyset 페이지네이션) |
 | `GET` | `/api/v1/cards/{id}` | 카드 상세(본문 + 질문) |
 | `POST` | `/api/v1/cards` | 카드 수동 생성(MANUAL) |
 | `GET` | `/api/v1/interviews` | 지난 면접 세션 목록 |

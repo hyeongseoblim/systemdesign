@@ -19,9 +19,11 @@ class CardController(
     fun feed(
         @RequestParam(required = false) area: TopicArea?,
         @RequestParam(required = false) mode: LearningMode?,
+        @RequestParam(required = false) difficulty: Short?,
+        @RequestParam(required = false) shuffleSeed: Int?,
         @RequestParam(required = false) cursor: String?,
         @RequestParam(defaultValue = "20") limit: Int,
-    ): FeedResponse = cardService.feed(area, mode, cursor, limit)
+    ): FeedResponse = cardService.feed(area, mode, difficulty, shuffleSeed, cursor, limit)
 
     @GetMapping("/{id}")
     fun detail(@PathVariable id: UUID): CardDetailResponse = cardService.detail(id)

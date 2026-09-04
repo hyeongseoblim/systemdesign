@@ -29,4 +29,19 @@ class CursorTest {
         assertNull(Cursor.decode("!!!not-base64!!!"))
         assertNull(Cursor.decode("bm9jb2xvbg")) // base64 of "nocolon" — no ':' separator
     }
+
+    @Test
+    fun `shuffle cursor round-trips seed and offset`() {
+        val encoded = ShuffleCursor.encode(seed = 20260904, offset = 40)
+
+        assertEquals(ShuffleCursorValue(seed = 20260904, offset = 40), ShuffleCursor.decode(encoded))
+        assertNull(Cursor.decode(encoded))
+    }
+
+    @Test
+    fun `shuffle cursor rejects malformed and negative offsets`() {
+        assertNull(ShuffleCursor.decode(null))
+        assertNull(ShuffleCursor.decode("!!!not-base64!!!"))
+        assertNull(ShuffleCursor.decode(java.util.Base64.getUrlEncoder().encodeToString("shuffle:1:-1".toByteArray())))
+    }
 }

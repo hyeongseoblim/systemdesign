@@ -11,6 +11,7 @@ export type TopicArea =
   | "AI";
 
 export type LearningMode = "CONCEPT" | "DESIGN" | "INTERVIEW" | "REVIEW";
+export type DifficultyLevel = 1 | 2 | 3 | 4 | 5;
 
 export interface CardSummary {
   id: string;
@@ -74,6 +75,14 @@ export const MODE_GUIDES: Record<LearningMode, string> = {
   REVIEW: "기억 회상 · 복습",
 };
 
+export const DIFFICULTY_LABELS: Record<DifficultyLevel, string> = {
+  1: "1 · 입문",
+  2: "2 · 기초",
+  3: "3 · 중급",
+  4: "4 · 시니어",
+  5: "5 · 스태프",
+};
+
 /** 읽음/완료 상태 — localStorage 키 (기기 로컬 학습 기록) */
 export const readKey = (id: string) => `jobStudy::read::${id}`;
 export const doneKey = (id: string) => `jobStudy::done::${id}`;
@@ -90,12 +99,16 @@ export function stripMd(s: string): string {
 export async function getFeed(params: {
   area?: TopicArea;
   mode?: LearningMode;
+  difficulty?: DifficultyLevel;
+  shuffleSeed?: number;
   cursor?: string | null;
   limit?: number;
 }): Promise<FeedResponse> {
   const q = new URLSearchParams();
   if (params.area) q.set("area", params.area);
   if (params.mode) q.set("mode", params.mode);
+  if (params.difficulty) q.set("difficulty", String(params.difficulty));
+  if (params.shuffleSeed != null) q.set("shuffleSeed", String(params.shuffleSeed));
   if (params.cursor) q.set("cursor", params.cursor);
   q.set("limit", String(params.limit ?? 20));
 

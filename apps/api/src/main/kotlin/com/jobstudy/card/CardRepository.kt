@@ -27,12 +27,14 @@ interface CardRepository : JpaRepository<Card, UUID> {
         WHERE c.status = com.jobstudy.common.CardStatus.PUBLISHED
           AND (:area IS NULL OR c.area = :area)
           AND (:mode IS NULL OR c.mode = :mode)
+          AND (:difficulty IS NULL OR c.difficulty = :difficulty)
         ORDER BY c.publishedAt DESC, c.id DESC
         """
     )
     fun findFeedFirstPage(
         @Param("area") area: TopicArea?,
         @Param("mode") mode: LearningMode?,
+        @Param("difficulty") difficulty: Short?,
         pageable: Pageable,
     ): List<Card>
 
@@ -43,6 +45,7 @@ interface CardRepository : JpaRepository<Card, UUID> {
         WHERE c.status = com.jobstudy.common.CardStatus.PUBLISHED
           AND (:area IS NULL OR c.area = :area)
           AND (:mode IS NULL OR c.mode = :mode)
+          AND (:difficulty IS NULL OR c.difficulty = :difficulty)
           AND (
                 c.publishedAt < :cursorPublishedAt
              OR (c.publishedAt = :cursorPublishedAt AND c.id < :cursorId)
@@ -53,9 +56,26 @@ interface CardRepository : JpaRepository<Card, UUID> {
     fun findFeedAfter(
         @Param("area") area: TopicArea?,
         @Param("mode") mode: LearningMode?,
+        @Param("difficulty") difficulty: Short?,
         @Param("cursorPublishedAt") cursorPublishedAt: OffsetDateTime,
         @Param("cursorId") cursorId: UUID,
         pageable: Pageable,
+    ): List<Card>
+
+    /** 랜덤 피드는 필터링된 후보만 읽고 Service에서 요청 시드로 안정적으로 섞는다. */
+    @Query(
+        """
+        SELECT c FROM Card c
+        WHERE c.status = com.jobstudy.common.CardStatus.PUBLISHED
+          AND (:area IS NULL OR c.area = :area)
+          AND (:mode IS NULL OR c.mode = :mode)
+          AND (:difficulty IS NULL OR c.difficulty = :difficulty)
+        """
+    )
+    fun findShuffledFeedCandidates(
+        @Param("area") area: TopicArea?,
+        @Param("mode") mode: LearningMode?,
+        @Param("difficulty") difficulty: Short?,
     ): List<Card>
 
     fun findByStatusOrderByCreatedAtDesc(status: CardStatus, pageable: Pageable): List<Card>

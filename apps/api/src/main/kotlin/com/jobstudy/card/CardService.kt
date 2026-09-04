@@ -7,6 +7,7 @@ import com.jobstudy.curriculum.CurriculumTopicRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.security.MessageDigest
 import java.util.UUID
 
 class CardNotFoundException(id: UUID) : RuntimeException("Card not found: $id")
@@ -19,15 +20,28 @@ class CardService(
 ) {
 
     @Transactional(readOnly = true)
-    fun feed(area: TopicArea?, mode: LearningMode?, cursor: String?, limit: Int): FeedResponse {
+    fun feed(
+        area: TopicArea?,
+        mode: LearningMode?,
+        difficulty: Short?,
+        shuffleSeed: Int?,
+        cursor: String?,
+        limit: Int,
+    ): FeedResponse {
         val pageSize = limit.coerceIn(1, 50)
+        val shuffledCursor = ShuffleCursor.decode(cursor)
+        val effectiveSeed = shuffledCursor?.seed ?: shuffleSeed
+        if (effectiveSeed != null) {
+            return shuffledFeed(area, mode, difficulty, effectiveSeed, shuffledCursor?.offset ?: 0, pageSize)
+        }
+
         val decoded = Cursor.decode(cursor)
         // limit+1 조회로 다음 페이지 존재 여부 판단
         val pageable = PageRequest.of(0, pageSize + 1)
         val rows = if (decoded == null) {
-            cardRepository.findFeedFirstPage(area, mode, pageable)
+            cardRepository.findFeedFirstPage(area, mode, difficulty, pageable)
         } else {
-            cardRepository.findFeedAfter(area, mode, decoded.first, decoded.second, pageable)
+            cardRepository.findFeedAfter(area, mode, difficulty, decoded.first, decoded.second, pageable)
         }
         val hasNext = rows.size > pageSize
         val page = if (hasNext) rows.subList(0, pageSize) else rows
@@ -40,6 +54,33 @@ class CardService(
             nextCursor = nextCursor,
         )
     }
+
+    private fun shuffledFeed(
+        area: TopicArea?,
+        mode: LearningMode?,
+        difficulty: Short?,
+        seed: Int,
+        offset: Int,
+        pageSize: Int,
+    ): FeedResponse {
+        val candidates = cardRepository.findShuffledFeedCandidates(area, mode, difficulty)
+        val ordered = candidates
+            .map { card -> stableShuffleKey(seed, card.id!!) to card }
+            .sortedWith(compareBy<Pair<String, Card>> { it.first }.thenBy { it.second.id })
+            .map { it.second }
+        val safeOffset = offset.coerceIn(0, ordered.size)
+        val page = ordered.drop(safeOffset).take(pageSize)
+        val nextOffset = safeOffset + page.size
+        return FeedResponse(
+            items = page.map { CardSummaryResponse.from(it) },
+            nextCursor = if (nextOffset < ordered.size) ShuffleCursor.encode(seed, nextOffset) else null,
+        )
+    }
+
+    private fun stableShuffleKey(seed: Int, id: UUID): String =
+        MessageDigest.getInstance("SHA-256")
+            .digest("$seed:$id".toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
 
     @Transactional(readOnly = true)
     fun detail(id: UUID): CardDetailResponse {
