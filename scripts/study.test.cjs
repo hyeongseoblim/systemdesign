@@ -53,9 +53,9 @@ test('랜덤 정렬 키는 동일한 시드에서 복귀·재조회 후에도 �
 test('목차는 코드 펜스 안의 제목과 중복 질문 섹션을 제외한다', () => {
   assert.deepEqual(headings('## 1. **핵심**\n```md\n## 예시\n```\n## 이해도 확인\n'), [{ title: '1. 핵심', id: sectionId('1. 핵심') }]);
 });
-test('40개 카드의 120개 점검 기준은 실제 질문과 정확히 연결된다', () => {
+test('41개 카드의 123개 점검 기준은 실제 질문과 정확히 연결된다', () => {
   const guides = JSON.parse(readFileSync(path.join(web, 'content/answer-guides.json'), 'utf8'));
-  assert.equal(Object.keys(guides).length, 40);
+  assert.equal(Object.keys(guides).length, 41);
   for (const [slug, guide] of Object.entries(guides)) {
     const raw = readFileSync(path.join(root, `apps/api/src/main/resources/content/${slug}.md`), 'utf8');
     const questions = raw.split('---')[1].split('questions:\n')[1].trim().split('\n').map(line => JSON.parse(line.trim().slice(2)));
@@ -77,7 +77,7 @@ test('V8은 검수 본문을 정확히 반영하고 기존 질문·카드 ID를 
 });
 
 // SQL 본문은 마크다운 코드 예제도 포함하므로 UPDATE 바깥 구조만 파싱한다.
-test('V9는 배포된 원본을 유지하고 V13 후속 본문까지 원본과 연결된다', () => {
+test('V9는 배포된 원본을 유지하고 V14 후속 본문까지 원본과 연결된다', () => {
   const directory = path.join(root, 'apps/api/src/main/resources');
   const sql = readFileSync(path.join(directory, 'db/migration/V9__review_existing_content.sql'), 'utf8');
   assert.equal(createHash('sha256').update(sql).digest('hex'), 'c5fa68863f1571117022189094bf99cc4ef3b89892da047bcc4c106ed61ca001', '배포된 V9는 변경하지 않는다');
@@ -88,6 +88,8 @@ test('V9는 배포된 원본을 유지하고 V13 후속 본문까지 원본과 �
   latest.set('backend-architecture-01-msa-vs-monolith', boundary.split('$boundary_review$')[1]);
   const storage = readFileSync(path.join(directory, 'db/migration/V13__review_storage_selection.sql'), 'utf8');
   latest.set('database-05-rdbms-vs-nosql', storage.split('$storage_selection$')[1]);
+  const interview = readFileSync(path.join(directory, 'db/migration/V14__review_database_interview.sql'), 'utf8');
+  latest.set('database-08-interview-index-lock', interview.split('$db_interview$')[1]);
   const expected = [
     'backend-02-concurrency',
     'backend-03-transaction',
@@ -189,4 +191,11 @@ assert collect_pages(lambda _: {"Items": [], "LastEvaluatedKey": {}}) == []
 print("pagination regression passed")
 `;
   assert.equal(execFileSync('python3', ['-c', example + scenario], { encoding: 'utf8' }).trim(), 'pagination regression passed');
+});
+
+test('V14는 DB 면접 본문만 반영한다', () => {
+  const directory = path.join(root, 'apps/api/src/main/resources');
+  const body = readFileSync(path.join(directory, 'content/database-08-interview-index-lock.md'), 'utf8').split('---').slice(2).join('---').trim();
+  const sql = readFileSync(path.join(directory, 'db/migration/V14__review_database_interview.sql'), 'utf8');
+  assert.equal(sql.replace(/^--[^\n]*\n/, '').trim(), `UPDATE cards\nSET content_md = $db_interview$${body}$db_interview$\nWHERE slug = 'database-08-interview-index-lock' AND source = 'MANUAL';`);
 });

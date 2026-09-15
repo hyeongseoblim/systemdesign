@@ -1,23 +1,6 @@
----
-area: DATABASE
-mode: INTERVIEW
-coach: database-coach
-title: "데이터베이스 면접 — 인덱스 · 실행계획 · 락 · 격리수준 압박 시나리오"
-slug: database-08-interview-index-lock
-difficulty: 4
-summary: "느린 쿼리 → 인덱스 → 락/데드락 → 재고 차감으로 이어지는 DB 라운드 압박 문답"
-tags:
-  - "Interview"
-  - "Index"
-  - "EXPLAIN"
-  - "Lock"
-  - "Isolation"
-questions:
-  - "면접관: \"복합 인덱스 `(shop_id, status, created_at)`를 걸었더니 `type=range`로 인덱스는 탔는데도 여전히 200ms가 걸립니다. `rows`는 500인데 실제로는 8만 행을 읽어요. 무엇을 의심하고, EXPLAIN의 어떤 값을 근거로 어떻게 좁히겠습니까?\" — 커버링·filesort·ICP·통계 오차를 구분해 답하세요."
-  - "면접관: \"REPEATABLE READ에서 잔액을 SELECT로 읽고 애플리케이션에서 차감해 UPDATE했더니 갱신 유실(Lost Update)이 났습니다. RR인데 왜 막지 못했나요? `FOR UPDATE`로 바꿨더니 이번엔 데드락(ERROR 1213)이 터졌습니다. 원인과 해결을 MySQL/PostgreSQL 차이까지 말하세요.\""
-  - "면접관: \"`UPDATE stock SET qty=qty-? WHERE sku=? AND qty>=?` 한 문장으로 Oversell은 막았습니다. 그런데 인기 SKU 하나에 초당 3만 요청이 몰리자 `innodb_lock_wait_timeout`이 터지고 p99가 2초로 뛰었습니다. 이 단일 행 핫스팟을 SQL을 거의 안 바꾸고 완화할 3가지 방법과 각각의 트레이드오프를 제시하세요.\""
----
-## 1. 가설을 실행계획과 대기 증거로 좁힌다
+-- DB 면접 카드 심층 검수. 기존 ID와 질문 유지.
+UPDATE cards
+SET content_md = $db_interview$## 1. 가설을 실행계획과 대기 증거로 좁힌다
 
 기준은 MySQL 8.4 InnoDB와 PostgreSQL 17이다. 질문의 200ms·8만 행·초당 3만 요청은 가상 면접 조건이며 측정된 제품 성능이 아니다. 먼저 실제 SQL·바인딩 값·테이블 정의·인덱스·격리수준과 재현 시점을 받는다. 실행 시간에는 락 대기·CPU·I/O·정렬·네트워크가 섞일 수 있다.
 
@@ -139,4 +122,5 @@ lock_wait_timeout을 낮추는 것은 대기 예산을 제한하는 방법이지
 - [MySQL 8.4 InnoDB 오류와 롤백 범위](https://dev.mysql.com/doc/refman/8.4/en/innodb-error-handling.html)
 - [MySQL 8.4 데드락 대응](https://dev.mysql.com/doc/refman/8.4/en/innodb-deadlocks-handling.html)
 - [PostgreSQL 17 트랜잭션 격리](https://www.postgresql.org/docs/17/transaction-iso.html)
-- [PostgreSQL 17 Index Only Scan](https://www.postgresql.org/docs/17/indexes-index-only-scans.html)
+- [PostgreSQL 17 Index Only Scan](https://www.postgresql.org/docs/17/indexes-index-only-scans.html)$db_interview$
+WHERE slug = 'database-08-interview-index-lock' AND source = 'MANUAL';

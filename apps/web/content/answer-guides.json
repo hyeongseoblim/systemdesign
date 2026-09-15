@@ -1998,5 +1998,67 @@
         "followUp": "세션을 잃으면 안 되는 경우 재생성 가능한 캐시 설계에서 무엇을 바꿔야 하나요?"
       }
     ]
+  },
+  "database-08-interview-index-lock": {
+    "reviewedAt": "2026-09-16",
+    "scope": "본문과 질문 3개 심층 검수. MySQL 8.4/PostgreSQL 17 공식 문서 기준, 성능 수치는 가상 조건이다.",
+    "sources": [
+      {
+        "label": "MySQL 8.4 ORDER BY 최적화",
+        "url": "https://dev.mysql.com/doc/refman/8.4/en/order-by-optimization.html"
+      },
+      {
+        "label": "MySQL 8.4 ICP",
+        "url": "https://dev.mysql.com/doc/refman/8.4/en/index-condition-pushdown-optimization.html"
+      },
+      {
+        "label": "MySQL 8.4 InnoDB 오류와 롤백 범위",
+        "url": "https://dev.mysql.com/doc/refman/8.4/en/innodb-error-handling.html"
+      },
+      {
+        "label": "MySQL 8.4 데드락 대응",
+        "url": "https://dev.mysql.com/doc/refman/8.4/en/innodb-deadlocks-handling.html"
+      },
+      {
+        "label": "PostgreSQL 17 트랜잭션 격리",
+        "url": "https://www.postgresql.org/docs/17/transaction-iso.html"
+      },
+      {
+        "label": "PostgreSQL 17 Index Only Scan",
+        "url": "https://www.postgresql.org/docs/17/indexes-index-only-scans.html"
+      }
+    ],
+    "questions": [
+      {
+        "question": "면접관: \"복합 인덱스 `(shop_id, status, created_at)`를 걸었더니 `type=range`로 인덱스는 탔는데도 여전히 200ms가 걸립니다. `rows`는 500인데 실제로는 8만 행을 읽어요. 무엇을 의심하고, EXPLAIN의 어떤 값을 근거로 어떻게 좁히겠습니까?\" — 커버링·filesort·ICP·통계 오차를 구분해 답하세요.",
+        "points": [
+          "실제 SQL·바인딩·노드·loops를 맞춰 추정 500과 실측 8만의 단위를 확인한다.",
+          "filesort·커버링·ICP를 구분하고 범위 조건만으로 정렬이 깨진다고 단정하지 않는다.",
+          "통계 편향과 실제 접근·정렬·대기를 측정하고 커버링 비용 및 PostgreSQL Heap Fetch를 확인한다."
+        ],
+        "pitfall": "커버링 실패가 추정 오차를 곧바로 설명하거나 Using index가 물리 I/O 0을 보장한다고 말하지 않는다.",
+        "followUp": "status가 created_at 뒤에 있는 인덱스는 반드시 filesort를 하나요?"
+      },
+      {
+        "question": "면접관: \"REPEATABLE READ에서 잔액을 SELECT로 읽고 애플리케이션에서 차감해 UPDATE했더니 갱신 유실(Lost Update)이 났습니다. RR인데 왜 막지 못했나요? `FOR UPDATE`로 바꿨더니 이번엔 데드락(ERROR 1213)이 터졌습니다. 원인과 해결을 MySQL/PostgreSQL 차이까지 말하세요.\"",
+        "points": [
+          "MySQL RR의 Snapshot 읽기 후 상수 덮어쓰기와 PostgreSQL RR의 동시 변경 실패를 구분한다.",
+          "PG도 락 대기 후 실패할 수 있고 새 트랜잭션 재판단·업무 키가 필요함을 설명한다.",
+          "데드락 자원 순환을 추적하고 잠금 순서·짧은 트랜잭션·DBMS별 롤백 범위와 제한 재시도를 설명한다."
+        ],
+        "pitfall": "ORDER BY 하나로 모든 데드락이 사라지거나 MySQL 잠금 시간 초과가 기본적으로 전체 롤백이라고 단정하지 않는다.",
+        "followUp": "첫 UPDATE 성공 후 두 번째 문장에서 잠금 시간 초과가 나면 무엇을 롤백하나요?"
+      },
+      {
+        "question": "면접관: \"`UPDATE stock SET qty=qty-? WHERE sku=? AND qty>=?` 한 문장으로 Oversell은 막았습니다. 그런데 인기 SKU 하나에 초당 3만 요청이 몰리자 `innodb_lock_wait_timeout`이 터지고 p99가 2초로 뛰었습니다. 이 단일 행 핫스팟을 SQL을 거의 안 바꾸고 완화할 3가지 방법과 각각의 트레이드오프를 제시하세요.\"",
+        "points": [
+          "기존 조건부 UPDATE의 정합성을 유지하면서 락 보유 시간을 줄인다.",
+          "SKU별 유입·동시성·기한·중복을 제어하고 실패·대기 비용을 설명한다.",
+          "키별 순서화의 큐 지연·재전달·다른 Writer를 고려하고 버킷/Redis는 별도 설계 변경으로 구분한다."
+        ],
+        "pitfall": "타임아웃 단축·커넥션 증가·큐 도입이 단일 행 처리 용량을 자동으로 높이지 않는다.",
+        "followUp": "DB 안의 대기는 줄었지만 큐 지연이 계속 늘면 무엇을 해야 하나요?"
+      }
+    ]
   }
 }

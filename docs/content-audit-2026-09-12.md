@@ -2,13 +2,13 @@
 
 ## 점검 범위와 판정 원칙
 
-저장소의 수동 카드 129개 전체에 대해 프론트매터·목차·본문 구조·출처 링크·질문별 해설 연결을 조사했다. 이는 운영 DB 전수 조회나 129개 전체 문장의 사실 검증을 완료했다는 뜻이 아니다. **34개는 본문·질문 3개를 대조해 심층 보강했고, 1개는 확인한 오류 구간만 정정했다. 나머지 94개는 구조 점검 상태**로 남긴다. 기존 10개 해설의 과거 검수와 이번 검수도 구분한다.
+저장소의 수동 카드 129개 전체에 대해 프론트매터·목차·본문 구조·출처 링크·질문별 해설 연결을 조사했다. 이는 운영 DB 전수 조회나 129개 전체 문장의 사실 검증을 완료했다는 뜻이 아니다. **35개는 본문·질문 3개를 대조해 심층 보강했다. 부분 정정만 남은 카드는 0개이며, 나머지 94개는 구조 점검 상태**로 남긴다. 기존 10개 해설의 과거 검수와 이번 검수도 구분한다.
 
 분량 2,000자는 보강 후보를 찾는 신호이며 합격 기준이 아니다. 긴 본문이나 참고 링크 하나가 정확성·완결성을 보장하지 않는다. 특히 외부 링크가 있어도 모든 기업 사례·수치가 그 출처에서 확인됐다고 간주하지 않는다. 모드별로 DESIGN은 요구·용량·데이터·실패·대안, INTERVIEW는 질문별 근거와 후속 압박, REVIEW는 문제 코드·반례·수정·검증을 확인해야 한다.
 
 ## 전체 기준선
 
-변경 전 본문 2,000자 미만 67개, 본문 HTTPS 출처가 있는 카드 23개, 질문별 점검 해설 10개/30문항이었다. 이번 변경은 카드 수를 늘리지 않고 본문 35개를 수정하고 신규 해설 30개/90문항을 추가했으며 기존 해설 3개/9문항도 갱신했다. 기존 카드의 slug·메타데이터·질문 순서·질문 문구는 변경하지 않았다.
+변경 전 본문 2,000자 미만 67개, 본문 HTTPS 출처가 있는 카드 23개, 질문별 점검 해설 10개/30문항이었다. 이번 변경은 카드 수를 늘리지 않고 본문 35개를 수정하고 신규 해설 31개/93문항을 추가했으며 기존 해설 3개/9문항도 갱신했다. 기존 카드의 slug·메타데이터·질문 순서·질문 문구는 변경하지 않았다.
 
 | 영역 | 카드 | 본문 2,000자 미만(변경 후) | 본문 출처 있음 | 질문별 해설 있음 |
 |---|---:|---:|---:|---:|
@@ -16,7 +16,7 @@
 | BACKEND_ARCHITECTURE | 15 | 7 | 6 | 6 |
 | BACKEND_DEV | 15 | 8 | 7 | 4 |
 | CS | 11 | 5 | 1 | 0 |
-| DATABASE | 15 | 6 | 7 | 5 |
+| DATABASE | 15 | 6 | 7 | 6 |
 | INFRA | 13 | 2 | 4 | 4 |
 | LOGISTICS | 19 | 0 | 10 | 11 |
 | SYSTEM_DESIGN | 26 | 5 | 9 | 9 |
@@ -189,7 +189,7 @@ PostgreSQL 동시 세션은 9월 13일 임시 로컬 18.4에서 아래 4개 시�
 | [database-05-rdbms-vs-nosql](../apps/api/src/main/resources/content/database-05-rdbms-vs-nosql.md) | CONCEPT · 3 | 5,467 | 심층 보강 | 구성별 CAP/PACELC·트랜잭션·Query 페이지·Shard 조회 비용 |
 | [database-06-query-tuning](../apps/api/src/main/resources/content/database-06-query-tuning.md) | CONCEPT · 3 | 7,147 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
 | [database-07-inventory-concurrency](../apps/api/src/main/resources/content/database-07-inventory-concurrency.md) | CONCEPT · 4 | 5,361 | 심층 보강 | 조건부 갱신·중복 예약·만료/결제 경쟁·Redis 내구성·이중 쓰기 |
-| [database-08-interview-index-lock](../apps/api/src/main/resources/content/database-08-interview-index-lock.md) | INTERVIEW · 4 | 12,526 | 부분 정정 | R3 갱신 유실의 MySQL·PostgreSQL 차이 정정; 나머지 라운드는 후속 검수 |
+| [database-08-interview-index-lock](../apps/api/src/main/resources/content/database-08-interview-index-lock.md) | INTERVIEW · 4 | 5,647 | 심층 보강 | 정렬·ICP·커버링·PG 대기 후 실패·롤백 범위·SQL 유지 핫스팟 완화 |
 | [database-09-index-access-optimization](../apps/api/src/main/resources/content/database-09-index-access-optimization.md) | CONCEPT · 4 | 2,319 | 구조 점검 | 점검 해설 없음 |
 | [database-10-index-write-cost](../apps/api/src/main/resources/content/database-10-index-write-cost.md) | CONCEPT · 4 | 1,552 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
 | [database-11-clustered-index-pk](../apps/api/src/main/resources/content/database-11-clustered-index-pk.md) | CONCEPT · 4 | 951 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
@@ -277,3 +277,9 @@ V11·V12는 `01c6099`로 운영 배포하고 DB·API·MSA 웹 응답을 확인�
 누적 심층 34개·부분 정정 1개, 고유 본문 35개, 해설 40개/120문항이다. V13에 후속 반영하며 기존 ID와 질문을 유지한다. 본문 Python 함수를 추출해 빈 중간 페이지 뒤의 항목과 커서 전달, 빈 마지막 페이지를 검증했다. 실제 DynamoDB/Cassandra/MongoDB 실행이나 장애 시험은 아니다.
 
 V13은 `066354c`로 운영 반영하고 DB·웹 응답을 검증했다. [2026-09-16 배포 기록](deployment-2026-09-16.md)을 참고한다.
+
+## 2026-09-16 DB 면접 심층 검수
+
+마지막 부분 정정 카드를 심층 검수로 전환했다. 범위 조건과 정렬, ICP/커버링/통계, PG RR 대기 후 직렬화 실패, MySQL 문장/트랜잭션 롤백, SQL 유지 핫스팟 완화와 구조 변경을 분리했다. 근거 없는 처리량 배수·무조건 데드락 예방·인덱스만으로 I/O 0 설명을 제거했다.
+
+누적 심층 35개·부분 0개, 고유 변경 본문 35개, 해설 41개/123문항. V14로 반영하고 기존 ID·질문을 유지한다. 실제 MySQL 장애·부하 시험은 수행하지 않았다.
