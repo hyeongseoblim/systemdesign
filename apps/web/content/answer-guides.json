@@ -1928,5 +1928,75 @@
         "followUp": "신규 서비스에서 주문을 받은 뒤 옛 DB로 돌아가려면 무엇을 확인해야 하나요?"
       }
     ]
+  },
+  "database-05-rdbms-vs-nosql": {
+    "reviewedAt": "2026-09-16",
+    "scope": "본문과 질문 3개 심층 검수. 제품 공식 문서 대조와 페이지 처리 예제 검증; 실서비스 장애 시험은 별도다.",
+    "sources": [
+      {
+        "label": "Abadi: PACELC 논문",
+        "url": "https://www.cs.umd.edu/~abadi/papers/abadi-pacelc.pdf"
+      },
+      {
+        "label": "PostgreSQL 17 Standby와 동기 복제",
+        "url": "https://www.postgresql.org/docs/17/warm-standby.html"
+      },
+      {
+        "label": "DynamoDB 읽기 일관성",
+        "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadConsistency.html"
+      },
+      {
+        "label": "DynamoDB 트랜잭션",
+        "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html"
+      },
+      {
+        "label": "DynamoDB Query 페이지네이션",
+        "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Query.Pagination.html"
+      },
+      {
+        "label": "DynamoDB Write Sharding",
+        "url": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-partition-key-sharding.html"
+      },
+      {
+        "label": "Cassandra 데이터 모델링",
+        "url": "https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/intro.html"
+      },
+      {
+        "label": "MongoDB 트랜잭션",
+        "url": "https://www.mongodb.com/docs/manual/core/transactions/"
+      }
+    ],
+    "questions": [
+      {
+        "question": "\"CAP 정리에서 셋 중 둘을 고른다\"는 설명이 왜 오해를 부르는지 지적하고, PACELC가 CAP의 어떤 빈틈을 메우는지 설명하세요. DynamoDB와 PostgreSQL을 PACELC 분류로 각각 배치해 보세요.",
+        "points": [
+          "CAP은 분할 실행에서 선형화 가능성과 정상 노드의 연산 완료를 함께 보장할 수 없다는 제약임을 설명한다.",
+          "PACELC는 평상시 지연/일관성 선택도 보며 ACID나 가용성 SLO와 혼동하지 않는다.",
+          "PostgreSQL 복제·읽기 대상과 DynamoDB 테이블/GSI·Global Tables 모드를 정한 뒤 보장을 비교한다."
+        ],
+        "pitfall": "DynamoDB를 무조건 PA/EL, PostgreSQL을 무조건 PC/EC라고 고정하지 않는다.",
+        "followUp": "GSI와 기본 테이블에 같은 강한 읽기를 요청할 수 있나요?"
+      },
+      {
+        "question": "Cassandra/DynamoDB의 \"Query-first modeling\"이 RDBMS 설계와 무엇이 다른지 설명하고, 데이터를 의도적으로 중복(denormalize) 저장하는 이유를 비용 관점에서 정당화하세요. 핫 파티션 회피책도 1가지 드세요.",
+        "points": [
+          "관계형도 접근 패턴을 고려하며 Cassandra/DynamoDB는 키·조회 모델을 특히 명시적으로 설계한다.",
+          "중복 모델은 읽기 탐색을 줄이는 대신 쓰기 증폭·지연·정정·대사를 필요로 한다.",
+          "Shard 키 분산과 읽기 Fan-out·병합·재샤딩 비용을 설명한다."
+        ],
+        "pitfall": "Query 한 번이면 전체 결과를 받거나 빈 Items면 조회가 끝났다고 판단하지 않는다.",
+        "followUp": "필터 결과는 비었는데 LastEvaluatedKey가 있으면 어떻게 하나요?"
+      },
+      {
+        "question": "물류 서비스를 설계 중입니다. 주문·결제, 운송장 추적 타임라인, 세션 캐시 — 각각 어떤 저장소(RDBMS / Wide-column / KV)를 고르겠습니까? 정합성 요구와 접근 패턴을 근거로 polyglot persistence를 정당화하세요.",
+        "points": [
+          "주문 제약·이력 조회·세션 손실 허용이라는 가정을 먼저 세운다.",
+          "RDBMS 로컬 원자성과 외부 결제, Wide-column의 버킷·정정, KV의 TTL·원본을 구분한다.",
+          "기존 DB로 충족 가능한지 측정하고 추가 저장소의 복구·권한·대사·온콜 비용을 비교한다."
+        ],
+        "pitfall": "NoSQL 전체에 트랜잭션이 없거나 저장소 혼용이 언제나 우수하다고 단정하지 않는다.",
+        "followUp": "세션을 잃으면 안 되는 경우 재생성 가능한 캐시 설계에서 무엇을 바꿔야 하나요?"
+      }
+    ]
   }
 }

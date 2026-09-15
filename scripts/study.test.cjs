@@ -53,9 +53,9 @@ test('랜덤 정렬 키는 동일한 시드에서 복귀·재조회 후에도 �
 test('목차는 코드 펜스 안의 제목과 중복 질문 섹션을 제외한다', () => {
   assert.deepEqual(headings('## 1. **핵심**\n```md\n## 예시\n```\n## 이해도 확인\n'), [{ title: '1. 핵심', id: sectionId('1. 핵심') }]);
 });
-test('39개 카드의 117개 점검 기준은 실제 질문과 정확히 연결된다', () => {
+test('40개 카드의 120개 점검 기준은 실제 질문과 정확히 연결된다', () => {
   const guides = JSON.parse(readFileSync(path.join(web, 'content/answer-guides.json'), 'utf8'));
-  assert.equal(Object.keys(guides).length, 39);
+  assert.equal(Object.keys(guides).length, 40);
   for (const [slug, guide] of Object.entries(guides)) {
     const raw = readFileSync(path.join(root, `apps/api/src/main/resources/content/${slug}.md`), 'utf8');
     const questions = raw.split('---')[1].split('questions:\n')[1].trim().split('\n').map(line => JSON.parse(line.trim().slice(2)));
@@ -77,7 +77,7 @@ test('V8은 검수 본문을 정확히 반영하고 기존 질문·카드 ID를 
 });
 
 // SQL 본문은 마크다운 코드 예제도 포함하므로 UPDATE 바깥 구조만 파싱한다.
-test('V9는 배포된 원본을 유지하고 V12 후속 본문까지 원본과 연결된다', () => {
+test('V9는 배포된 원본을 유지하고 V13 후속 본문까지 원본과 연결된다', () => {
   const directory = path.join(root, 'apps/api/src/main/resources');
   const sql = readFileSync(path.join(directory, 'db/migration/V9__review_existing_content.sql'), 'utf8');
   assert.equal(createHash('sha256').update(sql).digest('hex'), 'c5fa68863f1571117022189094bf99cc4ef3b89892da047bcc4c106ed61ca001', '배포된 V9는 변경하지 않는다');
@@ -86,6 +86,8 @@ test('V9는 배포된 원본을 유지하고 V12 후속 본문까지 원본과 �
   const statements = [...sql.matchAll(/UPDATE cards\nSET content_md = (\$review_\d+\$)([\s\S]*?)\1\nWHERE slug = '([^']+)' AND source = 'MANUAL';/g)];
   const boundary = readFileSync(path.join(directory, 'db/migration/V12__review_service_boundaries.sql'), 'utf8');
   latest.set('backend-architecture-01-msa-vs-monolith', boundary.split('$boundary_review$')[1]);
+  const storage = readFileSync(path.join(directory, 'db/migration/V13__review_storage_selection.sql'), 'utf8');
+  latest.set('database-05-rdbms-vs-nosql', storage.split('$storage_selection$')[1]);
   const expected = [
     'backend-02-concurrency',
     'backend-03-transaction',
@@ -162,4 +164,29 @@ test('V12는 MSA 비교 본문만 반영하고 가용성 예제는 명시한 값
   assert.equal(sql.replace(/^--.*$/gm, '').trim(), `UPDATE cards\nSET content_md = $boundary_review$${body}$boundary_review$\nWHERE slug = 'backend-architecture-01-msa-vs-monolith' AND source = 'MANUAL';`);
   const example = raw.match(/```python\n([\s\S]*?)```/)[1];
   assert.equal(execFileSync('python3', ['-c', example], { encoding: 'utf8' }).trim(), '99.5010%\n43.71 hours/year');
+});
+
+test('V13은 저장소 선택 본문만 반영하고 페이지 예제는 빈 중간 페이지를 건너뛴다', () => {
+  const directory = path.join(root, 'apps/api/src/main/resources');
+  const raw = readFileSync(path.join(directory, 'content/database-05-rdbms-vs-nosql.md'), 'utf8');
+  const body = raw.split('---').slice(2).join('---').trim();
+  const sql = readFileSync(path.join(directory, 'db/migration/V13__review_storage_selection.sql'), 'utf8');
+  assert.equal(sql.replace(/^--.*$/gm, '').trim(), `UPDATE cards\nSET content_md = $storage_selection$${body}$storage_selection$\nWHERE slug = 'database-05-rdbms-vs-nosql' AND source = 'MANUAL';`);
+  const example = raw.match(/```python\n([\s\S]*?)```/)[1];
+  const scenario = `
+seen = []
+def query(cursor):
+    seen.append(cursor)
+    if cursor is None:
+        return {"Items": [1], "LastEvaluatedKey": {"PK": "a"}}
+    if cursor == {"PK": "a"}:
+        return {"Items": [], "LastEvaluatedKey": {"PK": "b"}}
+    assert cursor == {"PK": "b"}
+    return {"Items": [2]}
+assert collect_pages(query) == [1, 2]
+assert seen == [None, {"PK": "a"}, {"PK": "b"}]
+assert collect_pages(lambda _: {"Items": [], "LastEvaluatedKey": {}}) == []
+print("pagination regression passed")
+`;
+  assert.equal(execFileSync('python3', ['-c', example + scenario], { encoding: 'utf8' }).trim(), 'pagination regression passed');
 });

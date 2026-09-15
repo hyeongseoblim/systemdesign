@@ -1,23 +1,6 @@
----
-area: DATABASE
-mode: CONCEPT
-coach: database-coach
-title: "RDBMS vs NoSQL — CAP 관점 선택과 데이터 모델링"
-slug: database-05-rdbms-vs-nosql
-difficulty: 3
-summary: "CAP·PACELC 관점에서 RDBMS와 NoSQL 4종을 분류하고, Query-first 모델링 패턴과 선택 가이드를 Trade-off 표로 정리한다."
-tags:
-  - "RDBMS"
-  - "NoSQL"
-  - "CAP"
-  - "PACELC"
-  - "데이터 모델링"
-questions:
-  - "\"CAP 정리에서 셋 중 둘을 고른다\"는 설명이 왜 오해를 부르는지 지적하고, PACELC가 CAP의 어떤 빈틈을 메우는지 설명하세요. DynamoDB와 PostgreSQL을 PACELC 분류로 각각 배치해 보세요."
-  - "Cassandra/DynamoDB의 \"Query-first modeling\"이 RDBMS 설계와 무엇이 다른지 설명하고, 데이터를 의도적으로 중복(denormalize) 저장하는 이유를 비용 관점에서 정당화하세요. 핫 파티션 회피책도 1가지 드세요."
-  - "물류 서비스를 설계 중입니다. 주문·결제, 운송장 추적 타임라인, 세션 캐시 — 각각 어떤 저장소(RDBMS / Wide-column / KV)를 고르겠습니까? 정합성 요구와 접근 패턴을 근거로 polyglot persistence를 정당화하세요."
----
-## 1. CAP은 제품 분류표가 아니다
+-- 저장소 선택 카드 심층 검수. 기존 ID와 질문 유지.
+UPDATE cards
+SET content_md = $storage_selection$## 1. CAP은 제품 분류표가 아니다
 
 CAP의 C는 선형화 가능성, A는 실패하지 않은 노드가 받은 연산의 완료, P는 노드 사이 메시지가 전달되지 않는 실행을 고려한다는 뜻이다. 모든 요청에 오류를 돌려주는 것으로 A를 만족시키지는 않는다. CAP의 가용성과 요청 성공률·지연 SLO는 같은 정의가 아니다.
 
@@ -125,4 +108,5 @@ Polyglot persistence는 저장소 수를 늘리는 목표가 아니다. 기존 D
 - [Cassandra 데이터 모델링](https://cassandra.apache.org/doc/latest/cassandra/developing/data-modeling/intro.html)
 - [MongoDB 트랜잭션](https://www.mongodb.com/docs/manual/core/transactions/)
 
-실제 관리형 DB·복제 장애·부하 시험과 페이지 처리 함수의 로컬 검증은 구분한다.
+실제 관리형 DB·복제 장애·부하 시험과 페이지 처리 함수의 로컬 검증은 구분한다.$storage_selection$
+WHERE slug = 'database-05-rdbms-vs-nosql' AND source = 'MANUAL';
