@@ -2110,5 +2110,121 @@
         "followUp": "느린 수신자에게 보낼 버퍼가 상한에 도달하면 무엇을 제한하나요?"
       }
     ]
+  },
+  "cs-10-virtual-memory": {
+    "reviewedAt": "2026-09-17",
+    "scope": "본문과 질문 3개 심층 검수. 임시 파일 mmap 예제와 Linux 문서 대조; 실제 Linux COW 부하·장애 시험은 별도다.",
+    "sources": [
+      {
+        "label": "Linux mmap(2)",
+        "url": "https://man7.org/linux/man-pages/man2/mmap.2.html"
+      },
+      {
+        "label": "Linux fork(2)",
+        "url": "https://man7.org/linux/man-pages/man2/fork.2.html"
+      },
+      {
+        "label": "Linux smaps",
+        "url": "https://man7.org/linux/man-pages/man5/proc_pid_smaps.5.html"
+      },
+      {
+        "label": "Linux msync(2)",
+        "url": "https://man7.org/linux/man-pages/man2/msync.2.html"
+      },
+      {
+        "label": "Python mmap API",
+        "url": "https://docs.python.org/3/library/mmap.html"
+      }
+    ],
+    "questions": [
+      {
+        "question": "가상 메모리가 프로세스 격리와 물리 메모리보다 큰 주소 공간을 제공하는 원리를 설명해보세요.",
+        "points": [
+          "프로세스별 주소 매핑·접근 권한과 의도적 공유를 설명한다.",
+          "TLB miss·Page Fault·저장 장치 접근을 구분하고 해결 불가능한 접근도 다룬다.",
+          "큰 가상 주소 공간이 무한 RAM을 보장하지 않으며 실제 작업 집합·회수·Swap·제한을 확인한다."
+        ],
+        "pitfall": "mmap 성공을 물리 메모리 전체 확보로, TLB miss를 디스크 읽기로 단정하지 않는다.",
+        "followUp": "큰 영역을 매핑했지만 RSS가 작은 이유는 무엇인가요?"
+      },
+      {
+        "question": "mmap한 파일의 첫 접근이 느리고 이후 접근이 빨라질 수 있는 이유는 무엇인가요?",
+        "points": [
+          "매핑 생성과 실제 페이지 접근 시점을 분리한다.",
+          "첫 접근도 Page Cache에 있으면 저장 장치 읽기가 불필요할 수 있고 이후 회수되면 다시 느려질 수 있다.",
+          "Fault·캐시·작업량·접근 순서·꼬리 지연을 맞춰 비교한다."
+        ],
+        "pitfall": "첫 접근은 항상 Major Fault, 두 번째는 항상 빠르다고 말하지 않는다.",
+        "followUp": "다른 프로세스가 파일을 먼저 읽었다면 결과가 어떻게 달라지나요?"
+      },
+      {
+        "question": "fork 후 Copy-on-Write가 메모리를 절약하다 쓰기 폭증 때 비용을 만드는 과정을 설명해보세요.",
+        "points": [
+          "사적 페이지를 처음 공유하고 부모나 자식의 쓰기에서 필요한 복사·매핑 변경이 생김을 설명한다.",
+          "페이지 테이블 비용과 쓰기 작업 집합·페이지 크기·실제 공유 상태를 확인한다.",
+          "RSS 단순 합산 대신 PSS·Private Dirty·메모리 압박을 함께 본다."
+        ],
+        "pitfall": "fork가 무료이거나 MAP_SHARED까지 사적 COW로 바뀐다고 말하지 않는다.",
+        "followUp": "작은 객체를 조금씩 수정했는데 사적 메모리가 크게 늘 수 있는 이유는 무엇인가요?"
+      }
+    ]
+  },
+  "cs-08-socket-internals": {
+    "reviewedAt": "2026-09-17",
+    "scope": "본문·질문 3개 심층 검수. 로컬 TCP Half-close 예제와 Linux 문서 대조; 실제 접속 폭주·TLS·망 장애 시험은 별도다.",
+    "sources": [
+      {
+        "label": "Linux listen(2)",
+        "url": "https://man7.org/linux/man-pages/man2/listen.2.html"
+      },
+      {
+        "label": "Linux accept(2)",
+        "url": "https://man7.org/linux/man-pages/man2/accept.2.html"
+      },
+      {
+        "label": "Linux send(2)",
+        "url": "https://man7.org/linux/man-pages/man2/send.2.html"
+      },
+      {
+        "label": "Linux shutdown(2)",
+        "url": "https://man7.org/linux/man-pages/man2/shutdown.2.html"
+      },
+      {
+        "label": "Linux recv(2)",
+        "url": "https://man7.org/linux/man-pages/man2/recv.2.html"
+      }
+    ],
+    "questions": [
+      {
+        "question": "Listen Backlog가 충분해도 애플리케이션이 연결을 받지 못하는 원인은 무엇일 수 있나요?",
+        "points": [
+          "연결 수립 중 대기와 accept 대기, 업무 큐를 분리하고 커널 상한을 확인한다.",
+          "FD·메모리·CPU·Event Loop·accept 오류를 관측하고 연결 이후 TLS/업무 지연과 구분한다.",
+          "새 Socket의 Non-blocking 설정과 EAGAIN 처리를 명확히 하며 backlog 증가가 처리율을 자동 높이지 않음을 설명한다."
+        ],
+        "pitfall": "접속 실패를 backlog 부족 하나로 단정하지 않는다.",
+        "followUp": "FD 제한에 도달했는데 backlog만 늘리면 해결되나요?"
+      },
+      {
+        "question": "send 호출 성공이 상대 애플리케이션의 수신 성공을 의미하지 않는 이유는 무엇인가요?",
+        "points": [
+          "send 반환 바이트만큼의 로컬 진행과 부분 쓰기 위치 보존을 설명한다.",
+          "TCP ACK·상대 애플리케이션 읽기·업무 커밋을 구분한다.",
+          "업무 응답 유실은 결과 불명으로 다루고 업무 키·상태 조회·제한 재시도를 사용한다."
+        ],
+        "pitfall": "send 성공이나 TCP ACK만으로 결제·저장 완료를 판단하지 않는다.",
+        "followUp": "10KB 중 3KB만 send됐다면 다음 요청의 시작 위치는 어디인가요?"
+      },
+      {
+        "question": "TCP Half-close와 애플리케이션 요청 종료를 어떻게 구분하고 처리하나요?",
+        "points": [
+          "SHUT_WR은 한 방향 종료이며 반대 방향 응답을 계속 받을 수 있다.",
+          "recv의 메시지 경계 부재와 EOF·상위 프로토콜 프레이밍을 구분한다.",
+          "정상 종료·RST·TLS 종료와 응답 대기를 분리하고 연결 수명을 관리한다."
+        ],
+        "pitfall": "EOF를 받자마자 모든 응답 상태를 버리거나 RST를 정상 업무 종료로 취급하지 않는다.",
+        "followUp": "Keep-alive 연결에서 EOF를 요청 종료 조건으로 쓰면 어떤 문제가 생기나요?"
+      }
+    ]
   }
 }

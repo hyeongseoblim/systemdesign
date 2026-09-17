@@ -1,23 +1,6 @@
----
-area: CS
-mode: CONCEPT
-coach: cs-coach
-title: "소켓 내부 — Listen Queue·Buffer·Half-close"
-slug: cs-08-socket-internals
-topicKey: cs-128
-difficulty: 4
-summary: "TCP 연결 수립 대기열, 송수신 Buffer, Backpressure와 Half-close가 애플리케이션 상태에 미치는 영향을 이해한다."
-tags:
-  - "Socket"
-  - "TCP"
-  - "Backpressure"
-  - "Half-close"
-questions:
-  - "Listen Backlog가 충분해도 애플리케이션이 연결을 받지 못하는 원인은 무엇일 수 있나요?"
-  - "send 호출 성공이 상대 애플리케이션의 수신 성공을 의미하지 않는 이유는 무엇인가요?"
-  - "TCP Half-close와 애플리케이션 요청 종료를 어떻게 구분하고 처리하나요?"
----
-## 1. 대기열을 같은 Backlog로 뭉뚱그리지 않는다
+-- Socket 내부 심층 검수. 기존 ID와 질문 유지.
+UPDATE cards
+SET content_md = $socket_review$## 1. 대기열을 같은 Backlog로 뭉뚱그리지 않는다
 
 Linux TCP의 listen(backlog)는 연결 수립을 마치고 accept를 기다리는 대기열의 크기와 관련된다. 연결 수립 중인 요청의 관리, 커널 상한, 애플리케이션의 처리 대기열은 별도다. backlog 값은 somaxconn 등의 환경 설정도 확인해야 하며 숫자 하나를 키워도 처리 용량 자체가 늘지는 않는다.
 
@@ -125,4 +108,5 @@ recv가 나눠 반환해도 누적하며, timeout으로 시험이 무한히 대�
 - [Linux accept(2)](https://man7.org/linux/man-pages/man2/accept.2.html)
 - [Linux send(2)](https://man7.org/linux/man-pages/man2/send.2.html)
 - [Linux shutdown(2)](https://man7.org/linux/man-pages/man2/shutdown.2.html)
-- [Linux recv(2)](https://man7.org/linux/man-pages/man2/recv.2.html)
+- [Linux recv(2)](https://man7.org/linux/man-pages/man2/recv.2.html)$socket_review$
+WHERE slug = 'cs-08-socket-internals' AND source = 'MANUAL';

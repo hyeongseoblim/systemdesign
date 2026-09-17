@@ -1,23 +1,6 @@
----
-area: CS
-mode: CONCEPT
-coach: cs-coach
-title: "가상 메모리 심화 — Page Cache·mmap·Copy-on-Write"
-slug: cs-10-virtual-memory
-topicKey: cs-142
-difficulty: 4
-summary: "가상 주소와 Page Table, Page Fault, File-backed Page Cache, mmap과 Copy-on-Write의 비용을 연결한다."
-tags:
-  - "Virtual Memory"
-  - "Page Cache"
-  - "mmap"
-  - "Copy-on-Write"
-questions:
-  - "가상 메모리가 프로세스 격리와 물리 메모리보다 큰 주소 공간을 제공하는 원리를 설명해보세요."
-  - "mmap한 파일의 첫 접근이 느리고 이후 접근이 빨라질 수 있는 이유는 무엇인가요?"
-  - "fork 후 Copy-on-Write가 메모리를 절약하다 쓰기 폭증 때 비용을 만드는 과정을 설명해보세요."
----
-## 1. 주소 공간·주소 변환·실제 메모리를 구분한다
+-- 가상 메모리 심층 검수. 기존 ID와 질문 유지.
+UPDATE cards
+SET content_md = $vm_review$## 1. 주소 공간·주소 변환·실제 메모리를 구분한다
 
 가상 주소는 프로세스가 사용하는 주소 체계다. 페이지 테이블은 접근 권한과 물리 페이지 등의 매핑 정보를 관리하며 TLB는 주소 변환 결과의 캐시다. 같은 숫자의 가상 주소라도 프로세스별로 다른 물리 페이지를 가리킬 수 있다. 공유 매핑처럼 의도적으로 같은 페이지를 참조하는 경우도 있다.
 
@@ -116,4 +99,5 @@ Linux에서는 /proc/PID/smaps 같은 자료로 매핑별 RSS·PSS·Dirty를 함
 - [Linux fork(2)](https://man7.org/linux/man-pages/man2/fork.2.html)
 - [Linux smaps](https://man7.org/linux/man-pages/man5/proc_pid_smaps.5.html)
 - [Linux msync(2)](https://man7.org/linux/man-pages/man2/msync.2.html)
-- [Python mmap API](https://docs.python.org/3/library/mmap.html)
+- [Python mmap API](https://docs.python.org/3/library/mmap.html)$vm_review$
+WHERE slug = 'cs-10-virtual-memory' AND source = 'MANUAL';
