@@ -299,4 +299,4 @@ V15는 `3beca3b`로 운영 반영했다. DB 36개 본문·ID 보존과 웹 I/O �
 - `cs-10-virtual-memory`: 가상 주소·TLB miss·Page Fault·저장 장치 접근을 분리하고 mmap의 Page Cache, MAP_PRIVATE/SHARED, 파일 축소 SIGBUS, fork COW, RSS/PSS/Private Dirty를 보강했다. 임시 파일 mmap 예제로 사본과 공유 쓰기를 확인하며 실제 Linux COW 부하·장애 시험을 대신하지 않는다.
 - `cs-08-socket-internals`: 연결 수립·accept·업무 대기열, 부분 send, TCP ACK와 업무 커밋, 출력 큐 예산, Half-close·EOF·RST·프레이밍을 구분했다. Loopback TCP 예제로 Half-close 뒤 반대 방향 응답을 확인하며 접속 폭주·TLS·망 장애 시험을 대신하지 않는다.
 
-누적 심층 38개, 구조 점검 91개, 해설 44개/132문항. V16·V17 적용 대상이며 기존 카드·질문 ID와 질문 문구를 유지한다. `npm run test:study` 17개와 전체 129개 콘텐츠 계약 검사는 통과했다. 운영 반영과 웹 본문·해설 확인은 배포 기록에서 별도로 확정한다.
+누적 심층 38개, 구조 점검 91개, 해설 44개/132문항. V16·V17은 `9ec11fa`로 운영 반영했으며 기존 카드·질문 ID와 질문 문구를 유지했다. `npm run test:study` 17개와 전체 129개 콘텐츠 계약 검사는 통과했다. 운영 DB의 마이그레이션·본문과 웹의 두 카드 본문·6개 해설도 확인했다. [배포 기록](deployment-2026-09-17.md)을 참고한다.
