@@ -2060,5 +2060,55 @@
         "followUp": "DB 안의 대기는 줄었지만 큐 지연이 계속 늘면 무엇을 해야 하나요?"
       }
     ]
+  },
+  "cs-07-io-multiplexing": {
+    "reviewedAt": "2026-09-17",
+    "scope": "본문·질문 심층 검수. C 읽기 분기와 이벤트 루프 설계; 전체 Linux epoll 부하 검증은 별도다.",
+    "sources": [
+      {
+        "label": "Linux epoll(7)",
+        "url": "https://man7.org/linux/man-pages/man7/epoll.7.html"
+      },
+      {
+        "label": "Linux read(2)",
+        "url": "https://man7.org/linux/man-pages/man2/read.2.html"
+      },
+      {
+        "label": "Linux select(2)",
+        "url": "https://man7.org/linux/man-pages/man2/select.2.html"
+      }
+    ],
+    "questions": [
+      {
+        "question": "Non-blocking I/O와 I/O Multiplexing은 각각 어떤 문제를 해결하나요?",
+        "points": [
+          "Non-blocking은 당장 진행할 수 없는 호출의 대기를 피하고 Multiplexing은 여러 FD의 준비를 함께 기다린다.",
+          "준비 알림과 완료를 구분하며 실제 read/write의 반환값을 검사한다.",
+          "epoll도 준비 이벤트·등록 관리·Handler 비용이 있으며 모든 작업을 자동 비동기로 바꾸지 않는다."
+        ],
+        "pitfall": "epoll 사용만으로 파일 I/O·DNS·CPU 연산이 비동기가 된다고 말하지 않는다.",
+        "followUp": "읽기 준비 알림 뒤 read가 EAGAIN이면 오류인가요?"
+      },
+      {
+        "question": "Level-triggered와 Edge-triggered 알림에서 읽기 Loop가 달라지는 이유는 무엇인가요?",
+        "points": [
+          "LT는 준비 상태의 재알림, ET는 상태 변화 기반 알림을 구분한다.",
+          "ET에서 Non-blocking으로 진행해 EAGAIN을 확인하고 EOF·EINTR·부분 읽기를 분기한다.",
+          "공정성 예산으로 중단하면 애플리케이션 Ready Queue에서 이어 처리하고 새 Edge만 기다리지 않는다."
+        ],
+        "pitfall": "EAGAIN까지 무한히 한 연결만 처리하면 공정성이 자동 보장된다고 가정하지 않는다.",
+        "followUp": "계속 데이터가 들어오는 연결에서 예산을 다 썼다면 어디에 작업을 남기나요?"
+      },
+      {
+        "question": "epoll을 사용해도 느린 사용자 코드가 Event Loop 전체를 막을 수 있는 이유를 설명해보세요.",
+        "points": [
+          "단일 Loop의 긴 Handler·Blocking 호출·동기 대기가 다른 연결 처리를 늦춘다.",
+          "Worker 수와 큐·기한·취소를 제한하고 연결 수명과 완료 순서를 관리한다.",
+          "부분 쓰기 위치와 출력 큐 상한·상류 역압력을 관리하며 Loop 지연과 큐 대기를 따로 측정한다."
+        ],
+        "pitfall": "무제한 Worker Queue나 출력 버퍼로 과부하가 해결됐다고 말하지 않는다.",
+        "followUp": "느린 수신자에게 보낼 버퍼가 상한에 도달하면 무엇을 제한하나요?"
+      }
+    ]
   }
 }

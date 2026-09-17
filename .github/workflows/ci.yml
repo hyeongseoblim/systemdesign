@@ -39,6 +39,7 @@ jobs:
         run: |
           npm run test:study
           python3 ../../scripts/content-examples.test.py
+          python3 ../../scripts/content-io.test.py
       - name: Build
         run: npm run build
         env:

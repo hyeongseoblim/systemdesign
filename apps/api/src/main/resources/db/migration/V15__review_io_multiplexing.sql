@@ -1,23 +1,6 @@
----
-area: CS
-mode: CONCEPT
-coach: cs-coach
-title: "Linux I/O Multiplexing — select·poll·epoll"
-slug: cs-07-io-multiplexing
-topicKey: cs-114
-difficulty: 4
-summary: "많은 File Descriptor의 준비 상태를 감시하는 select, poll, epoll의 관심 목록과 알림 비용을 비교한다."
-tags:
-  - "Linux"
-  - "I/O Multiplexing"
-  - "epoll"
-  - "Non-blocking I/O"
-questions:
-  - "Non-blocking I/O와 I/O Multiplexing은 각각 어떤 문제를 해결하나요?"
-  - "Level-triggered와 Edge-triggered 알림에서 읽기 Loop가 달라지는 이유는 무엇인가요?"
-  - "epoll을 사용해도 느린 사용자 코드가 Event Loop 전체를 막을 수 있는 이유를 설명해보세요."
----
-## 1. 호출의 대기와 여러 연결의 대기를 구분한다
+-- I/O 다중화 심층 검수. 기존 ID와 질문 유지.
+UPDATE cards
+SET content_md = $io_review$## 1. 호출의 대기와 여러 연결의 대기를 구분한다
 
 Non-blocking Socket은 지금 진행할 수 없는 read/write에서 스레드를 기다리게 하는 대신 EAGAIN 또는 EWOULDBLOCK을 반환할 수 있다. Multiplexing은 여러 FD의 준비 상태를 함께 기다리는 수단이다. 둘을 조합하면 연결마다 바쁜 반복 확인을 하지 않아도 된다.
 
@@ -106,4 +89,5 @@ CPU 작업이나 Blocking I/O를 Worker Pool로 옮겨도 무제한 작업 큐�
 
 - [Linux epoll(7)](https://man7.org/linux/man-pages/man7/epoll.7.html)
 - [Linux read(2)](https://man7.org/linux/man-pages/man2/read.2.html)
-- [Linux select(2)](https://man7.org/linux/man-pages/man2/select.2.html)
+- [Linux select(2)](https://man7.org/linux/man-pages/man2/select.2.html)$io_review$
+WHERE slug = 'cs-07-io-multiplexing' AND source = 'MANUAL';
