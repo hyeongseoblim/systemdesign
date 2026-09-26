@@ -16,10 +16,14 @@ export default function QuestionAnswers({
   cardId,
   questions,
   guide,
+  id = "questions",
+  step = 2,
 }: {
   cardId: string;
   questions: QuestionItem[];
   guide?: AnswerGuide;
+  id?: string;
+  step?: number;
 }) {
   const [answered, setAnswered] = useState<Set<string>>(new Set());
 
@@ -43,9 +47,9 @@ export default function QuestionAnswers({
 
   if (questions.length === 0) return null;
   return (
-    <div id="questions" className="qsection">
+    <div id={id} className="qsection">
       <div className="qsection-head">
-        <span>STEP 2</span>
+        <span>STEP {step}</span>
         <div>
           <h2>기억에서 꺼내보기</h2>
           <p className="qhint">본문을 보지 않고, 동료에게 설명하듯 답해보세요.</p>

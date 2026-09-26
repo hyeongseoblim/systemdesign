@@ -1,23 +1,6 @@
----
-area: LOGISTICS
-mode: CONCEPT
-coach: logistics-domain-coach
-title: "TMS 심화 — 운송장 상태머신 · 허브앤스포크 · 배차"
-slug: logistics-03-tms-transportation
-difficulty: 3
-summary: "화물을 언제·어떻게·얼마에 보낼지 결정하고 집행하는 TMS(Transportation Management System)를, 운송장(Waybill) 상태 머신 · 네트워크 토폴로지(허브앤스포크 vs P2P) · 간선/지선 운영 · 배차(Dispatch) 흐름까지 백엔드 설계 관점에서 연결한다."
-tags:
-  - "운송장"
-  - "상태머신"
-  - "허브앤스포크"
-  - "배차"
-questions:
-  - "운송장(Waybill) 상태 머신에서 `IN_TRANSIT`이 자기 자신으로 반복 전이하도록 설계하는 이유를 허브앤스포크 네트워크와 연결해 설명하고, \"순서가 뒤바뀐 스캔 이벤트\"가 도착했을 때 상태 판정을 어떻게 보정해야 하는지 서술해보세요."
-  - "거점이 50개일 때 허브앤스포크와 포인트투포인트(P2P)의 노선 수를 각각 추정하고, 적재효율·리드타임·단위 운송비·장애 전파 관점에서 두 방식의 Trade-off를 비교한 뒤, 어떤 조건에서 P2P 직배가 더 유리한지 설명해보세요."
-  - "전국 기사 앱이 At-least-once로 보내는 TrackingEvent 스트림을 Kafka로 처리한다고 할 때, (1) 중복 이벤트 멱등 처리, (2) 같은 운송장 이벤트의 순서 보장, (3) 오프라인 동기화로 지연 도착하는 과거 시각 이벤트 처리를 각각 어떻게 설계할지 설명해보세요."
----
-
-## 1. TMS의 범위와 사실의 소유자
+-- logistics-03-tms-transportation deep review. Existing card and question IDs are preserved.
+UPDATE cards
+SET content_md = $tms_review$## 1. TMS의 범위와 사실의 소유자
 
 TMS(Transportation Management System, 운송관리 시스템)는 출고된 화물을 어떤 경로·수단·시간창으로 움직일지 계획하고, 운송 작업·운임·추적 상태를 관리하는 시스템으로 설계할 수 있다. 다만 모든 제품이 같은 경계를 갖는 것은 아니다. OMS는 주문과 이행 의도를, WMS나 재고 서비스는 창고 작업과 재고를, 운송사·기사 앱·스캐너는 현장에서 관찰한 운송 이벤트를 소유할 수 있다.
 
@@ -177,4 +160,5 @@ flowchart LR
 - [Apache Kafka — Design: Message Delivery Semantics](https://kafka.apache.org/35/design/design/)
 - [Apache Kafka — Producer Configs: idempotence and ordering](https://kafka.apache.org/31/configuration/producer-configs/)
 - [Google OR-Tools — Vehicle Routing](https://developers.google.com/optimization/routing)
-- [Google OR-Tools — Common Routing Tasks and search limits](https://developers.google.com/optimization/routing/routing_tasks)
+- [Google OR-Tools — Common Routing Tasks and search limits](https://developers.google.com/optimization/routing/routing_tasks)$tms_review$
+WHERE slug = 'logistics-03-tms-transportation' AND source = 'MANUAL';

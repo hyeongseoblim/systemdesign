@@ -1,22 +1,6 @@
----
-area: LOGISTICS
-mode: CONCEPT
-coach: logistics-domain-coach
-title: "WMS 심화 — 입고·피킹·재고상태 · Oversell 방지"
-slug: logistics-02-wms-warehouse
-difficulty: 3
-summary: "창고의 입고·보관·피킹·출고 흐름을 살피고, 재고 상태·예약·동시성·실사를 백엔드 설계와 연결한다."
-tags:
-  - "입고"
-  - "피킹"
-  - "재고상태"
-  - "Oversell"
-questions:
-  - "재고를 단일 숫자 \"100개\"로 관리하지 않고 On-hand / Reserved / Available로 분해해야 하는 이유를 설명하고, 주문 수락 판단을 어떤 값 기준으로 해야 Oversell이 방지되는지 서술해보세요."
-  - "재고 점유를 즉시 차감하지 않고 Reserve→Commit→Ship 3단계로 나누는 이유는 무엇이며, Reserve 단계에 TTL을 거는 이유와 실물 On-hand 차감이 어느 시점에 일어나야 하는지 설명해보세요."
-  - "\"남은 재고 1개를 두 요청이 동시에 구매\"하는 상황에서 Oversell을 막는 방법을, 원자적 조건부 UPDATE / 낙관적 락 / Redis 원자 감소의 Trade-off와 함께 설명하고, 코드로 막아도 여전히 Cycle count가 필요한 이유를 서술해보세요."
----
-## 1. WMS의 범위와 주변 시스템
+-- logistics-02-wms-warehouse deep review. Existing card and question IDs are preserved.
+UPDATE cards
+SET content_md = $wms_review$## 1. WMS의 범위와 주변 시스템
 
 WMS(Warehouse Management System, 창고관리 시스템)는 창고 안의 위치별 재고와 작업 흐름을 다루는 시스템으로 설계할 수 있다. 제품에 따라 재고 원장, 주문 할당, 운송 연동의 책임이 ERP·OMS·재고 서비스·WMS 사이에 다르게 배분된다. 그러므로 WMS를 SKU 재고 전체의 보편적인 단일 진실 원천으로 보지 말고, 수량·위치·상태별 데이터 소유자와 확정 이벤트를 먼저 정한다.
 
@@ -146,4 +130,5 @@ flowchart LR
 - [Microsoft Dynamics 365 — Inventory posting profiles](https://learn.microsoft.com/en-us/dynamics365/finance/general-ledger/inventory-posting-profiles)
 - [Microsoft Dynamics 365 — Cycle counting](https://learn.microsoft.com/en-us/dynamics365/supply-chain/warehousing/cycle-counting)
 - [Redis — Scripting with Lua](https://redis.io/docs/latest/develop/programmability/eval-intro/)
-- [AWS DynamoDB — Atomic counters and idempotency](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithItems.html)
+- [AWS DynamoDB — Atomic counters and idempotency](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithItems.html)$wms_review$
+WHERE slug = 'logistics-02-wms-warehouse' AND source = 'MANUAL';

@@ -1,22 +1,6 @@
----
-area: LOGISTICS
-mode: CONCEPT
-coach: logistics-domain-coach
-title: "OMS 심화 — 주문 수명주기 · 할당 · 분할출고"
-slug: logistics-01-oms-order-management
-difficulty: 3
-summary: "주문과 이행의 상태 범위를 구분하고, 창고 할당·분할출고·결제 연동을 백엔드 설계 관점에서 연결한다."
-tags:
-  - "주문"
-  - "수명주기"
-  - "할당"
-  - "분할출고"
-questions:
-  - "주문 상태를 `isPaid`, `isShipped`, `isCanceled` 같은 Boolean 플래그 조합으로 관리할 때 발생하는 문제를 설명하고, 상태 머신(Enum + 전이)으로 전환하면 무엇이 해결되는지 서술해보세요."
-  - "한 주문의 라인 3개가 서로 다른 창고에 분산되어 분할출고됩니다. 이때 `Order` 헤더 상태를 어떻게 결정해야 하며, 한 Shipment만 배송 실패했을 때 어떤 상태/보상 흐름이 필요한지 설명해보세요."
-  - "\"결제는 성공했는데 재고 Reserve가 실패\"하는 상황을 Saga로 처리한다고 할 때, 어떤 보상 트랜잭션이 필요하고 Idempotency-Key가 왜 필수인지, Capture를 출고 시점에 하는 이유와 함께 설명해보세요."
----
-## 1. OMS가 책임지는 것과 다른 시스템이 책임지는 것
+-- logistics-01-oms-order-management deep review. Existing card and question IDs are preserved.
+UPDATE cards
+SET content_md = $oms_review$## 1. OMS가 책임지는 것과 다른 시스템이 책임지는 것
 
 OMS(Order Management System, 주문관리 시스템)는 채널의 주문을 접수하고, 업무 정책에 따라 검증·이행 경로를 조정하며, 주문 진행 상황을 고객과 운영자에게 보여주는 역할을 맡을 수 있다. 하지만 회사마다 시스템 경계와 데이터 소유권은 다르다. OMS가 결제 원장, 창고의 실물 수량, 운송사의 배송 기록까지 모두 대체하는 단일 진실 원천이라고 가정하지 않는다.
 
@@ -131,4 +115,5 @@ sequenceDiagram
 - [Oracle Fusion Cloud Order Management — Split Order Lines](https://docs.oracle.com/en/cloud/saas/supply-chain-and-manufacturing/25d/fauom/split-fulfillment-lines.html)
 - [Oracle Fusion Cloud Order Management — Source Orders and Fulfillment Lines](https://docs.oracle.com/en/cloud/saas/supply-chain-and-manufacturing/25c/fauom/how-order-management-transforms-source-orders-into-sales-orders.html)
 - [Stripe API — Confirm a PaymentIntent and capture method](https://docs.stripe.com/api/payment_intents/confirm)
-- [Stripe API — Idempotent requests](https://docs.stripe.com/api/idempotent_requests)
+- [Stripe API — Idempotent requests](https://docs.stripe.com/api/idempotent_requests)$oms_review$
+WHERE slug = 'logistics-01-oms-order-management' AND source = 'MANUAL';

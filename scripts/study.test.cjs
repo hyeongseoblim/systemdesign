@@ -10,11 +10,12 @@ const root = path.resolve(__dirname, '..');
 const web = path.join(root, 'apps/web');
 const output = mkdtempSync(path.join(tmpdir(), 'jobstudy-study-test-'));
 execFileSync(process.execPath, [path.join(web, 'node_modules/typescript/bin/tsc'),
-  path.join(web, 'lib/study.ts'), path.join(web, 'lib/reading.ts'), '--outDir', output,
+  path.join(web, 'lib/study.ts'), path.join(web, 'lib/reading.ts'), path.join(web, 'lib/starterPath.ts'), '--outDir', output,
   '--module', 'commonjs', '--target', 'ES2022', '--skipLibCheck', '--types', 'node',
   '--typeRoots', path.join(web, 'node_modules/@types')]);
 const { matchesSearch, matchesStudy, needsReview, readStudy, writeStorage, shuffleRank } = require(path.join(output, 'study.js'));
 const { headings, sectionId } = require(path.join(output, 'reading.js'));
+const { nextStarter, STARTER_LESSONS } = require(path.join(output, 'starterPath.js'));
 after(() => rmSync(output, { recursive: true, force: true }));
 
 test('검색은 제목·태그·요약, 대소문자와 공백 분리 검색어를 지원한다', () => {
@@ -50,12 +51,23 @@ test('랜덤 정렬 키는 동일한 시드에서 복귀·재조회 후에도 �
   assert.deepEqual(sort(ids), sort([...ids].reverse()));
   assert.notEqual(shuffleRank('card-a', 42), shuffleRank('card-a', 43));
 });
+test('시작 경로는 미완료 카드 순서로 안내하고 기존 완료 기록을 건너뛴다', () => {
+  const cards = STARTER_LESSONS.map((lesson, index) => ({ id: `card-${index}`, slug: lesson.slug }));
+  assert.equal(nextStarter(cards, {}).card.id, 'card-0');
+  assert.equal(nextStarter(cards, { 'card-0': { done: 'today' } }).card.id, 'card-1');
+  assert.equal(nextStarter(cards, Object.fromEntries(cards.map((card) => [card.id, { done: 'today' }]))), undefined);
+  assert.equal(STARTER_LESSONS.length, new Set(STARTER_LESSONS.map((lesson) => lesson.slug)).size);
+  for (const lesson of STARTER_LESSONS) {
+    assert.ok(readFileSync(path.join(root, `apps/api/src/main/resources/content/${lesson.slug}.md`), 'utf8').includes(`slug: ${lesson.slug}`));
+    assert.ok(lesson.takeaway && lesson.example && lesson.question && lesson.check);
+  }
+});
 test('목차는 코드 펜스 안의 제목과 중복 질문 섹션을 제외한다', () => {
   assert.deepEqual(headings('## 1. **핵심**\n```md\n## 예시\n```\n## 이해도 확인\n'), [{ title: '1. 핵심', id: sectionId('1. 핵심') }]);
 });
-test('44개 카드의 132개 점검 기준은 실제 질문과 정확히 연결된다', () => {
+test('47개 카드의 141개 점검 기준은 실제 질문과 정확히 연결된다', () => {
   const guides = JSON.parse(readFileSync(path.join(web, 'content/answer-guides.json'), 'utf8'));
-  assert.equal(Object.keys(guides).length, 44);
+  assert.equal(Object.keys(guides).length, 47);
   for (const [slug, guide] of Object.entries(guides)) {
     const raw = readFileSync(path.join(root, `apps/api/src/main/resources/content/${slug}.md`), 'utf8');
     const questions = raw.split('---')[1].split('questions:\n')[1].trim().split('\n').map(line => JSON.parse(line.trim().slice(2)));
@@ -224,4 +236,47 @@ test('V17은 소켓 본문을 반영하고 Half-close 뒤 응답 수신을 재�
   const sql = readFileSync(path.join(directory, 'db/migration/V17__review_socket_internals.sql'), 'utf8');
   assert.equal(sql.replace(/^--[^\n]*\n/, '').trim(), `UPDATE cards\nSET content_md = $socket_review$${body}$socket_review$\nWHERE slug = 'cs-08-socket-internals' AND source = 'MANUAL';`);
   execFileSync('python3', ['-c', raw.match(/```python\n([\s\S]*?)```/)[1]], { timeout: 10000 });
+});
+
+test('V18은 OMS 상태·부분 이행·결제 본문과 질문 해설을 반영한다', () => {
+  const directory = path.join(root, 'apps/api/src/main/resources');
+  const slug = 'logistics-01-oms-order-management';
+  const raw = readFileSync(path.join(directory, `content/${slug}.md`), 'utf8');
+  const body = raw.split('---').slice(2).join('---').trim();
+  const sql = readFileSync(path.join(directory, 'db/migration/V18__review_oms_order_lifecycle.sql'), 'utf8');
+  assert.equal(sql.replace(/^--[^\n]*\n/, '').trim(), `UPDATE cards\nSET content_md = $oms_review$${body}$oms_review$\nWHERE slug = '${slug}' AND source = 'MANUAL';`);
+  const guide = JSON.parse(readFileSync(path.join(web, 'content/answer-guides.json'), 'utf8'))[slug];
+  const questions = raw.split('---')[1].split('questions:\n')[1].trim().split('\n').map(line => JSON.parse(line.trim().slice(2)));
+  assert.deepEqual(guide.questions.map(item => item.question), questions);
+  assert.match(body, /결과가 불명확하면/);
+  assert.match(body, /PARTIALLY_FULFILLED/);
+});
+
+test('V19은 WMS 재고 차원·예약 경합·실사 본문과 질문 해설을 반영한다', () => {
+  const directory = path.join(root, 'apps/api/src/main/resources');
+  const slug = 'logistics-02-wms-warehouse';
+  const raw = readFileSync(path.join(directory, `content/${slug}.md`), 'utf8');
+  const body = raw.split('---').slice(2).join('---').trim();
+  const sql = readFileSync(path.join(directory, 'db/migration/V19__review_wms_inventory.sql'), 'utf8');
+  assert.equal(sql.replace(/^--[^\n]*\n/, '').trim(), `UPDATE cards\nSET content_md = $wms_review$${body}$wms_review$\nWHERE slug = '${slug}' AND source = 'MANUAL';`);
+  const guide = JSON.parse(readFileSync(path.join(web, 'content/answer-guides.json'), 'utf8'))[slug];
+  const questions = raw.split('---')[1].split('questions:\n')[1].trim().split('\n').map(line => JSON.parse(line.trim().slice(2)));
+  assert.deepEqual(guide.questions.map(item => item.question), questions);
+  assert.match(body, /격리\/불량/);
+  assert.match(body, /Cycle count/);
+});
+
+test('V20은 TMS 이벤트 원장·노선 수 가정·Kafka 보장과 질문 해설을 반영한다', () => {
+  const directory = path.join(root, 'apps/api/src/main/resources');
+  const slug = 'logistics-03-tms-transportation';
+  const raw = readFileSync(path.join(directory, `content/${slug}.md`), 'utf8');
+  const body = raw.split('---').slice(2).join('---').trim();
+  const sql = readFileSync(path.join(directory, 'db/migration/V20__review_tms_transportation.sql'), 'utf8');
+  assert.equal(sql.replace(/^--[^\n]*\n/, '').trim(), `UPDATE cards\nSET content_md = $tms_review$${body}$tms_review$\nWHERE slug = '${slug}' AND source = 'MANUAL';`);
+  const guide = JSON.parse(readFileSync(path.join(web, 'content/answer-guides.json'), 'utf8'))[slug];
+  const questions = raw.split('---')[1].split('questions:\n')[1].trim().split('\n').map(line => JSON.parse(line.trim().slice(2)));
+  assert.deepEqual(guide.questions.map(item => item.question), questions);
+  assert.match(body, /occurredAt/);
+  assert.match(body, /1,225/);
+  assert.match(body, /waybillId.*파티션/);
 });

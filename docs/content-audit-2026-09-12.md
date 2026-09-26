@@ -2,13 +2,13 @@
 
 ## 점검 범위와 판정 원칙
 
-저장소의 수동 카드 129개 전체에 대해 프론트매터·목차·본문 구조·출처 링크·질문별 해설 연결을 조사했다. 이는 운영 DB 전수 조회나 129개 전체 문장의 사실 검증을 완료했다는 뜻이 아니다. **38개는 본문·질문 3개를 대조해 심층 보강했다. 부분 정정만 남은 카드는 0개이며, 나머지 91개는 구조 점검 상태**로 남긴다. 기존 10개 해설의 과거 검수와 이번 검수도 구분한다.
+저장소의 수동 카드 129개 전체에 대해 프론트매터·목차·본문 구조·출처 링크·질문별 해설 연결을 조사했다. 이는 운영 DB 전수 조회나 129개 전체 문장의 사실 검증을 완료했다는 뜻이 아니다. **41개는 본문·질문 3개를 대조해 심층 보강했다. 부분 정정만 남은 카드는 0개이며, 나머지 88개는 구조 점검 상태**로 남긴다. 기존 10개 해설의 과거 검수와 이번 검수도 구분한다.
 
 분량 2,000자는 보강 후보를 찾는 신호이며 합격 기준이 아니다. 긴 본문이나 참고 링크 하나가 정확성·완결성을 보장하지 않는다. 특히 외부 링크가 있어도 모든 기업 사례·수치가 그 출처에서 확인됐다고 간주하지 않는다. 모드별로 DESIGN은 요구·용량·데이터·실패·대안, INTERVIEW는 질문별 근거와 후속 압박, REVIEW는 문제 코드·반례·수정·검증을 확인해야 한다.
 
 ## 전체 기준선
 
-변경 전 본문 2,000자 미만 67개, 본문 HTTPS 출처가 있는 카드 23개, 질문별 점검 해설 10개/30문항이었다. 누적 변경은 카드 수를 늘리지 않고 본문 38개를 심층 보강하고 해설을 44개/132문항으로 확대했다. 기존 카드의 slug·메타데이터·질문 순서·질문 문구는 변경하지 않았다.
+변경 전 본문 2,000자 미만 67개, 본문 HTTPS 출처가 있는 카드 23개, 질문별 점검 해설 10개/30문항이었다. 누적 변경은 카드 수를 늘리지 않고 본문 41개를 심층 보강하고 해설을 47개/141문항으로 확대했다. 기존 카드의 slug·메타데이터·질문 순서·질문 문구는 변경하지 않았다.
 
 | 영역 | 카드 | 본문 2,000자 미만(변경 후) | 본문 출처 있음 | 질문별 해설 있음 |
 |---|---:|---:|---:|---:|
@@ -18,7 +18,7 @@
 | CS | 11 | 2 | 4 | 3 |
 | DATABASE | 15 | 6 | 7 | 6 |
 | INFRA | 13 | 2 | 4 | 4 |
-| LOGISTICS | 19 | 0 | 10 | 11 |
+| LOGISTICS | 19 | 0 | 13 | 14 |
 | SYSTEM_DESIGN | 26 | 5 | 9 | 9 |
 
 ## 확인한 문제와 수정
@@ -51,7 +51,7 @@
 
 1. **재고·동시성 경로**: database-07, backend-02/04/07은 이번에 보강했다. backend-03과 database-02도 9월 13일 보강했다. database-03도 이후 배치에서 보강했다. 다음은 database-08의 잔여 본문과 거래·격리 설명을 맞추고 실제 DB 두 세션 장애 재현을 추가한다.
 2. **합의·복제·메시징**: system-design-07/17/18은 이번에 보강했다. system-design-06/14의 메시징·다중 리전과 architecture-04/07은 9월 13일 추가 배치에서 보강했다.
-3. **물류 업무 모델**: logistics-13/14/16/19는 이번에 보강했다. logistics-10/11/12도 보강했다. logistics-15/17/18도 보강했다. 다음은 logistics-01~09의 남은 기업 사례와 운영 설명을 검수한다. 이벤트 보정, 배송 약속, 원장 대사, 기사 할당의 상태 전이 예제와 질문별 해설을 채운다. logistics-01~07의 기업별 설명은 공개 근거와 가상 설계를 분리한다.
+3. **물류 업무 모델**: logistics-01~03과 logistics-10~19 일부를 심층 보강했다. 다음은 logistics-04~09의 기업 사례와 운영 설명을 검수한다. 이벤트 보정, 배송 약속, 원장 대사, 기사 할당의 상태 전이 예제와 질문별 해설을 채운다. 기업별 설명은 공개 근거와 가상 설계를 분리한다.
 4. **AI/LLM 15개**: 보안·도구 실행·평가부터. 짧은 개요에서 실패 입력→판단→복구 예제로 확장하고 API·프로토콜 버전을 명시한다.
 5. **DB·백엔드·인프라·CS 잔여**: 같은 주제의 CONCEPT·INTERVIEW·REVIEW를 묶어 용어와 정답 기준이 충돌하지 않는지 비교한다.
 
@@ -210,9 +210,9 @@ PostgreSQL 동시 세션은 9월 13일 임시 로컬 18.4에서 아래 4개 시�
 | [infra-11-kubernetes-troubleshooting-interview](../apps/api/src/main/resources/content/infra-11-kubernetes-troubleshooting-interview.md) | INTERVIEW · 4 | 4,423 | 심층 보강 | Phase/STATUS·미생성/미배정/준비·이전 로그·연결 비교 |
 | [infra-12-kubernetes-resource-management](../apps/api/src/main/resources/content/infra-12-kubernetes-resource-management.md) | CONCEPT · 4 | 4,379 | 심층 보강 | Admission·QoS·OOM/축출·HPA 분모·장애/배포 여유 |
 | [infra-13-warehouse-edge-design](../apps/api/src/main/resources/content/infra-13-warehouse-edge-design.md) | DESIGN · 5 | 982 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [logistics-01-oms-order-management](../apps/api/src/main/resources/content/logistics-01-oms-order-management.md) | CONCEPT · 3 | 6,940 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
-| [logistics-02-wms-warehouse](../apps/api/src/main/resources/content/logistics-02-wms-warehouse.md) | CONCEPT · 3 | 8,549 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
-| [logistics-03-tms-transportation](../apps/api/src/main/resources/content/logistics-03-tms-transportation.md) | CONCEPT · 3 | 10,907 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
+| [logistics-01-oms-order-management](../apps/api/src/main/resources/content/logistics-01-oms-order-management.md) | CONCEPT · 3 | 5,888 | 심층 보강 | 상태 객체 분리·부분 이행·승인/매입 Saga·Oracle/Stripe 근거 |
+| [logistics-02-wms-warehouse](../apps/api/src/main/resources/content/logistics-02-wms-warehouse.md) | CONCEPT · 3 | 6,746 | 심층 보강 | 재고 차원·가용식·예약 정책·원자 갱신·실사·Redis 경계 |
+| [logistics-03-tms-transportation](../apps/api/src/main/resources/content/logistics-03-tms-transportation.md) | CONCEPT · 3 | 8,842 | 심층 보강 | Waybill 이벤트 원장·지연 보정·링크 수 가정·Kafka/VRP 근거 |
 | [logistics-04-fulfillment-inventory](../apps/api/src/main/resources/content/logistics-04-fulfillment-inventory.md) | CONCEPT · 4 | 9,103 | 구조 점검 | 본문 출처 없음 / 기업 언급 출처 확인 |
 | [logistics-05-last-mile-routing](../apps/api/src/main/resources/content/logistics-05-last-mile-routing.md) | CONCEPT · 4 | 8,971 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
 | [logistics-06-returns-reverse-logistics](../apps/api/src/main/resources/content/logistics-06-returns-reverse-logistics.md) | CONCEPT · 3 | 7,561 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
@@ -300,3 +300,32 @@ V15는 `3beca3b`로 운영 반영했다. DB 36개 본문·ID 보존과 웹 I/O �
 - `cs-08-socket-internals`: 연결 수립·accept·업무 대기열, 부분 send, TCP ACK와 업무 커밋, 출력 큐 예산, Half-close·EOF·RST·프레이밍을 구분했다. Loopback TCP 예제로 Half-close 뒤 반대 방향 응답을 확인하며 접속 폭주·TLS·망 장애 시험을 대신하지 않는다.
 
 누적 심층 38개, 구조 점검 91개, 해설 44개/132문항. V16·V17은 `9ec11fa`로 운영 반영했으며 기존 카드·질문 ID와 질문 문구를 유지했다. `npm run test:study` 17개와 전체 129개 콘텐츠 계약 검사는 통과했다. 운영 DB의 마이그레이션·본문과 웹의 두 카드 본문·6개 해설도 확인했다. [배포 기록](deployment-2026-09-17.md)을 참고한다.
+
+## 2026-09-22 OMS·WMS 검수
+
+- `logistics-01-oms-order-management`: 주문·라인·Shipment·Payment의 상태 범위를 분리하고 부분 이행 집계, 실패한 Shipment의 정책별 후속 처리, 승인/매입에 따른 결제 보상을 보강했다. OMS를 결제·재고·운송까지 포괄하는 단일 진실 원천으로 단정하지 않으며, 근거 없는 기업별 cut-off·내부 할당 정책·피크 비율을 제거했다.
+- `logistics-02-wms-warehouse`: 재고 차원·상태에 따른 가용 수량 정의를 명시하고, 예약·TTL·출고 원장 반영을 가능한 워크플로 예로 한정했다. 근거가 불분명한 KPI·처리량·Redis 처리량과 기업 내부 운영 주장을 제거했다. WMS 검수는 Luna Ultra가 별도로 수행하고 Microsoft·Redis·AWS 공식 문서와 대조했다.
+
+두 카드의 기존 slug·메타데이터·질문 문구와 학습 ID는 유지했다. 질문별 해설 6개를 추가했고, V18/V19 마이그레이션은 소스 본문과 일치하도록 만들었다. 누적 심층 40개, 구조 점검 89개, 해설 46개/138문항이다. 로컬 테스트 결과와 배포 여부는 아래 검증 기록에 별도로 적는다.
+
+- `npm run test:study` (`apps/web`): 19/19 통과. 카드 질문과 138개 해설의 연결, V18/V19 본문 일치 검사를 포함한다.
+- `bash scripts/check-content.sh`: 전체 129개 콘텐츠 계약 통과.
+- `npm run build` (`apps/web`): 성공.
+- `git diff --check`: 통과.
+
+V18/V19는 로컬 변경이며 DB 적용·API 응답·운영 배포는 수행하지 않았다.
+
+## 2026-09-26 TMS 검수
+
+- `logistics-03-tms-transportation`: OMS/WMS와 TMS의 사실 소유권을 분리하고, Waybill 현재 상태와 불변 TrackingEvent 원장을 구분했다. `IN_TRANSIT` 자기 전이, `eventId` 중복 판정, `occurredAt`/`receivedAt` 분리, watermark·보정 큐·정정 이벤트를 함께 설명했다.
+- 허브앤스포크와 P2P 노선 수는 허브 포함 여부·방향성 가정을 먼저 밝히도록 수정했다. 회사별 내부 처리량·적재율을 일반 사실로 제시하지 않고, 물량 밀도·SLA·장애 전파를 비교하는 가상 설계로 바꿨다.
+- 배차는 차량 용량·시간창·선행 제약·재계획·fallback을 포함한 VRP 문제로 설명하고, 적재율 예시의 계산 가정과 실제 운영 수치를 분리했다. Kafka는 파티션 내부 순서·producer idempotence·소비자 재처리·외부 DB 경계를 분리했다.
+
+기존 slug·메타데이터·질문 문구와 학습 ID는 유지했다. 질문별 해설 3개를 추가했고, V20 migration은 소스 본문과 일치하도록 만들었다. 누적 심층 41개, 구조 점검 88개, 해설 47개/141문항이다. 로컬 테스트 결과와 배포 여부는 아래 검증 기록에 별도로 적는다.
+
+- `npm run test:study` (`apps/web`): 20/20 통과. 카드 질문과 141개 해설의 연결, V18/V19/V20 본문 일치 검사를 포함한다.
+- `bash scripts/check-content.sh`: 전체 129개 콘텐츠 계약 통과.
+- `npm run build` (`apps/web`): 성공.
+- `git diff --check`: 통과.
+
+V20은 로컬 변경이며 DB 적용·API 응답·운영 배포는 수행하지 않았다.

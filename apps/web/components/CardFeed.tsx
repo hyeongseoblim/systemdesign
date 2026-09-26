@@ -8,6 +8,7 @@ import { CardSummary, FeedResponse, TopicArea, LearningMode, DifficultyLevel, ge
 import { matchesSearch, matchesStudy, needsReview, readStudy, shuffleRank, STUDY_LABELS,
   StudyFilter, StudyRecord } from "@/lib/study";
 import DifficultyDots from "@/components/DifficultyDots";
+import { nextStarter, STARTER_LESSONS } from "@/lib/starterPath";
 
 export default function CardFeed({ initial, area, mode, difficulty, view = "explore" }: {
   view?: "home" | "explore" | "review";
@@ -117,6 +118,8 @@ export default function CardFeed({ initial, area, mode, difficulty, view = "expl
   const reviewCount = items.filter((card) => needsReview(records[card.id] ?? {})).length;
   const reading = items.filter((card) => records[card.id]?.read && !records[card.id]?.done)
     .sort((a, b) => (records[b.id]?.read ?? "").localeCompare(records[a.id]?.read ?? ""))[0];
+  const starter = ready && !loading && !error ? nextStarter(items, records) : undefined;
+  const reviewed = items.find((card) => needsReview(records[card.id] ?? {}));
   const params = new URLSearchParams();
   if (view !== "home") params.set("view", view);
   if (area) params.set("area", area);
@@ -135,13 +138,14 @@ export default function CardFeed({ initial, area, mode, difficulty, view = "expl
   return (
     <>
       {view === "home" && <section className="home-welcome">
-        <span className="eyebrow">조금씩, 꾸준히 쌓는 실력</span>
-        <h2>오늘도 한 걸음<br />성장해 볼까요?</h2>
-        <p>개념을 읽고, 내 언어로 설명하는 기술 학습.</p>
-        <Link className="home-primary" href={reading ? cardHref(reading.id) : "/?view=explore"} onClick={rememberPosition}>
-          {reading ? "이어서 공부하기" : "공부할 카드 찾기"}<span aria-hidden="true">↗</span>
+        <span className="eyebrow">5장으로 시작하는 학습 경로</span>
+        <h2>{starter ? "오늘의 1장" : loading || !ready ? "다음 카드를 찾고 있어요" : error ? "목록을 확인할 수 없어요" : "첫 경로를 마쳤어요"}</h2>
+        <p>{starter ? `시작 경로 ${starter.position}/${STARTER_LESSONS.length} · 짧게 읽고 질문 하나에 답해보세요.` : loading || !ready ? "학습 목록을 불러오고 있어요." : error ? "아래에서 다시 시도해 주세요." : "이제 관심 있는 주제를 자유롭게 골라보세요."}</p>
+        {starter && <p className="home-starter-title">{starter.card.title}</p>}
+        <Link className="home-primary" href={starter ? cardHref(starter.card.id) : "/?view=explore"} onClick={rememberPosition}>
+          {starter ? records[starter.card.id]?.read ? "이 카드 이어서 하기" : "이 카드 시작하기" : "전체 카드 둘러보기"}<span aria-hidden="true">↗</span>
         </Link>
-        {ready && reading && <p className="resume-title">{reading.title}</p>}
+        {ready && reviewed && <Link className="home-review-link" href={cardHref(reviewed.id)} onClick={rememberPosition}>다시 볼 1장 · {reviewed.title} →</Link>}
         <div className="home-stats">
           <Link href="/?view=explore&study=complete"><strong>{ready ? `${completeCount}${loading || error ? "+" : ""}` : "—"}</strong><span>학습 완료</span></Link>
           <Link href="/?view=review"><strong>{ready ? `${reviewCount}${loading || error ? "+" : ""}` : "—"}</strong><span>복습할 카드</span></Link>
@@ -183,16 +187,15 @@ export default function CardFeed({ initial, area, mode, difficulty, view = "expl
         <span>완료 <strong>{ready ? completeCount : "…"}개</strong></span>
       </div>
       </>}
-      {view === "home" && <div className="home-section-title"><h2>새롭게 공부해 보세요</h2><Link href="/?view=explore">전체 보기 →</Link></div>}
-      {loading && <p className="catalog-status" role="status">전체 목록을 확인하고 있어요. 검색 결과가 더 추가될 수 있습니다.</p>}
+      {loading && view !== "home" && <p className="catalog-status" role="status">전체 목록을 확인하고 있어요. 검색 결과가 더 추가될 수 있습니다.</p>}
       {error && <div className="catalog-status" role="alert">일부 카드를 불러오지 못했어요. 현재 결과는 전체가 아닙니다. <button className="chip" onClick={() => setRetry((v) => v + 1)}>다시 시도</button></div>}
-      {ready && filtered.length === 0 && !loading && (
+      {view !== "home" && ready && filtered.length === 0 && !loading && (
         <div className="empty"><strong>{error ? "불러온 카드 중에는 일치하는 카드가 없어요." : (view === "review" ? "지금은 복습할 카드가 없어요." : "조건에 맞는 학습 카드가 없어요.")}</strong>
           <p>{view === "review" ? "학습 후 이해도를 기록하면 여기에 모아드려요." : "검색어나 학습 상태를 바꿔 보세요."}</p><button className="chip" onClick={() => updateOptions({ query: "", filter: view === "review" ? "review" : "all" })}>검색·학습 상태 초기화</button></div>
       )}
       {view === "review" && !ready && <p className="catalog-status" role="status">복습 기록을 확인하고 있어요.</p>}
-      <div className="feed" aria-busy={loading || !ready}>
-        {(ready ? filtered : view === "review" ? [] : items).slice(0, view === "home" ? 4 : visible).map((c) => {
+      {view !== "home" && <div className="feed" aria-busy={loading || !ready}>
+        {(ready ? filtered : view === "review" ? [] : items).slice(0, visible).map((c) => {
           const record = records[c.id] ?? {};
           const isRead = !!record.read;
           const isDone = !!record.done;
@@ -214,7 +217,8 @@ export default function CardFeed({ initial, area, mode, difficulty, view = "expl
             </Link>
           );
         })}
-      </div>
+      </div>}
+      {view === "home" && <div className="home-explore-link"><Link href="/?view=explore">다른 주제 직접 찾아보기 →</Link>{reading && <Link href={cardHref(reading.id)} onClick={rememberPosition}>학습 중인 카드 이어보기 →</Link>}</div>}
       {view !== "home" && filtered.length > visible && <button className="loadmore" onClick={() => updateOptions({ visible: visible + 20 })}>20개 더 보기 · {Math.min(visible, filtered.length)}/{filtered.length}개 표시</button>}
     </>
   );
