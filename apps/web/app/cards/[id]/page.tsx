@@ -78,7 +78,6 @@ export default async function CardPage({
           <p className="lede">{stripMd(card.summary)}</p>
         )}
         <div className="byline">
-          {card.coach && <span className="coach">{card.coach}</span>}
           <span>{isAI ? "AI 생성" : "직접 큐레이션"}</span>
           {isAI && card.qualityScore != null && <span>품질 {card.qualityScore}점</span>}
           {published && <span>{published}</span>}
@@ -88,9 +87,9 @@ export default async function CardPage({
       <nav className="study-roadmap" aria-label="이 카드 학습 순서">
         <span className="roadmap-title">학습 순서</span>
         <ol className={hasQuestions || starter ? undefined : "two-steps"}>
-          <li><b>1</b><a href="#reading">{starter ? "짧은 설명" : "핵심 내용 읽기"}</a></li>
+          <li><b>1</b><a href="#reading">{starter ? "짧은 설명" : "핵심 읽기"}</a></li>
           {(hasQuestions || starter) && <li><b>2</b><a href="#questions">{starter ? "질문 1개" : `질문 ${card.questions.length}개 답하기`}</a></li>}
-          <li><b>{completionStep}</b><a href="#complete">{starter ? "오늘 마무리" : "이해도 기록하기"}</a></li>
+          <li><b>{completionStep}</b><a href="#complete">{starter ? "오늘 마무리" : "이해도 기록"}</a></li>
         </ol>
       </nav>
 

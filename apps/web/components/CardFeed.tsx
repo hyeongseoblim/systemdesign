@@ -151,6 +151,28 @@ export default function CardFeed({ initial, area, mode, difficulty, view = "expl
           <Link href="/?view=review"><strong>{ready ? `${reviewCount}${loading || error ? "+" : ""}` : "—"}</strong><span>복습할 카드</span></Link>
         </div>
       </section>}
+      {view === "home" && <section className="home-path" aria-label="5장 학습 경로">
+        <div className="home-path-heading">
+          <div><span className="eyebrow">학습 경로</span><h2>이렇게 이어집니다</h2></div>
+          <span className="home-path-count">{ready && !loading && !error ? `${STARTER_LESSONS.filter((lesson) => {
+            const card = items.find((item) => item.slug === lesson.slug);
+            return card && records[card.id]?.done;
+          }).length} / ${STARTER_LESSONS.length} 완료` : "5개의 짧은 학습"}</span>
+        </div>
+        <ol className="home-path-list" aria-busy={!ready || loading}>
+          {STARTER_LESSONS.map((lesson, index) => {
+            const card = items.find((item) => item.slug === lesson.slug);
+            const done = !!(card && records[card.id]?.done);
+            const current = starter?.card.slug === lesson.slug;
+            const state = done ? "done" : current ? "current" : "upcoming";
+            const content = <><span className="home-path-number" aria-hidden="true">{done ? "✓" : index + 1}</span><span className="home-path-label">{lesson.label}</span><span className="home-path-state">{done ? "완료" : current ? "다음 학습" : ""}</span></>;
+            return <li key={lesson.slug} className={`home-path-item ${state}`}>
+              {card ? <Link href={cardHref(card.id)} onClick={rememberPosition} aria-current={current ? "step" : undefined}>{content}</Link> : <div>{content}</div>}
+            </li>;
+          })}
+        </ol>
+        <Link className="home-path-explore" href="/?view=explore">관심 주제로 바로 이동하기 <span aria-hidden="true">→</span></Link>
+      </section>}
       {view === "review" && <section className="screen-intro"><span className="eyebrow">내 것으로 만드는 시간</span><h2>한 번 더, 확실하게</h2><p>다시 공부하고 싶거나 힌트가 필요했던 카드를 모았어요.</p></section>}
       {view !== "home" && <section className="study-search" aria-label="카드 검색과 학습 상태">
         <label htmlFor="card-search">{view === "review" ? "복습 카드 검색" : "무엇을 공부할까요?"}</label>
@@ -218,7 +240,7 @@ export default function CardFeed({ initial, area, mode, difficulty, view = "expl
           );
         })}
       </div>}
-      {view === "home" && <div className="home-explore-link"><Link href="/?view=explore">다른 주제 직접 찾아보기 →</Link>{reading && <Link href={cardHref(reading.id)} onClick={rememberPosition}>학습 중인 카드 이어보기 →</Link>}</div>}
+      {view === "home" && reading && (!starter || reading.id !== starter.card.id) && <div className="home-explore-link"><Link href={cardHref(reading.id)} onClick={rememberPosition}>학습 중인 카드 이어보기 →</Link></div>}
       {view !== "home" && filtered.length > visible && <button className="loadmore" onClick={() => updateOptions({ visible: visible + 20 })}>20개 더 보기 · {Math.min(visible, filtered.length)}/{filtered.length}개 표시</button>}
     </>
   );
