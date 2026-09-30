@@ -16,12 +16,14 @@ questions:
   - "좋아요 카운터(유실 일부 허용)와 계좌 잔액(정합성 필수)에 각각 어떤 캐시 쓰기 패턴(Write-through / Write-back / Write-around)을 적용할지 고르고, 그 선택의 Trade-off를 정량·정성 근거로 설명해보세요."
   - "QPS 50,000을 받는 메인 배너 캐시(인기 hot key)가 60초 TTL로 동시 만료됩니다. Cache Stampede가 어떻게 발생하는지 설명하고, 완화책 2가지 이상을 각각의 Trade-off(지연·복잡도·stale 허용)와 함께 제시해보세요."
 ---
+> **검수 경계** — 캐시 지연·적중률·QPS·TTL 값은 예시다. 캐시는 진실 원장을 대체하지 않으며 stale 허용 범위와 무효화 계약을 필드별로 정한다.
+
 ## 1. 캐시를 왜, 그리고 어디에
 
 **캐시(Cache)**는 비싼 연산·느린 저장소의 결과를 빠른 저장소에 복제해 재사용하는 것이다. 핵심 동기는 두 가지다.
 
 - **지연(Latency) 단축**: DB 디스크 조회(SSD seek ≈ 0.1ms, 인덱스 미스 시 수~수십 ms) → 메모리 캐시 hit ≈ 0.1~1ms. `p99` tail latency를 끌어내린다.
-- **처리량(Throughput)·비용**: origin(원본 DB)의 QPS(Queries Per Second, 초당 쿼리 수) 부하를 흡수. DB 한 대가 5,000 QPS 한계라면, hit rate 90% 캐시는 origin QPS를 1/10로 줄인다.
+- **처리량(Throughput)·비용**: origin(원본 DB)의 QPS(Queries Per Second, 초당 쿼리 수) 부하를 흡수한다. 원본 용량을 `C`, 전체 요청을 `Q`, hit rate를 `h`라 두면 origin 부하는 대략 `Q×(1−h)`로 계산하고 실제 장치 benchmark로 `C`를 정한다.
 
 ### 캐시는 어디에나 있다 — 다층(Multi-layer) 구조
 
@@ -47,7 +49,7 @@ flowchart LR
 
 > **💡 팁 — "가장 빠른 캐시는 호출하지 않는 캐시"**
 >
-> 계층마다 hit rate × 비용 × 무효화 난이도가 다르다. **Browser/CDN은 무효화가 가장 어렵고(이미 사용자 디스크에 박힘) latency 이득은 가장 크다.** 변동이 잦은 데이터일수록 origin에 가까운 App/DB 계층에서, 정적 자산일수록 Edge에서 캐싱하는 게 정석이다.
+> 계층마다 hit rate·비용·무효화 난이도가 다르다. 브라우저/CDN은 이미 배포된 응답의 무효화 범위를 확인해야 하고, 변동이 잦은 데이터는 origin에 가까운 계층, 정적 자산은 Edge에서 캐시하는 방식을 요구사항과 관측으로 검증한다.
 
 ## 2. 캐시 패턴 5종 — 읽기/쓰기 경로 설계
 
@@ -115,7 +117,7 @@ sequenceDiagram
 
 ## 4. Redis 핵심 — 캐시의 사실상 표준
 
-> **왜 Redis인가** — 단일 스레드 기반 인메모리 자료구조 서버. 단순 GET/SET을 넘어 *자료구조 연산을 원자적으로* 제공하는 것이 강점.
+> **왜 Redis인가** — 인메모리 자료구조 서버이며, 명령 처리 경로가 직렬화되어 단순 GET/SET을 넘어 *자료구조 연산을 원자적으로* 제공하는 것이 강점이다. I/O thread와 클러스터 구성은 별도 설정·버전·운영 모델로 검토한다.
 
 #### 주요 자료구조와 캐시 활용
 
@@ -128,7 +130,7 @@ sequenceDiagram
 
 ### 단일 스레드 모델(Single-thread)
 
-Redis의 명령 실행은 단일 스레드라 **명령 단위 원자성**이 공짜로 보장된다(락 불필요). 대신 `O(N)` 명령(`KEYS *`, 큰 `SMEMBERS`)이 이벤트 루프를 막아 전체 지연을 유발한다.
+Redis의 명령 실행 경로는 한 명령을 중간에 끼워 넣지 않고 처리하므로 **명령 단위 원자성**을 제공한다(애플리케이션 락 불필요). I/O thread를 켜더라도 큰 `O(N)` 명령(`KEYS *`, 큰 `SMEMBERS`)은 실행 경로를 오래 점유해 전체 지연을 유발할 수 있다.
 
 > **⚠️ 실무 함정 — O(N) 명령이 루프를 막는다**
 >
@@ -149,7 +151,7 @@ Redis의 명령 실행은 단일 스레드라 **명령 단위 원자성**이 공
 
 > **🎯 면접 포인트 — "Redis는 왜 빠른가?"**
 >
-> 단순히 "인메모리라서"는 절반짜리 답. (1) 메모리 + (2) 단일 스레드로 락·컨텍스트 스위치 비용 제거 + (3) I/O 멀티플렉싱(epoll) + (4) 효율적 자료구조 + (5) RESP 경량 프로토콜. 그리고 **그 단일 스레드가 곧 O(N) 명령의 위험** 이라는 양면을 함께 말해야 시니어답다.
+> 단순히 "인메모리라서"는 절반짜리 답. (1) 메모리 + (2) 직렬화된 명령 처리와 낮은 락 경합 + (3) I/O 멀티플렉싱(epoll) + (4) 효율적 자료구조 + (5) RESP 경량 프로토콜. 그리고 **긴 O(N) 명령이 전체 latency를 막을 수 있다**는 양면을 함께 말해야 시니어답다.
 
 ## 5. CDN 캐싱과 캐시 무효화(Cache Invalidation)
 
@@ -174,7 +176,7 @@ Redis의 명령 실행은 단일 스레드라 **명령 단위 원자성**이 공
 
 > **💡 팁 — 무효화하지 말고 "키를 바꿔라"**
 >
-> 정적 자산은 무효화(purge)보다 **해시 기반 파일명(content hash)** 이 정석이다. `main.a1b2c3.js` 처럼 내용이 바뀌면 파일명이 바뀌므로 무효화 자체가 불필요해지고, 옛 버전은 TTL로 자연 소멸한다. 네이버·토스 프론트 빌드가 모두 이 방식.
+> 정적 자산은 무효화(purge)보다 **해시 기반 파일명(content hash)** 을 선택하면 `main.a1b2c3.js`처럼 내용이 바뀔 때 URL도 바뀐다. 다만 배포 파이프라인과 캐시 정책이 함께 검증되어야 하며 특정 회사의 빌드 방식을 일반화하지 않는다.
 
 ## 6. Thundering Herd / Cache Stampede 🔥(Deep-dive)
 
@@ -216,13 +218,11 @@ flowchart TB
 >
 > "Redis로 캐싱하겠습니다"에서 멈추면, 면접관은 "그 인기 키가 만료되는 순간 DB는?"으로 압박한다. **Hot key + 동시 만료** 는 캐싱 설계의 필수 점검 항목. 또한 단순 락만 답하면 "락 잡은 요청이 느리거나 죽으면?"(락 타임아웃·stale 폴백)까지 이어진다.
 
-## 7. 국내 빅테크 · 물류 사례
+## 7. 적용 사례 — 물류 캐시
 
-> **배민 — 메뉴/가게 캐시** — 메뉴·가게 정보는 **읽기:쓰기 비율이 압도적**. 피크(점심·저녁) 트래픽을 Redis 캐시로 흡수하고, 사장님이 메뉴를 바꾸면 해당 가게 키만 무효화(event 기반 invalidation). 잘못된 가격 캐싱은 곧 사고이므로 TTL을 짧게+이벤트 무효화 병행.
+> **가상 사례 — 읽기 중심 메뉴·검색 캐시** — 읽기:쓰기 비율과 변경 빈도를 측정해 Redis·Edge 캐시를 선택하고, 원장 변경 이벤트로 필요한 키만 무효화한다. 가격처럼 정확성이 중요한 필드는 짧은 TTL·버전 키·원본 우회를 조합한다.
 
-> **네이버 — 검색 결과·정적 자산 CDN** — 검색 자동완성·인기 검색어처럼 변동은 있지만 짧은 stale을 허용하는 데이터는 edge/근접 캐시로. JS/CSS는 content-hash 파일명으로 사실상 영구 캐시 + 배포 시 키 교체.
-
-> **토스 — 잔액 캐시와 일관성** — 잔액·계좌 같은 **금융 정합성 필수** 데이터는 Write-back·긴 TTL 금지가 정석. 캐시하더라도 매우 짧은 TTL + 쓰기 시 즉시 무효화, 혹은 "Read-your-writes(자기 쓰기 즉시 반영)"를 위해 갱신 직후엔 캐시 우회(원본 조회). 일관성 > 약간의 latency.
+> **가상 사례 — 계좌 잔액** — 금융 정합성이 필수인 데이터는 Write-back을 피하고 원장 DB를 진실의 원천으로 둔다. 캐시하더라도 즉시 무효화와 Read-your-writes 경로를 정의하며, 특정 회사의 구현으로 일반화하지 않는다.
 
 ### 물류 연결 — 라스트마일 추적 상태 캐싱
 
@@ -251,10 +251,24 @@ sequenceDiagram
 
 > **💡 팁 — 추적 캐시는 "이벤트가 쓰고, 조회가 읽는다"**
 >
-> 추적 상태는 변경 빈도가 조회 빈도보다 훨씬 낮다. 그래서 **상태 변경 이벤트(Kafka)가 발생할 때만 캐시를 갱신(write-through 변형)** 하고, 폭주하는 조회는 전부 캐시 hit로 처리하는 게 정석. 동시 만료 stampede 방지를 위해 키별 TTL에 jitter를 준다.
+> 추적 상태는 변경 빈도가 조회 빈도보다 낮을 수 있다. 상태 변경 이벤트가 캐시를 갱신하는 패턴을 검토하고, 조회는 캐시로 흡수하되 갱신 실패·stale 허용·동시 만료를 별도로 정의한다.
 
 ```text
 ttl = base_ttl + random(0, jitter)
 cache_key = "shipment:" + waybill_id + ":v" + projection_version
 negative_ttl << normal_ttl
 ```
+
+## 검수 경계와 실패 흐름
+
+- cache-aside에서 DB commit·DEL·재충전 순서가 어긋나면 stale value가 다시 들어올 수 있으므로 version/CAS·짧은 TTL·무효화 재시도를 조합한다.
+- hot key 만료는 origin DB로 동시 miss를 보내므로 single-flight·lock timeout·stale-while-revalidate·TTL jitter의 실패 시 동작을 정한다.
+- Redis 장애 시 cache miss가 원장 DB로 쏟아지는 경로와 개인정보가 섞인 cache key를 별도로 검토하고, fallback이 source of truth를 덮지 않게 한다.
+- eviction·persistence·cluster resharding은 서로 다른 운영 문제다. hit rate·big key·eviction·p95/p99·DB 보호 지표를 함께 측정한다.
+
+## 공식·1차 출처
+
+- [https://redis.io/docs/latest/develop/reference/eviction/](https://redis.io/docs/latest/develop/reference/eviction/)
+- [https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/](https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/)
+- [https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/](https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/)
+- [https://www.rfc-editor.org/rfc/rfc9111](https://www.rfc-editor.org/rfc/rfc9111)

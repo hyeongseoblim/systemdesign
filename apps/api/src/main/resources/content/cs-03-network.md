@@ -55,18 +55,18 @@ sequenceDiagram
 
 > **🎯 면접 단골 — "왜 연결은 3-way, 종료는 4-way? TIME_WAIT은 왜?"**
 >
-> **3 vs 4** : 수립 땐 서버의 ACK와 SYN을 SYN-ACK로 합칠 수 있지만, 종료 땐 서버가 보낼 데이터가 남아있을 수 있어 ACK와 FIN을 분리한다(Half-close). **TIME_WAIT(2×MSL)** : ① 마지막 ACK 유실 시 재전송된 FIN에 응답하기 위해, ② 네트워크에 떠도는 지연 패킷이 같은 4-tuple의 새 연결에 섞이지 않도록. `ss -tan | grep TIME-WAIT | wc -l` 로 측정. 너무 많으면 포트 고갈 → **연결 풀링** · `SO_REUSEADDR` · `tcp_tw_reuse` 로 완화.
+> **3 vs 4** : 수립 땐 서버의 ACK와 SYN을 SYN-ACK로 합칠 수 있지만, 종료 땐 서버가 보낼 데이터가 남아있을 수 있어 ACK와 FIN을 분리한다(Half-close). **TIME_WAIT(2×MSL)** 은 마지막 ACK 유실 시 재전송된 FIN에 응답하고 같은 연결 식별자의 오래된 세그먼트와 새 연결을 구분하는 데 필요하다. `ss -tan`으로 로컬·원격 주소별 상태를 본다. 높은 개수 자체를 장애로 단정하지 말고 실제 임시 포트 고갈·연결 실패를 확인한 뒤 연결 재사용과 종료 주체를 검토한다. `SO_REUSEADDR`나 커널 옵션을 보편적 해결책으로 제시하지 않는다.
 
-> **⚠️ 함정 — TIME_WAIT은 능동 종료(Active Close) 측에 쌓인다**
+> **⚠️ 함정 — 보통 능동 종료 측에 TIME_WAIT이 남지만 동시 종료도 가능하다**
 >
-> 서버가 먼저 끊으면 TIME_WAIT이 서버에 쌓여 포트가 마른다. 그래서 보통 **클라이언트가 먼저 닫게** 설계하고, 서버↔서버 호출은 Keep-Alive 커넥션 풀로 연결 자체를 재사용해 종료 빈도를 줄인다.
+> 서버가 먼저 끊었다면 해당 서버 쪽에 TIME_WAIT이 남을 수 있다. 양쪽 동시 종료라면 양쪽 모두 TIME_WAIT에 들어갈 수도 있다. 서버의 수신 소켓에서 TIME_WAIT이 많다는 이유만으로 임시 포트가 고갈된다고 단정하지 않는다. 실제 소켓의 로컬·원격 주소, 연결 실패, 종료 주체를 확인하고 서버↔서버 호출은 Keep-Alive 연결 풀로 불필요한 재연결을 줄인다.
 
 ## 3. 혼잡 제어 (Congestion Control)
 
 TCP는 네트워크 혼잡을 감지해 전송 속도를 스스로 조절한다. **혼잡 윈도우(cwnd)**를 키우고 줄이는 알고리즘이 핵심이다.
 
 ```
-Slow Start (느린 시작)        : cwnd를 RTT마다 2배 (지수 증가) — ssthresh까지
+Slow Start (느린 시작)        : ACK·cwnd 정책에 따라 지수적으로 증가하는 구간 — ssthresh까지
 Congestion Avoidance (혼잡 회피): ssthresh 이후 RTT마다 +1 (선형 증가)
 Fast Retransmit / Recovery    : 중복 ACK 3회 → 손실 추정, 즉시 재전송
 손실 감지 시                   : cwnd를 줄이고 다시 회피 구간으로
@@ -76,19 +76,19 @@ Fast Retransmit / Recovery    : 중복 ACK 3회 → 손실 추정, 즉시 재전
 | 알고리즘 | 혼잡 신호 | 특징 |
 | --- | --- | --- |
 | **Reno / NewReno** | 패킷 손실 | 고전적, 손실 기반(AIMD) |
-| **CUBIC** | 패킷 손실 | Linux 기본, 고대역폭·고지연에 강함 |
-| **BBR (Google)** | 대역폭·RTT 측정 | 손실 무시, 버퍼블로트 회피. YouTube 적용 |
+| **CUBIC** | 패킷 손실 | Linux에서 널리 사용되지만 기본·세부 동작은 커널 설정과 버전에 의존 |
+| **BBR** | 병목 대역폭·RTT 추정 | 모델 기반 제어; 버전·배포 설정·경로에 따라 동작과 공정성이 달라짐 |
 
 > **🎯 면접 — Nagle vs TCP_NODELAY**
 >
-> Nagle 알고리즘은 작은 패킷을 모아 보내 대역폭을 아끼지만, Delayed ACK와 만나면 수십 ms 지연이 생긴다. 그래서 지연에 민감한 **실시간·RPC 서버는 `TCP_NODELAY`로 Nagle을 끈다** . "왜 내 gRPC가 가끔 40ms 느린가"의 흔한 범인.
+> Nagle은 작은 세그먼트를 모아 효율을 높일 수 있지만, 애플리케이션 write 패턴·Delayed ACK·RTT와 상호작용해 지연을 만들 수 있다. 지연에 민감한 RPC에서 `TCP_NODELAY`를 검토할 수 있지만 패킷 수·대역폭·CPU와 함께 측정해야 하며, 모든 지연의 원인으로 단정하지 않는다.
 
 ## 4. HTTP 버전 진화 (1.1 / 2 / 3)
 
 ```mermaid
 flowchart TB
     H1["HTTP/1.1요청-응답 직렬HOL Blocking(앱 레벨)"] -->|멀티플렉싱| H2["HTTP/2한 TCP에 다중 스트림HPACK 헤더 압축"]
-    H2 -->|"TCP HOL 해결"| H3["HTTP/3QUIC(UDP 기반)스트림 독립·0-RTT"]
+    H2 -->|"TCP HOL 영향 → QUIC 스트림 독립"| H3["HTTP/3QUIC(UDP 기반)스트림 독립·선택적 0-RTT"]
     H2 -.->|"패킷 손실 시전체 스트림 정지"| TCPHOL["TCP 레벨HOL Blocking 잔존"]
 
     style H1 fill:#fef3c7,stroke:#d97706
@@ -97,14 +97,14 @@ flowchart TB
     style TCPHOL fill:#fef2f2,stroke:#dc2626
 ```
 
-*진화의 핵심은 HOL(Head-of-Line) Blocking 제거 — HTTP/2는 앱 레벨, HTTP/3은 TCP 레벨까지 해결*
+*HTTP/2는 애플리케이션 스트림을 하나의 TCP 연결에 다중화하고, HTTP/3은 QUIC의 독립 스트림으로 전송 계층의 TCP HOL 영향을 줄인다.*
 
 | 버전 | 전송 | 핵심 개선 | 남은 문제 |
 | --- | --- | --- | --- |
 | **HTTP/1.0** | TCP | 요청마다 연결 수립/종료 | 높은 지연·연결 비용 |
 | **HTTP/1.1** | TCP | Keep-Alive, 파이프라이닝 | 응답 순서 보장 → HOL Blocking |
 | **HTTP/2** | TCP | 멀티플렉싱, HPACK, 바이너리 프레이밍, 서버 푸시 | TCP 단일 손실이 전 스트림 정지 |
-| **HTTP/3** | QUIC(UDP) | 스트림 독립, 연결 이주, 0-RTT | UDP 차단·미들박스, CPU 부담 |
+| **HTTP/3** | QUIC(UDP) | 스트림 독립, 연결 이주, 선택적 0-RTT | UDP 경로 차단·미들박스, 구현·CPU·재전송 정책 |
 
 ### 멱등성(Idempotency) & 안전(Safe) 메서드
 
@@ -133,11 +133,11 @@ sequenceDiagram
     Note over C: 재방문 시 0-RTT(PSK)로 즉시 전송 가능
 ```
 
-*TLS 1.3은 키교환을 ClientHello에 실어 1-RTT로 단축 — 1.2의 2-RTT 대비 절반*
+*TLS 1.3의 일반적인 full handshake는 1-RTT이지만, TLS 1.2·재개·HelloRetryRequest·네트워크 조건에 따라 왕복 수가 달라진다. 0-RTT early data는 replay 위험을 고려해야 한다.*
 
 | 항목 | TLS 1.2 | TLS 1.3 |
 | --- | --- | --- |
-| 핸드셰이크 RTT | 2-RTT | 1-RTT (재연결 0-RTT) |
+| 핸드셰이크 RTT | full handshake·재개 방식에 따라 다름 | 일반 full handshake 1-RTT, 재개 시 0-RTT early data 선택 가능 |
 | 키 교환 | RSA / DHE / ECDHE | ECDHE만(전방향 비밀성 강제) |
 | 암호 스위트 | 다수(취약한 것 포함) | AEAD만, 취약 알고리즘 제거 |
 
@@ -147,7 +147,7 @@ sequenceDiagram
 
 > **⚠️ 대표 공격**
 >
-> MITM(중간자), Replay(재전송 → nonce·타임스탬프), Downgrade(구버전 강요 → TLS 1.3 강제·HSTS), CSRF( `SameSite` 쿠키·토큰), XSS(이스케이프·CSP), SQLi(파라미터 바인딩). 쿠키는 `HttpOnly` (JS 접근 차단)· `Secure` (HTTPS만)· `SameSite` 로 방어.
+> MITM은 인증서 검증·신뢰 저장소 문제로, Replay는 프로토콜·애플리케이션의 freshness와 멱등성 문제로, Downgrade는 허용 버전·협상 정책 문제로 다룬다. TLS 1.3 강제나 HSTS만으로 CSRF·XSS·SQLi가 해결되는 것은 아니다. CSRF에는 origin·CSRF token·쿠키 정책, XSS에는 출력 인코딩·CSP, SQLi에는 parameter binding을 적용한다.
 
 ## 6. DNS (Domain Name System)
 
@@ -209,7 +209,15 @@ flowchart LR
 
 > **💡 실무 연결 — 캐시 무효화가 어렵다**
 >
-> "There are only two hard things: cache invalidation and naming things." 정적 자원은 파일명에 해시를 박는 **Cache Busting** ( `app.3f9a.js` )으로 영구 캐시 + 즉시 갱신을 동시에 얻는다. 동적 콘텐츠는 짧은 TTL + `stale-while-revalidate` 로 가용성과 신선도를 절충한다.
+> 정적 자원은 파일명에 콘텐츠 해시를 넣는 **Cache Busting**으로 새 버전과 이전 버전을 분리할 수 있다. 동적 콘텐츠는 `Cache-Control`, `ETag`, `Vary`, 개인정보 여부와 purge 실패를 함께 설계하고, `stale-while-revalidate`는 허용 가능한 오래된 데이터 범위가 있을 때만 사용한다.
+
+## 8. 실패 흐름과 진단 경계
+
+- TIME_WAIT이 많다는 사실만으로 서버 장애나 포트 고갈을 단정하지 않는다. 능동·수동 종료 주체, 임시 포트 범위, 연결 재사용, `connect()` 실패와 실제 latency를 함께 확인한다.
+- HTTP/2의 TCP HOL과 HTTP/3의 QUIC stream independence는 서로 다른 계층의 문제다. HTTP/3로 바꿔도 UDP 경로 차단·MTU·loss·서버 처리·애플리케이션 HOL이 자동으로 사라지지 않는다.
+- TLS 0-RTT는 replay 가능한 요청을 포함할 수 있으므로 주문·결제 같은 side effect 요청을 early data로 허용하지 않거나 서버에서 재생 방지·멱등성 정책을 적용한다.
+- DNS TTL과 CDN cache가 오래된 origin·콘텐츠를 계속 제공할 수 있다. 인증서·DNS·origin health·cache key·purge 전파를 각각 확인하고 장애 시 stale 응답 허용 범위를 정한다.
+- `TCP_NODELAY`, congestion control, keep-alive timeout은 커널·라이브러리·프로토콜·워크로드 조합의 설정이다. 한 옵션을 켜는 것만으로 지연을 해결한다고 말하지 않고 packet capture와 애플리케이션 latency를 함께 비교한다.
 
 ## Q&A 연습
 
@@ -220,3 +228,12 @@ dig +trace example.com
 curl -v --http2 https://example.com
 ss -tan state time-wait
 ```
+
+### 근거 자료
+
+- [RFC 9293 — TCP](https://www.rfc-editor.org/rfc/rfc9293.html): 종료 상태와 동시 종료·TIME-WAIT.
+- [RFC 9114 — HTTP/3](https://www.rfc-editor.org/rfc/rfc9114.html): QUIC 스트림과 HTTP/3.
+- [RFC 9110 — HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html): HTTPS URI 및 요청·응답 경계.
+- [RFC 9000 — QUIC](https://www.rfc-editor.org/rfc/rfc9000.html): QUIC 전송과 스트림.
+- [RFC 8446 — TLS 1.3](https://www.rfc-editor.org/rfc/rfc8446.html): TLS 1.3 handshake와 0-RTT 고려사항.
+- [Linux kernel TCP documentation](https://docs.kernel.org/networking/ip-sysctl.html): Linux TCP 설정과 커널 버전별 확인 지점.

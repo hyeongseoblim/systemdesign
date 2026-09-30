@@ -18,6 +18,8 @@ questions:
   - "샤딩 키를 auto-increment ID나 timestamp로 잡으면 어떤 문제가 생기는지(키워드: Hot shard) 설명하고, 단순 `hash % N` 대비 **Consistent Hashing + 가상 노드**가 노드 증감 시 무엇을 어떻게 줄여주는지 그림 없이 말로 설명해보세요."
   - "풀필먼트 재고 테이블을 **창고ID**로 샤딩할 때와 **SKU**로 샤딩할 때 각각 무엇이 쉬워지고 무엇이 교차 샤드 비용을 치르는지 비교하고, 핫딜 때 인기 SKU 동시 차감 핫스팟을 어떻게 흡수할지(+ 오버셀 방지 일관성 경로) 설명해보세요."
 ---
+> **검수 경계** — 저장소와 샤딩 전략은 제품 이름의 우열이 아니라 질의 패턴, 트랜잭션 범위, 키 분포, 복구 목표에 따른 설계 가설이다.
+
 ## 1. SQL vs NoSQL — 언제 무엇을
 
 > **결정 기준** — 정답은 없다. *데이터 접근 패턴(읽기/쓰기 형태)·일관성 요구·확장 축*으로 고른다.
@@ -38,7 +40,7 @@ questions:
 
 > **💡 팁 — Polyglot Persistence(다중 저장소)**
 >
-> 현실 대형 시스템은 한 DB로 다 하지 않는다. 쿠팡·배민도 **주문=RDBMS, 세션·재고 카운터=Redis, 검색=Elasticsearch, 이벤트=Kafka→Wide-column** 식으로 용도별 저장소를 섞는다. 면접에서 "하나로 다 한다"보다 "용도별 분리 + 정합성 동기화 방법"을 말하는 게 시니어답다.
+> 실제 시스템은 용도별 저장소를 조합할 수 있다. 다만 특정 회사의 내부 구성을 일반화하지 말고 공개 문서 또는 요구사항에 근거해 **용도별 분리와 정합성 동기화 방법**을 설명한다.
 
 ## 2. Replication (복제) — 읽기 확장과 가용성
 
@@ -81,7 +83,7 @@ flowchart TB
 >
 > 비동기 복제에서 사용자가 글을 쓰고(Leader) 곧바로 새로고침해 Follower에서 읽으면, **아직 복제 안 된 옛 데이터** 가 보인다("방금 단 댓글이 사라졌어요"). 해결책: (1) **본인 쓰기 직후 일정 시간은 Leader에서 읽기** , (2) 쓰기 후 받은 LSN(로그 시퀀스 번호)까지 따라잡은 Follower만 사용, (3) Sticky 세션. 이게 **Read-your-writes(자기 쓰기 읽기 일관성)** 보장 기법이다. 🔥(Deep-dive)
 
-> **💡 사례 — 토스 계좌**
+> **💡 사례 — 금융 계좌**
 >
 > 금융 잔액 조회 트래픽은 막대하므로 Read replica로 분산하지만, **"방금 이체한 잔액"은 lag로 틀리면 안 되는** 대표 케이스다. 그래서 잔액 변경 직후 일정 구간은 Leader 읽기로 강제하거나, 핵심 잔액은 동기 복제·강한 일관성 경로로 둔다. 가용성보다 정합성이 먼저인 도메인.
 
@@ -164,16 +166,16 @@ flowchart TB
 - 각 물리 노드를 **수십~수백 개의 가상 노드**로 링 곳곳에 흩뿌리면 부하가 고르게 분산되고, 노드 제거 시 그 부하가 **여러 노드로 골고루 재흡수**된다.
 - 이종 스펙 노드는 가상 노드 수를 다르게 줘서 가중치를 표현할 수 있다.
 
-> **💡 사례 — Amazon DynamoDB / Cassandra**
+> **💡 논문과 제품 구현을 구분하기**
 >
-> Amazon Dynamo 논문이 일관성 해시 + 가상 노드를 대중화했고, DynamoDB·Cassandra·Riak이 이를 파티셔닝·복제 배치의 토대로 쓴다. 캐시 레이어(Memcached·Redis 클러스터)와 L4/L7 LB의 consistent-hash 분산도 같은 원리. "노드 추가 시 캐시가 다 날아가는 문제"를 일관성 해시로 막는다고 답하면 좋다.
+> Dynamo 논문은 일관성 해시를 포함한 분산 저장소 설계 아이디어에 큰 영향을 줬다. 다만 **DynamoDB의 내부 파티셔닝을 consistent hashing·virtual node의 공개 계약으로 일반화하면 안 된다**. DynamoDB는 공식 문서의 partition key·uniform activity·hot partition 가이드로 설계하고, Cassandra처럼 token/partition key를 공개하는 제품은 각 제품의 데이터 모델 문서로 확인한다. Redis Cluster도 consistent hashing이 아니라 고정 hash slot과 resharding 모델을 사용한다. 제품 이름을 나열하기보다 노드 증감 시 이동 범위, hot key, 복제·트랜잭션 경계를 분리해 설명한다.
 
 ## 5. Resharding & Hotspot 회피
 
 ### 재샤딩(Resharding) — 늘어난 데이터를 다시 나누기
 
 - 트래픽·데이터가 커지면 shard 수를 늘려야 하는데, 운영 중 무중단 재배치는 까다롭다.
-- **사전 분할(Pre-splitting / 논리 샤드)**: 물리 노드보다 훨씬 많은 *논리 샤드*(예: 1024개)를 미리 만들고, 물리 노드에 매핑만 옮긴다. 노드 추가 시 데이터 재해시 없이 **논리 샤드 소유권만 이동** → 카카오·대형 메시징·Redis Cluster(16384 슬롯)가 쓰는 방식.
+- **사전 분할(Pre-splitting / 논리 샤드)**: 물리 노드보다 훨씬 많은 *논리 샤드*(예: 1024개)를 미리 만들고, 물리 노드에 매핑만 옮긴다. 노드 추가 시 데이터 재해시 없이 **논리 샤드 소유권만 이동**한다. Redis Cluster처럼 슬롯 기반 제품은 공식 문서의 재배치 모델을 별도로 확인한다.
 - 일관성 해시 + 가상 노드도 재샤딩 비용을 낮추는 같은 목적의 도구.
 
 ### Hotspot(핫스팟) 회피 패턴
@@ -184,7 +186,7 @@ flowchart TB
 | 특정 인기 키 집중 (셀럽·핫딜 상품) | 자연 분포의 쏠림 | 해당 키만 추가 분할(샤드 스플릿), 캐시 앞단 흡수, 읽기 복제 |
 | 특정 시간대 폭주 | 이벤트·세일 트래픽 | 큐로 평탄화(Back-pressure), 사전 스케일아웃 |
 
-> **💡 사례 — 카카오 메시지 샤딩**
+> **💡 사례 — 대규모 메시징 샤딩**
 >
 > 대규모 메시징은 채팅방·사용자 단위로 샤딩하되, **초대형 오픈채팅방 하나가 Hot shard** 가 되는 문제를 다룬다. 방 단위 분리·읽기 팬아웃 최적화·캐시로 특정 방의 부하를 분산한다. 샤딩 키(방ID vs 사용자ID) 선택이 곧 핫스팟 분포를 결정.
 
@@ -204,7 +206,7 @@ flowchart TB
 
 > **⚠️ 실무 함정 — 재고는 "차감 정합성"이 먼저**
 >
-> 샤딩·복제로 분산하더라도 **재고 차감은 Oversell(초과판매)이 나면 안 되므로** 강한 일관성 경로가 필요하다. Read replica에서 가용재고를 읽고 차감하면 lag로 오버셀이 난다 — 차감은 Leader/원자적 조건부 UPDATE 또는 Redis 원자 감소로, 조회만 replica로 분리하는 게 정석. (앞 챕터 03의 LB·Gateway와 함께 04의 복제·샤딩이 한 시스템에서 맞물린다.)
+> 샤딩·복제로 분산하더라도 **재고 차감은 Oversell(초과판매)이 나면 안 되므로** 강한 일관성 경로가 필요하다. Read replica에서 가용재고를 읽고 차감하면 lag로 오버셀이 날 수 있다. 차감은 Leader/원자적 조건부 UPDATE처럼 불변식을 지키는 경로에 두고, 조회만 replica로 분리하는 방식을 검토한다.
 
 ```sql
 UPDATE inventory
@@ -213,3 +215,18 @@ WHERE sku_id = :sku_id
   AND quantity >= :qty;
 -- affected rows = 0이면 재고 부족
 ```
+
+## 검수 경계와 실패 흐름
+
+- 비동기 replica에서 write 직후 stale read가 생길 수 있으므로 leader read·LSN/version token·session affinity 중 보장 수준을 선택한다.
+- resharding은 데이터 이동량·dual-write/read cutover·rollback 경로를 계획하고, `hash % N`처럼 노드 수 변경 때 전체 재배치가 필요한 방식과 비교한다.
+- cross-shard transaction·unique constraint·재고 차감처럼 한 불변식을 여러 shard에 걸쳐 지켜야 하는 경로는 원자성 경계를 먼저 선언한다.
+- monotonic key·인기 SKU·낮은 cardinality partition key로 hot shard가 생기면 key 버킷·write sharding·single-writer 경로를 선택하고 p95/p99와 재대사를 검증한다.
+
+## 공식·1차 출처
+
+- [https://www.postgresql.org/docs/current/warm-standby.html](https://www.postgresql.org/docs/current/warm-standby.html)
+- [https://www.postgresql.org/docs/current/ddl-partitioning.html](https://www.postgresql.org/docs/current/ddl-partitioning.html)
+- [https://www.mongodb.com/docs/manual/sharding/](https://www.mongodb.com/docs/manual/sharding/)
+- [https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-partition-key-design.html](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-partition-key-design.html)
+- [https://cassandra.apache.org/doc/stable/cassandra/architecture/overview.html](https://cassandra.apache.org/doc/stable/cassandra/architecture/overview.html)

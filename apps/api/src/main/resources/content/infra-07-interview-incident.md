@@ -120,14 +120,14 @@ HPA는 **반응형(reactive)**이라 트래픽이 튄 **다음에** 늘어난다
 ```mermaid
 sequenceDiagram
     participant U as 트래픽 5배 유입
-    participant HPA as HPA(15s 주기)
+    participant HPA as HPA(설정된 주기)
     participant CA as Cluster Autoscaler
     participant Pod as 새 Pod
     participant DB as DB 커넥션 풀
     U->>HPA: 부하 급증
-    Note over HPA: 메트릭 수집·판정 지연(수십 초)
+    Note over HPA: 메트릭 수집·판정·ready 대기 지연
     HPA->>CA: replica 증가 요청
-    Note over CA: 노드 부족 시 EC2 신규 기동(수 분)
+    Note over CA: 노드 부족 시 프로비저닝·스케줄 지연
     CA->>Pod: 새 Pod 스케줄 + 이미지 pull + 워밍업
     Pod->>DB: 커넥션 요청 폭증
     Note over DB: max_connections 한계 → 여기서 2차 장애
@@ -139,12 +139,12 @@ sequenceDiagram
 
 | 한계 | 왜 문제인가 | 대책 |
 | --- | --- | --- |
-| **스케일 아웃 지연** | 메트릭 판정~새 Pod ready까지 수십 초~수 분. 스파이크엔 늦음 | 이벤트 전 **사전 예열(pre-warming)**, `minReplicas` 상향 |
+| **스케일 아웃 지연** | 메트릭 판정부터 새 Pod ready까지 구성별 지연. 스파이크엔 늦을 수 있음 | 이벤트 전 **사전 예열(pre-warming)**, `minReplicas` 상향 |
 | **노드 부족** | Pod는 늘려도 얹을 노드가 없으면 Pending | Cluster Autoscaler/**Karpenter**로 노드도 사전 확보 |
 | **DB 커넥션 풀 고갈** | 앱은 무한 확장돼도 DB `max_connections`는 유한 → 하류가 먼저 죽음 | **Stateful 계층은 스케일 아웃 안 됨**, 커넥션 풀·읽기 복제본·캐시로 대비 |
 
 **사전 예열 체크리스트 (예고된 피크의 정석):**
-- `minReplicas`를 이벤트 전에 상향(예: 10 → 50)해 콜드 스타트 회피.
+- `minReplicas`를 이벤트 전에 상향해 콜드 스타트와 노드 대기 시간을 줄인다. 값은 용량 모델로 결정한다.
 - Cluster Autoscaler/Karpenter로 **노드를 미리 확보**(over-provisioning pause pod 트릭).
 - CDN·캐시 워밍, DB 읽기 복제본(Read Replica) 추가, ElastiCache 워밍.
 - **부하 테스트(Load test)로 병목을 미리 발견** — k6/Locust로 5배 트래픽 리허설.
@@ -162,37 +162,37 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: order-api
-  minReplicas: 50          # 이벤트 전 사전 상향 (평소 10)
-  maxReplicas: 200
+  minReplicas: 2           # 예시: 실제 값은 용량 모델로 결정
+  maxReplicas: 20          # 예시: 하위 시스템 한도와 함께 결정
   metrics:
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: 60   # 70~80은 스파이크에 이미 늦다
+          averageUtilization: 60   # 예시: 기준선·처리량 검증 필요
   behavior:
     scaleUp:
       stabilizationWindowSeconds: 0    # 늘릴 땐 즉시
       policies:
         - type: Percent
-          value: 100                   # 15초마다 최대 2배
-          periodSeconds: 15
-    scaleDown:
-      stabilizationWindowSeconds: 300  # 줄일 땐 천천히 (플래핑 방지)
+          value: 100                   # 예시: 정책·용량으로 조정
+          periodSeconds: 60
+      scaleDown:
+        stabilizationWindowSeconds: 300  # 예시: 축소 플래핑 방지 정책
 ```
 
 > **⚠️ 실무 함정 — HPA `averageUtilization: 80`**
 >
-> CPU 목표를 80%로 잡으면, 트래픽이 튀어 80%를 찍은 **뒤에야** 스케일이 시작되고 그 사이 요청은 이미 큐에 쌓여 지연이 터진다. 예고된 피크엔 **목표치를 낮추고(60%) `minReplicas`를 미리 올려** 헤드룸을 확보하라. HPA는 완만한 증가엔 좋지만 **계단식 스파이크엔 사전 예열이 정답**이다.
+> CPU 목표 하나만으로는 트래픽·큐 backlog·하위 시스템 포화를 설명하지 못한다. 예고된 피크에는 목표치와 `minReplicas`를 실제 처리량·ready 시간으로 검증하고, 반응형 HPA가 늦을 경우 사전 용량·입장 제어·큐를 함께 사용한다.
 
 > **💡 팁 — "5배"를 숫자로 되받아쳐라**
 >
-> 면접관이 "5배"라고 하면 시니어는 되묻는다. "평소 QPS(Queries Per Second)가 얼마고, 그래서 피크 QPS는? DB 쓰기 QPS는 몇으로 오르나? 커넥션 풀은 pod당 10, pod 50개면 500 커넥션인데 RDS max_connections가 그걸 감당하나?" **정량으로 병목을 지목**하면 바로 시니어 신호다. 물류로 치면 명절·프로모션 주문 피크는 "평균의 5배"가 아니라 "특정 3시간에 집중된 10배"라 **평균이 아닌 피크 분포**로 산정해야 한다.
+> 면접관이 "5배"라고 하면 평소·피크 QPS, 읽기·쓰기 비율, pod별 연결 수, DB·외부 API의 지속 가능 처리량을 되묻는다. 연결 풀의 상한은 pod 수와 함께 계산하되, 실제 DB 설정값을 확인하지 않고 특정 숫자를 일반 규칙으로 가정하지 않는다. 평균 배율보다 시간대별 피크 분포와 backlog를 용량 모델에 넣는다.
 
 > **면접관의 후속 압박** — "노드도 미리 늘리고 minReplicas도 올렸어. 근데 새벽에 DB가 커넥션 한계로 죽었어. 왜?"
 >
-> → 앱 계층만 스케일 아웃한 전형적 함정. **Stateful 계층(DB)은 수평 확장이 안 된다.** 대책: 읽기는 Read Replica로 분산, 커넥션은 **RDS Proxy/PgBouncer** 같은 커넥션 풀러로 다중화, 쓰기 폭증은 큐로 버퍼링. "앱만 늘리면 하류가 죽는다"를 알고 있으면 통과.
+> → 앱 계층만 스케일 아웃한 전형적 함정. 관계형 DB의 쓰기 경로와 연결 상한은 앱처럼 무한히 늘지 않을 수 있다. 읽기는 복제본·캐시로 분산할 수 있지만 일관성·지연을 확인하고, 연결 풀러·back-pressure·큐로 하위 시스템을 보호한다. 앱만 늘리면 하류가 죽을 수 있다는 점을 용량 모델로 설명한다.
 
 ---
 
@@ -230,7 +230,7 @@ stateDiagram-v2
 
 > **🎯 면접 포인트 — Error Budget으로 결정을 정당화하라**
 >
-> "롤백할까요?"를 감으로 답하지 마라. **"에러율 7% × 남은 시간을 곱해 Error Budget 소진 속도를 계산하면 몇 시간 내 이달 예산이 바닥난다. 그러므로 즉시 완화한다"**처럼 숫자로 정당화한다. SLO 99.9%면 월 허용 다운타임은 약 43분. 7% 에러가 10분만 지속돼도 이미 상당 부분을 태운다. 시니어는 결정에 **정량 근거**를 붙인다. 🔥(Deep-dive)
+> "롤백할까요?"를 감으로 답하지 마라. 현재 오류율·요청량·SLO 분모·남은 error budget을 같은 정의로 계산해 완화 속도를 정당화한다. 예시 SLO가 99.9%인 경우에도 실제 예산은 요청 기반인지 시간 기반인지, 제외 시간이 있는지에 따라 달라진다. 🔥(Deep-dive)
 
 > **⚠️ 실무 함정 — "롤백했으니 끝"이라 답하는 순간**
 >
@@ -270,7 +270,7 @@ flowchart TB
     ALB --> AZb
     ALB --> AZc
     AZa -.->|"Primary 다운"| RDS
-    RDS -->|"60~120초 페일오버"| AZb
+    RDS -->|"서비스별 페일오버 완료 후"| AZb
     style AZa fill:#fee2e2,stroke:#ef4444
     style AZb fill:#dcfce7,stroke:#22c55e
     style AZc fill:#dcfce7,stroke:#22c55e
@@ -282,14 +282,14 @@ flowchart TB
 **답변 뼈대:**
 1. **설계가 방어한다** — Multi-AZ 전제라면:
    - **ALB**가 죽은 AZ의 타깃을 헬스체크로 자동 제외 → 트래픽이 살아있는 AZ로.
-   - **RDS Multi-AZ**의 동기 Standby가 60~120초 내 자동 페일오버.
+   - **RDS Multi-AZ**와 같은 관리형 데이터베이스의 페일오버 동작·완료 시간은 엔진·구성·장애 유형별 공식 문서를 확인하고, 애플리케이션은 연결 재수립을 처리한다.
    - Cluster Autoscaler가 살아있는 AZ에 부족분 노드 보충.
 2. **당신이 할 일** — 자동 복구를 **관측·검증**하고, 남은 AZ가 트래픽을 감당하는지 확인.
 3. **결정적 함정 — 용량 헤드룸(capacity headroom).** 3-AZ에 각 33%로 딱 맞게 돌렸다면, 1개 AZ가 죽는 순간 남은 2개가 각 50%씩 받아야 한다. **여유 없이 운영했으면 남은 AZ도 연쇄 과부하로 죽는다.** N+1 여유(각 AZ가 다른 하나의 몫까지 감당할 헤드룸)를 미리 확보해야 한다.
 
 > **🎯 면접 포인트 — RTO/RPO로 답하라**
 >
-> "AZ 죽으면 어떻게 되냐"에 "괜찮아요 Multi-AZ라서"는 부족하다. **RTO(Recovery Time Objective, 목표 복구 시간)와 RPO(Recovery Point Objective, 목표 복구 시점)**로 답하라. "RDS Multi-AZ 페일오버 RTO는 약 60~120초, RPO는 동기 복제라 0(데이터 손실 없음). 그 사이 진행 중이던 트랜잭션은 실패하니 앱은 **재시도(retry)와 멱등성(Idempotency)**으로 대비돼 있어야 한다." 여기까지 오면 시니어 통과.
+> "AZ 죽으면 어떻게 되냐"에 "괜찮아요 Multi-AZ라서"는 부족하다. **RTO(Recovery Time Objective, 목표 복구 시간)와 RPO(Recovery Point Objective, 목표 복구 시점)**, 장애 전환 중 실패할 요청, 읽기·쓰기 정합성, 애플리케이션의 연결 재수립을 함께 답한다. RPO가 0인지 여부도 복제 방식과 커밋 시점으로 확인하며, 진행 중인 트랜잭션 재시도에는 **멱등성(Idempotency)**을 둔다.
 
 > **⚠️ 실무 함정 — "Multi-AZ면 무조건 안전"**
 >
@@ -297,7 +297,7 @@ flowchart TB
 
 > **면접관의 최종 압박** — "그럼 Multi-Region은? AZ로 부족하니 리전 이중화 하자고 하면?"
 >
-> → **성급하면 감점.** "먼저 RTO/RPO 요구가 뭔지 확인하겠다. Multi-Region은 비용이 배 이상, 데이터 동기화·일관성·페일오버 복잡도가 급증한다. **금융·결제급 RPO≈0, RTO 수 분** 요구가 아니라면 대개 Multi-AZ로 충분하다. 리전 장애는 AZ 장애보다 훨씬 드물다. 요구사항(SLA·규제·재해 시나리오) 없이 Multi-Region부터 지르는 건 오버엔지니어링." **필요성을 먼저 되묻는 것**이 시니어의 답이다.
+> → **성급하면 감점.** 먼저 RTO/RPO, 리전 장애 범위, 데이터 복제·충돌 모델, 규제·계약 요구를 확인한다. Multi-Region은 추가 리소스와 데이터·페일오버 복잡도를 만들므로 필요성을 입증한 뒤 선택한다. 요구사항 없이 Multi-Region부터 지르는 것은 오버엔지니어링일 수 있다. **필요성을 먼저 되묻는 것**이 시니어의 답이다.
 
 ---
 
@@ -322,3 +322,20 @@ flowchart TB
 > **💡 시나리오 — 추석 전날 밤, 주문 폭주 중 장애**
 >
 > 추석 D-1, 평소 10배 주문이 3시간에 집중된다(피크 분포 — 평균이 아니다). **R1**: 주문 조회 p99가 튄다 → 메트릭으로 "특정 AZ의 DB 읽기 지연"임을 삼각측량. **R2**: HPA로 앱은 늘렸지만 RDS 커넥션이 한계 → **미리 Read Replica 증설·RDS Proxy·minReplicas 사전 상향**을 안 해둔 게 화근. Stateful 계층은 사전 예열이 답. **R3**: 하필 이 피크에 배포가 나가 에러율 급증 → **피크 시간대 배포 동결(freeze window)**이 규칙이었어야. 롤백 시 재고 차감 마이그레이션이 파괴적이면 롤 포워드. **R4**: AZ 하나가 죽어도 남은 AZ가 10배 피크를 흡수할 **헤드룸**이 있었는지가 생사를 가른다. **Trade-off**: 피크 대비 상시 헤드룸은 비용이다. 명절 같은 예고된 피크는 **상시가 아니라 이벤트 전 스케줄 스케일 업**으로 비용과 안정성을 저울질한다 — 이게 시니어의 답이다.
+
+## 8. 실패 흐름과 인터뷰 답변 경계
+
+- 메트릭·로그·트레이스가 서로 다른 시간대·샘플링·분모를 사용하면 삼각측량이 틀어진다. 먼저 데이터 신선도와 상관관계 ID를 확인하고, 관측 공백을 정상으로 해석하지 않는다.
+- HPA가 원하는 replica를 계산해도 노드·이미지 registry·Pod startup·DB 연결이 막히면 사용자 용량은 늘지 않는다. 각 단계의 Pending·ImagePullBackOff·readiness 실패를 분리해 설명한다.
+- 롤백 명령이 성공해도 파괴적 DB 변경·외부 이벤트·이미 전송된 주문을 되돌리지는 못한다. Expand-Contract, 롤 포워드, 보상·대사 절차를 구분한다.
+- AZ 장애 시 자동 페일오버를 기다리는 동안 앱의 기존 연결과 진행 중 트랜잭션이 실패할 수 있다. 재시도 폭주를 막는 deadline·backoff·idempotency와 남은 AZ 용량을 함께 확인한다.
+- 면접의 수치(예: 오류율·트래픽 배율)는 판단 연습을 위한 가정이다. 실제 운영 수치·클라우드 페일오버 시간·HPA 주기는 서비스 구성과 공식 문서·관측값으로 검증한다.
+
+## 9. 참고 자료
+
+- [Kubernetes Horizontal Pod Autoscaling](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)
+- [Kubernetes Deployments and rollout](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)
+- [Google SRE: Service Level Objectives](https://sre.google/sre-book/service-level-objectives/)
+- [Google SRE: Monitoring](https://sre.google/sre-book/monitoring/)
+- [AWS Regions and Availability Zones](https://docs.aws.amazon.com/global-infrastructure/latest/regions/aws-regions.html)
+- [Amazon RDS Multi-AZ deployments](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZ.html)

@@ -17,12 +17,14 @@ questions:
   - "**Active-Active** 멀티리전에서 같은 레코드를 두 리전이 동시에 수정하면 충돌(conflict)이 발생합니다. **LWW(Last-Write-Wins)**, **CRDT**, **단일 writer 리전(home region)** 세 가지 충돌 해결 전략을 데이터 손실·복잡도·적용 조건으로 비교하고, 왜 '그냥 타임스탬프 큰 값 채택(LWW)'이 위험한지 구체 시나리오로 설명하세요."
   - "리전 하나가 통째로 죽는 장애에서 **RTO(Recovery Time Objective)**와 **RPO(Recovery Point Objective)**를 정의하고, 비동기 복제(replication lag) 상황에서 페일오버 시 **데이터 유실이 왜 필연적인지**, 그리고 DNS/GSLB 기반 트래픽 전환의 함정(TTL·split-brain)을 서술해보세요. 글로벌 풀필먼트 재고라면 이 유실을 어떻게 방어하겠습니까?"
 ---
+> **검수 경계** — RTT·RTO·RPO와 제품별 수치는 리전·구성·계약에 따라 달라진다. 클라우드 문서가 보장하는 범위와 설계 가설을 분리한다.
+
 ## 1. 왜 멀티리전인가 — 세 가지 동인
 
 `Multi-Region(멀티리전)` 아키텍처는 시스템을 지리적으로 떨어진 여러 데이터센터 리전에 배치하는 것이다. 단일 리전으로 충분한데 굳이 복잡도를 떠안는 이유는 셋뿐이다.
 
 - **지연(Latency)**: 사용자와 가까운 리전에서 응답. 서울 사용자가 미국 리전에 붙으면 왕복만 150~200ms. 글로벌 서비스는 사용자를 가까운 리전으로 붙여 체감 지연을 낮춘다.
-- **가용성(Availability)**: 리전 전체 장애(AWS ap-northeast-2 다운 등)에도 다른 리전이 트래픽을 받아 서비스 지속. Single-region은 리전이 SPOF.
+- **가용성(Availability)**: 한 리전 전체 장애에도 다른 리전이 트래픽을 받아 서비스 지속하도록 설계할 수 있다. Single-region은 리전이 장애 도메인이 된다.
 - **규제·데이터 주권(Data Sovereignty)**: `GDPR(General Data Protection Regulation, 유럽 개인정보보호법)`, 중국 데이터 현지화 등 — 특정 국가 사용자 데이터를 그 지역에 저장해야 하는 법적 요구.
 
 > **🎯 면접 포인트 — "왜"를 못 대면 오버엔지니어링**
@@ -30,6 +32,8 @@ questions:
 > 멀티리전은 비용·복잡도·일관성 난이도가 급증한다. "글로벌하니까 멀티리전"은 감점. 위 셋 중 **어떤 동인이 지배적인가**를 먼저 규정해야 아키텍처가 갈린다. 규제 때문이면 geo-partitioning이, 가용성 때문이면 failover 설계가, 지연 때문이면 read replica 배치가 중심이 된다.
 
 ### 물리적 제약 — 빛의 속도는 못 이긴다
+
+> 아래 RTT는 지역·네트워크 경로에 따라 달라지는 설명용 범위다. 실제 동기/비동기 선택은 측정된 p95/p99와 quorum 설정으로 검증한다.
 
 | 구간 | RTT(왕복) | 함의 |
 | --- | --- | --- |
@@ -40,7 +44,7 @@ questions:
 
 > **⚠️ 실무 함정 — "전 리전 동기 복제로 강한 일관성"**
 >
-> 리전 간 RTT 150ms 상황에서 모든 쓰기를 전 리전에 **동기 복제**하면 커밋 지연이 150ms+ 붙는다. TPS는 폭락하고 한 리전 느려지면 전체가 느려진다. 그래서 대부분 **리전 내부는 동기, 리전 간은 비동기** 복제를 택한다. 비동기의 대가가 곧 다음 섹션의 replication lag과 충돌이다. "전부 strong consistency"는 물리를 무시한 답.
+> 리전 간 RTT가 수십~수백 ms인 환경에서 모든 쓰기를 전 리전에 **동기 복제**하면 커밋 지연이 네트워크 왕복에 묶인다. 처리량과 장애 영향은 배치·프로토콜·워크로드에 따라 달라진다. 따라서 한 가지 흔한 기준은 **리전 내부는 동기, 리전 간은 비동기** 복제이지만, 지연·RPO/RTO·일관성 계약에 따라 달라진다. 비동기의 대가가 곧 다음 섹션의 replication lag과 충돌이다. "전부 strong consistency"는 물리를 무시한 답.
 
 ## 2. 아키텍처 패턴 — Active-Passive vs Active-Active
 
@@ -74,9 +78,9 @@ flowchart TB
 | **Active-Active** | 다중 리전 | 낮은 지연·리소스 활용·리전 장애에 강함 | **충돌 해결 필수**·복잡도 급증 | RTO 초~분, RPO ≈ lag |
 | **Pilot Light** | 단일 리전 | 최소 비용 대기 | 페일오버 시 스케일업 시간 김 | RTO 수십분~시간 |
 
-> **💡 사례 — Netflix의 Active-Active**
+> **💡 가상 사례 — Active-Active 검증**
 >
-> **Netflix**는 AWS 3개 리전에 걸친 Active-Active로 유명하다. 한 리전을 통째로 죽이는 **Chaos(카오스) 훈련**(regional evacuation)을 정기적으로 해 페일오버를 검증한다. 사용자를 가까운 리전으로 라우팅하되, 리전 장애 시 수 분 내 다른 리전으로 트래픽을 흘려보낸다. 핵심 교훈: **페일오버는 평소에 훈련해야 실제로 작동한다** — 안 돌려본 standby는 장애 때 반드시 문제를 낸다.
+> 여러 리전에 Active-Active를 배치하면 가까운 리전으로 라우팅할 수 있지만, 장애 시 트래픽 전환·데이터 충돌·복구 시간을 실제 설정으로 검증해야 한다. 정기적인 chaos/DR 훈련으로 페일오버를 검증하고, 특정 회사의 리전 수나 RTO를 일반화하지 않는다.
 
 ## 3. 리전 간 복제와 충돌 해결
 
@@ -132,9 +136,9 @@ stateDiagram-v2
 
 *User home region — 쓰기는 항상 home 리전으로, 원격 리전은 읽기 복제본. 장애 시에만 home을 재지정.*
 
-> **💡 사례 — 쿠팡·글로벌 커머스의 지역 분리**
+> **💡 가상 사례 — 글로벌 커머스의 지역 분리**
 >
-> **쿠팡**은 한국 중심이지만 대만·글로벌 확장에서 리전별 데이터·재고를 분리 운영한다. **Amazon**의 커머스는 마켓플레이스(리전)별로 재고·주문을 파티셔닝하고, 리전 간에는 카탈로그·정산 같은 저빈도 데이터만 비동기로 맞춘다. 핵심은 **강한 일관성이 필요한 데이터(재고·결제)는 단일 리전에 가두고, 리전 간에는 최종 일관성으로 충분한 것만 복제**하는 경계 설계다.
+> 지역별 데이터·재고를 분리하고 리전 간에는 카탈로그처럼 최종 일관성으로 충분한 데이터를 비동기 복제한다고 가정할 수 있다. 재고·결제처럼 강한 일관성이 필요한 데이터의 쓰기 리전을 어디에 둘지는 규제·계약·복구 목표로 정하며 특정 회사의 운영 방식으로 단정하지 않는다.
 
 ## 5. 페일오버 — RTO/RPO와 라우팅
 
@@ -161,9 +165,10 @@ flowchart LR
 
 | 기술 | 일관성 | 복제 | 페일오버 특성 | 대가 |
 | --- | --- | --- | --- | --- |
-| **Google Spanner** | 외부 일관성(strong) | Paxos quorum + **TrueTime** | 자동, RPO ≈ 0 | 쓰기 지연↑·GPS/원자시계 인프라 |
-| **DynamoDB Global Tables** | 최종 일관성(LWW) | 멀티 리전 Active-Active 비동기 | 자동, RPO = lag(초 단위) | 충돌 시 LWW 손실 가능 |
-| **Aurora Global Database** | 리전 내 strong, 리전 간 async | 스토리지 레벨 비동기 | 수동/자동 승격, RPO ~1초·RTO ~분 | 승격 시간·읽기 전용 secondary |
+| **Google Spanner** | 외부 일관성(strong) | Paxos quorum + **TrueTime** | 동기 quorum 가정에서 RPO ≈ 0 | 쓰기 지연↑·GPS/원자시계 인프라 |
+| **DynamoDB Global Tables (MREC)** | 기본 eventual·동시 쓰기 LWW | 멀티 리전 Active-Active 비동기 | RPO는 복제 지연·장애 시점에 의존 | 충돌 시 LWW 손실 가능 |
+| **DynamoDB Global Tables (MRSC)** | 다중 리전 strong, 정확히 3개 리전 구성 | 다중 리전 동기 일관성 모델 | 가용성·지연·구성 제약을 현재 문서로 확인 | MREC와 보장·비용이 다름 |
+| **Aurora Global Database** | 리전 내 strong, 리전 간 async | 스토리지 레벨 비동기 | RPO/RTO는 엔진·리전·복구 구성과 테스트 결과에 의존 | 승격 시간·읽기 전용 secondary |
 
 > **⚠️ 실무 함정 — DNS 페일오버의 split-brain과 TTL**
 >
@@ -221,3 +226,17 @@ ON CONFLICT (event_id) DO NOTHING;   -- 이미 적용됐으면 skip
 > **🎯 마무리 한 줄 (면접 클로징)**
 >
 > "멀티리전은 지연·가용성·규제 중 지배 동인을 먼저 정하고, **리전 내부는 동기·리전 간은 비동기**를 기본으로 합니다. 충돌은 데이터 성격별로 갈라 — 카운터는 CRDT, 잔액·재고는 **단일 writer home region + strong consistency**로 가두고, 조회성은 최종 일관성으로 복제합니다. 페일오버는 **RTO/RPO를 정량 목표로** 잡고 split-brain을 fencing/quorum으로 막으며, 무엇보다 평소에 리전 장애를 훈련합니다." — 경로별 일관성 차등과 RTO/RPO 정량화를 한 호흡에 말하면 시니어 합격 시그널.
+
+## 검수 경계와 실패 흐름
+
+- RPO는 제품 표의 고정값이 아니라 replication mode·lag·장애 시점을 포함한 계약이다. sync quorum과 async replica를 같은 행에서 섞지 않는다.
+- Active-Active 충돌은 LWW·CRDT·home-region single writer 중 데이터 불변식에 맞게 선택하고, 재고·잔액의 차감 손실을 merge 정책으로 숨기지 않는다.
+- DNS TTL·resolver cache·기존 connection이 RTO에 더해지고, 양쪽 리전이 writer가 되는 split-brain은 fencing/quorum으로 차단한다.
+- 장애 전환 뒤 미복제 주문·예약을 outbox·멱등 재처리·대사로 수렴시키며, 복구 훈련에서 RTO/RPO·p95/p99를 실제 측정한다.
+
+## 공식·1차 출처
+
+- [https://cloud.google.com/spanner/docs/true-time-external-consistency](https://cloud.google.com/spanner/docs/true-time-external-consistency)
+- [https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/V2globaltables_HowItWorks.html](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/V2globaltables_HowItWorks.html)
+- [https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-global-database.html](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-global-database.html)
+- [https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-failover.html](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-failover.html)

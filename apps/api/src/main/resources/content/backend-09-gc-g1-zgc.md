@@ -18,6 +18,8 @@ questions:
   - "ZGC가 대부분의 작업을 애플리케이션과 동시에 수행할 때 추가로 지불하는 CPU·메모리·Barrier 비용을 설명해보세요."
   - "GC Pause가 길어졌을 때 Heap 크기부터 늘리기 전에 Allocation Rate, Live Set, Promotion, CPU 포화를 어떤 순서로 확인할지 설명해보세요."
 ---
+> **검수 경계** — G1·ZGC의 단계·옵션·지원 JDK와 pause 특성은 JDK 버전에 따라 달라진다. pause 숫자와 처리량은 보장값이 아니며 같은 JDK·heap·workload·컨테이너 제한에서 부하 테스트로 비교한다.
+
 ## 1. GC 문제는 세 숫자에서 시작한다
 
 - `Allocation Rate`: 초당 새로 만드는 객체 바이트
@@ -68,6 +70,15 @@ Pause 한 건보다 시간축을 본다. Allocation Rate가 갑자기 늘었는�
 
 > **면접 포인트** — “ZGC가 더 최신이므로 선택”이 아니라 Pause 예산, Allocation Rate, Live Set, 컨테이너 여유, 장애 복구 시간을 수치로 제시한다.
 
-## 참고
+## 검수 경계와 실패 흐름
+
+- `MaxGCPauseMillis`는 목표이며 모든 workload에서 달성되는 SLA가 아니다. 목표를 낮출수록 collector가 회수량·young 크기·CPU를 조정할 수 있으므로 allocation rate와 처리량을 함께 본다.
+- GC pause가 늘면 heap을 먼저 키우지 말고 allocation burst, live set, promotion/evacuation 실패, CPU quota와 safepoint를 시간축으로 분리한다.
+- ZGC·G1 선택은 JDK 버전, heap 크기, barrier·concurrent 작업 CPU, 메모리 여유, tail latency 목표의 결합이다. collector 변경 후 p99·error rate·RSS·복구 시간을 같은 조건에서 비교한다.
+- Full GC·OOM·컨테이너 종료가 발생하면 요청 timeout·retry storm과 cascading failure를 막는 admission control과 graceful degradation도 함께 확인한다.
+
+## 공식·1차 출처
 
 - [Java 25 Garbage Collection Tuning Guide](https://docs.oracle.com/en/java/javase/25/gctuning/index.html)
+- [Java 21 Garbage Collection Tuning Guide](https://docs.oracle.com/en/java/javase/21/gctuning/index.html)
+- [OpenJDK ZGC](https://wiki.openjdk.org/display/zgc)

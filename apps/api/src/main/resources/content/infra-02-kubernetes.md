@@ -77,12 +77,12 @@ flowchart TB
 | --- | --- | --- |
 | **ClusterIP** | 클러스터 내부만 | 서비스 간 내부 통신 (기본) |
 | **NodePort** | 노드 IP:포트 | 간단 외부 노출 (실무엔 잘 안 씀) |
-| **LoadBalancer** | 클라우드 LB 프로비저닝 | 외부 노출 (AWS면 ELB 자동 생성) |
-| **Ingress** | L7 경로/호스트 라우팅 | 여러 서비스를 1개 LB로 (비용↓) |
+| **LoadBalancer** | 클라우드 LB 프로비저닝 | 외부 노출; 구현은 클라우드·컨트롤러에 의존 |
+| **Ingress** | L7 경로/호스트 라우팅 | 여러 서비스를 공통 진입점으로 연결; Ingress controller 필요 |
 
 > **⚠️ 실무 함정**
 >
-> 서비스마다 `type: LoadBalancer` 를 쓰면 **서비스 개수만큼 ELB가 생성** 돼 비용이 폭증한다. Ingress 하나로 묶어 단일 ALB에서 경로 라우팅하는 게 표준.
+> 서비스마다 `type: LoadBalancer`를 만들면 클라우드 컨트롤러가 여러 외부 로드밸런서를 만들 수 있다. Ingress를 선택할 때는 지원하는 IngressClass, 장애 도메인, TLS·라우팅 정책, 로드밸런서 비용을 현재 클라우드 문서와 함께 검토한다.
 
 ## 4. ConfigMap / Secret — 설정 분리
 
@@ -93,19 +93,21 @@ flowchart TB
 
 > **⚠️ 실무 함정**
 >
-> Secret을 Git에 평문/base64로 커밋 → 유출 사고 1순위. **Sealed Secrets, External Secrets Operator(AWS Secrets Manager 연동), Vault** 로 관리하라. 또한 Secret을 환경변수로 주입하면 프로세스 덤프·로그로 새기 쉬워, 파일 마운트가 더 안전한 경우가 있다. 🔥(Deep-dive)
+> Secret을 Git에 평문/base64로 커밋하면 누구나 원문을 복원할 수 있다. Kubernetes Secret 자체의 저장·전송 보호, RBAC, 외부 secret manager 연동, 키 회전 절차를 환경에 맞게 설계한다. 환경변수와 파일 마운트 중 어떤 방식이 안전한지는 애플리케이션·런타임의 로그와 덤프 처리까지 확인해 결정한다. 🔥(Deep-dive)
 
 ## 5. Requests / Limits — 스케줄링과 OOM의 핵심
 
 > **정의** — **requests** = 스케줄러가 노드 배치 시 보장하는 최소 자원. **limits** = 초과 시 제한(CPU는 throttle, 메모리는 *OOMKill*).
 
-### QoS Class — 노드 압박 시 누가 먼저 죽나
+### QoS Class — 노드 압박 시 제거될 가능성
 
-| QoS Class | 조건 | 제거(Evict) 우선순위 |
+| QoS Class | 조건 | 일반적인 제거(Evict) 경향 |
 | --- | --- | --- |
-| **Guaranteed** | requests = limits (CPU·메모리 모두) | 가장 늦게 (가장 안전) |
-| **Burstable** | requests < limits | 중간 |
-| **BestEffort** | requests·limits 미설정 | **가장 먼저 죽음** |
+| **Guaranteed** | 모든 컨테이너의 CPU·메모리 requests와 limits가 설정되고 서로 같음 | 사용량이 requests를 넘지 않으면 상대적으로 뒤로 밀릴 수 있음 |
+| **Burstable** | requests 또는 limits가 일부 설정되거나 서로 다름 | 사용량이 requests를 넘는 정도·Priority 등에 따라 달라짐 |
+| **BestEffort** | requests·limits 미설정 | 사용량이 requests를 넘는 것으로 취급되어 먼저 대상이 되기 쉬움 |
+
+QoS Class만으로 고정된 eviction 순서를 정할 수 없다. 노드 압박 eviction은 Pod의 실제 자원 사용량이 requests를 넘는지, Pod Priority, requests 대비 사용량 등을 함께 보고 순위를 정하며, **Guaranteed도 노드 압박이나 다른 종료 원인에서 면제되지 않는다**. 따라서 이 표는 일반적인 경향으로만 사용하고 [node-pressure eviction 공식 문서](https://kubernetes.io/docs/concepts/scheduling-eviction/node-pressure-eviction/)의 현재 kubelet 동작을 확인한다.
 
 > **🎯 면접 포인트**
 >
@@ -139,7 +141,7 @@ flowchart LR
 
 > **💡 커스텀 메트릭으로 진짜 부하 반영**
 >
-> CPU 기반 HPA는 I/O 바운드 워크로드(배송 추적 폴링 등)에선 부하를 못 잡는다. **큐 길이(SQS 메시지 수)·초당 요청(QPS)** 같은 커스텀 메트릭(KEDA 활용)으로 스케일하면 사용자 체감과 일치한다.
+> CPU 기반 HPA만으로는 I/O 대기나 큐 backlog를 충분히 표현하지 못할 수 있다. **처리해야 할 큐의 age·backlog, 요청률, 동시 작업 수** 같은 워크로드 메트릭을 서비스 처리량과 연결해 선택한다. KEDA를 쓰면 외부·이벤트 메트릭으로 스케일할 수 있지만, 메트릭 수집 지연·0까지 축소·인증 실패·하위 시스템 포화까지 함께 검증해야 한다.
 
 ## 7. 롤링 업데이트 + Probe — 무중단 배포
 
@@ -157,7 +159,7 @@ sequenceDiagram
     Note over RSold: 문제 시 rollout undo → v1 ReplicaSet 복귀
 ```
 
-*롤링 업데이트 — maxSurge/maxUnavailable로 무중단 보장. readinessProbe 통과 전엔 트래픽 안 줌*
+*롤링 업데이트 — maxSurge/maxUnavailable과 readiness 상태로 전환 폭을 제어한다. readiness 통과 전에는 일반적으로 Service 엔드포인트에서 제외된다.*
 
 ### 3종 Probe 구분 — 가장 많이 틀리는 부분
 
@@ -169,19 +171,19 @@ sequenceDiagram
 
 > **⚠️ 실무 함정 — Probe 혼동이 장애를 만든다**
 >
-> **livenessProbe를 공격적으로** (짧은 timeout·threshold) 설정하면, 일시적 부하로 응답이 느려질 때 Pod이 계속 재시작되는 **재시작 루프(CrashLoop)** 에 빠진다. 부하가 더 심해지는 악순환. 살아있는지(liveness)와 준비됐는지(readiness)는 별개 엔드포인트로 분리하고, liveness는 관대하게 잡아라. 🔥(Deep-dive)
+> **livenessProbe를 공격적으로** 설정하면 일시적 부하나 하위 시스템 지연에도 Pod이 계속 재시작되는 재시작 루프가 생길 수 있다. liveness는 프로세스가 복구 불가능한 상태인지, readiness는 현재 트래픽을 받을 수 있는지를 구분하고, 느린 초기화는 startupProbe로 보호한다. probe가 실패할 때 재시작·트래픽 제외·배포 중단이 어떻게 연쇄되는지 관찰한다. 🔥(Deep-dive)
 
 ## 8. 물류 연결 — 새벽 주문 폭주 오토스케일
 
-> **💡 정량 시나리오**
+> **💡 시나리오**
 >
-> 컬리·쿠팡류의 **Cut-off(마감) 직전 주문 폭주** : 22:30~23:00 사이 트래픽이 평소의 8~10배로 치솟는다. 주문 API Deployment에 **HPA(목표 CPU 60%, min 6 / max 60)** 설정 → 피크 진입 2~3분 내 Pod 6→48개로 확장. 동시에 **Cluster Autoscaler/Karpenter**가 Pending Pod을 감지해 노드를 5→20대로 증설. 재고 워커는 CPU가 아닌 **SQS 큐 길이 기반(KEDA)**으로 스케일 — 쌓인 메시지에 비례해 컨슈머 증설. **Trade-off** : 노드 증설엔 EC2 기동 시간(1~2분) 지연이 있으니, 예측 가능한 피크엔 **스케줄 기반 선제 스케일(predictive)** 로 22:00에 미리 워밍업한다. 비용은 들지만 Cut-off 실패(=주문 유실)보다 싸다.
+> 예고된 마감 직전 주문 증가를 평균 배율로만 표현하지 말고, 관측된 요청률·큐 backlog·처리량·DB 연결 상한을 입력으로 삼는다. 주문 API는 반응형 HPA와 사전 capacity를 비교하고, 재고 워커는 CPU보다 큐 age/backlog 기반 메트릭을 검토한다. 새 노드가 준비되기 전까지 Pending Pod이 쌓일 수 있으므로 Cluster Autoscaler 또는 다른 노드 프로비저너의 지연·실패 경로를 포함한다. 스케일 아웃이 하위 DB·결제·재고의 처리량을 초과하면 큐잉·rate limit·load shedding으로 입장을 제한한다.
 
 ```mermaid
 flowchart TB
-    Peak["⏰ 22:30 주문 폭주\n트래픽 x10"] --> HPA["HPA: 주문 Pod 6→48"]
+    Peak["예고된 주문 증가\n처리량 한도 확인"] --> HPA["HPA: 요청·처리량 메트릭"]
     Peak --> KEDA["KEDA: 재고 워커\n(큐 길이 기반)"]
-    HPA --> CA["Cluster Autoscaler\n노드 5→20"]
+    HPA --> CA["노드 프로비저너\nPending Pod 처리"]
     KEDA --> CA
     CA --> Done["✅ Cut-off 내 처리"]
 
@@ -206,7 +208,25 @@ flowchart TB
 ```yaml
 resources:
   requests: { cpu: "250m", memory: "256Mi" }
-  limits: { memory: "512Mi" }
+limits: { memory: "512Mi" }
 readinessProbe:
   httpGet: { path: /api/v1/health, port: 8080 }
 ```
+
+## 10. 실패 흐름과 운영 경계
+
+- 새 ReplicaSet의 이미지 pull 또는 startupProbe가 실패하면 readiness를 통과하지 못한 Pod이 Service에 들어가지 않도록 하고, Deployment 진행이 멈추는 조건과 이전 ReplicaSet 유지 조건을 확인한다. `maxUnavailable`을 무리하게 올리면 정상 용량까지 줄어들 수 있다.
+- readiness가 통과한 뒤 애플리케이션이 즉시 종료되면 진행 중 요청이 끊길 수 있다. `preStop`, `terminationGracePeriodSeconds`, 애플리케이션의 drain 신호, Service endpoint 전파 지연을 함께 측정한다.
+- HPA가 외부 메트릭을 읽지 못하면 마지막 desired replica를 유지하거나 축소 정책이 예상과 달라질 수 있다. 메트릭 어댑터·KEDA 인증 실패, backlog 감소 지연, 노드 부족을 별도 알람으로 둔다.
+- limit 초과로 OOMKilled 된 Pod은 limit만 올리면 메모리 누수와 노드 포화를 숨길 수 있다. requests·limits·QoS·노드 여유·heap 설정을 같이 확인하고, 변경 전후의 재시작과 eviction을 관찰한다.
+- Secret 또는 이미지 자격증명 오류는 Pod가 `Pending`·`ImagePullBackOff`에 머무르게 할 수 있다. RBAC와 registry 접근권한을 확인하면서 비밀값을 로그에 출력하지 않는다.
+
+## 11. 참고 자료
+
+- [Kubernetes Concepts](https://kubernetes.io/docs/concepts/overview/)
+- [Services and Ingress](https://kubernetes.io/docs/concepts/services-networking/service/) 및 [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/)
+- [Resource Management for Pods and Containers](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/) 및 [Pod QoS](https://kubernetes.io/docs/concepts/workloads/pods/pod-qos/)
+- [Liveness, Readiness, and Startup Probes](https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/)
+- [Horizontal Pod Autoscaling](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)
+- [Kubernetes Secrets](https://kubernetes.io/docs/concepts/configuration/secret/)
+- [KEDA concepts](https://keda.sh/docs/latest/concepts/)

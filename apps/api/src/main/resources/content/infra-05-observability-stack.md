@@ -70,7 +70,7 @@ flowchart LR
 | 관점 | Loki | ELK / OpenSearch |
 | --- | --- | --- |
 | 인덱싱 | 라벨만 인덱싱 (본문 미인덱싱) | 전문(full-text) 인덱싱 |
-| 비용 | **저렴** (저장 위주) | 높음 (인덱스 부담) |
+| 비용·운영 | 라벨·보존·저장량에 따라 산정 | 인덱스·저장·검색량에 따라 산정 |
 | 검색력 | 라벨 + grep식 | **강력한 전문 검색·집계** |
 | Grafana 통합 | 네이티브 (Prometheus와 한 화면) | Kibana 별도 |
 
@@ -102,7 +102,7 @@ sequenceDiagram
 
 - **OpenTelemetry(OTel)**: 벤더 중립 표준. 계측(instrumentation)을 한 번 하면 Tempo/Jaeger/Datadog 등 어디로든 보낼 수 있다.
 - **W3C Trace Context**: 서비스 간 `traceparent` 헤더로 trace_id를 전파해야 끊기지 않는다.
-- **샘플링**: 전수 추적은 비싸다. 보통 1~10% 샘플링 + 에러는 전수(tail-based sampling).
+- **샘플링**: 전수 추적과 저장은 비용·용량·민감정보 노출을 늘릴 수 있다. 트래픽과 장애 진단 요구에 맞는 head/tail sampling 정책을 정하고, 오류·고위험 경로 보존 규칙을 별도로 검증한다.
 
 ## 5. RED / USE 메서드 — 무엇을 측정할까
 
@@ -151,11 +151,11 @@ flowchart LR
 
 > **💡 시나리오 — "고객 앱에 배송 상태가 안 뜬다"**
 >
-> 라스트마일 추적 이벤트(스캔 → Kafka → 추적 서비스 → 앱)가 일부 지연된다는 CS 인입. **Metrics**: 추적 서비스의 RED 대시보드에서 컨슈머 처리 지연(consumer lag)이 평소 0 → 수만으로 치솟음 확인. **Traces**: 느린 요청의 trace를 열어 DB upsert 구간이 180ms로 병목임을 발견. **Logs**: 같은 trace_id 로그에서 특정 운송장의 중복 이벤트가 락 경합을 유발한 것 확인. **결론** : 3 Pillars를 trace_id로 엮었기에 "메트릭 이상 → 트레이스 병목 → 로그 근본원인"으로 10분 내 진단. 만약 평문 로그에 trace_id가 없었다면 수억 건 추적 이벤트 중 범인을 못 찾는다. 이게 관측성 설계가 곧 운영 가능성인 이유.
+> 라스트마일 추적 이벤트(스캔 → 메시지 스트림 → 추적 서비스 → 앱)가 지연된다는 CS 인입. **Metrics**에서 consumer lag과 처리율의 변화를 확인하고, **Traces**에서 느린 요청의 DB upsert 구간을 찾는다. **Logs**에서 같은 `trace_id`와 이벤트 키를 검색해 중복 이벤트·락 경합 같은 가설을 검증한다. 세 Pillar를 같은 상관관계 ID로 연결하면 메트릭 이상 → 트레이스 병목 → 로그 근본원인의 순서로 좁힐 수 있다.
 
 ```mermaid
 flowchart LR
-    Lag["📊 컨슈머 lag 급증\n(Metrics 알람)"] --> Trace["🔗 느린 trace 열기\nDB 180ms 병목"]
+    Lag["📊 컨슈머 lag 급증\n(Metrics 알람)"] --> Trace["🔗 느린 trace 열기\nDB 구간 병목"]
     Trace --> Log["📜 trace_id 로그\n중복 이벤트 → 락 경합"]
     Log --> Fix["멱등성 키 추가\n+ upsert 인덱스 개선"]
 
@@ -175,3 +175,20 @@ flowchart LR
   "error_code": "INVENTORY_TIMEOUT"
 }
 ```
+
+## 9. 실패 흐름과 데이터 경계
+
+- 메트릭 수집기가 중단되면 대시보드의 빈 값이 정상으로 보일 수 있다. scrape 실패·exporter 장애·수집 지연을 별도 메트릭으로 감시하고, 알 수 없음과 정상 상태를 구분한다.
+- 라벨에 사용자·주문·운송장 같은 고유값을 넣으면 cardinality와 저장량이 예측을 벗어날 수 있다. 유한한 라벨만 남기고 개별 식별자는 로그·트레이스의 검색 필드로 보낸다. 이미 폭증한 시계열은 수집 설정을 바꿔도 기존 데이터가 즉시 사라지지 않으므로 보존·삭제 정책을 함께 적용한다.
+- 로그 수집 지연이나 샘플링으로 원인 로그가 빠질 수 있다. 오류·보안 사건·결제·재고 같은 핵심 경로의 보존 규칙과 개인정보 마스킹을 먼저 정한다.
+- 추적 헤더가 신뢰 경계를 넘어 전파될 때는 허용 헤더와 샘플링 정책을 확인한다. 외부 입력을 그대로 로그·트레이스 속성에 넣으면 개인정보와 로그 주입 문제가 생길 수 있다.
+- SLO 알람이 실제 사용자 영향과 연결되지 않거나 알림 대상이 없으면 page하지 않는다. 알람은 행동·담당자·Runbook·중복 억제·복구 확인을 함께 갖춘다.
+
+## 10. 참고 자료
+
+- [Prometheus data model](https://prometheus.io/docs/concepts/data_model/) 및 [metric and label naming](https://prometheus.io/docs/practices/naming/)
+- [Prometheus alerting rules](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/)
+- [OpenTelemetry observability primer](https://opentelemetry.io/docs/concepts/observability-primer/)
+- [OpenTelemetry sampling](https://opentelemetry.io/docs/concepts/sampling/)
+- [W3C Trace Context](https://www.w3.org/TR/trace-context/)
+- [Google SRE: Alerting on SLOs](https://sre.google/workbook/alerting-on-slos/)

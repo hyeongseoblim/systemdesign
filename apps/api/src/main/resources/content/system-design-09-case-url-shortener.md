@@ -14,6 +14,8 @@ questions:
   - "리다이렉트에 **301 대신 302를 쓰는 이유**를 클릭 통계 관점에서 설명하고, 반대로 301이 더 나은 상황은 언제인지 함께 제시해보세요. 각각 서버 부하/latency에 미치는 영향도 포함해서."
   - "읽기 QPS 2만을 받기 위한 **캐싱 전략**을 설명하고, 바이럴 링크에서 발생하는 **Cache Stampede(쇄도)**와 **Hot Key** 문제를 각각 어떻게 막을지 구체적 기법으로 답해보세요."
 ---
+> **검수 경계** — 쓰기·읽기량, 보존 기간, 캐시와 키 예측 가능성은 가상 요구사항이다. 301·302와 CDN의 실제 동작은 클라이언트·캐시 정책으로 검증한다.
+
 ## 1. 요구사항 명확화 (Requirements)
 
 > **한 줄 정의** — 긴 URL을 짧은 키로 매핑하고, 짧은 키 접근 시 원본으로 *리다이렉트*한다. 압도적 read-heavy(읽기 우세) 시스템.
@@ -236,7 +238,7 @@ sequenceDiagram
 
 > **💡 실전 권장 — KGS 하이브리드**
 >
-> 대규모(bit.ly급)에서는 **③ KGS** 가 정석. 키를 미리 생성해 두므로 쓰기 경로가 단순 pop+INSERT가 되어 latency가 평탄하고, 무작위라 예측도 불가. 커스텀 별칭만 별도 UNIQUE 충돌 검사로 처리한다.
+> 대규모 단축 URL 서비스에서는 **③ KGS**를 검토할 수 있다. 키를 미리 생성해 두므로 쓰기 경로가 단순 pop+INSERT가 되어 latency가 평탄하고, 무작위라 예측도 불가. 커스텀 별칭만 별도 UNIQUE 충돌 검사로 처리한다.
 
 ## 5. Deep-dive 🔥(Deep-dive)
 
@@ -310,9 +312,9 @@ flowchart TB
 
 요약: **통계·만료·차단이 제품 가치면 302**, **순수 성능·인프라 비용 최소화면 301**. 절대 정답은 비즈니스 요구가 정한다 — 면접에선 "둘 다 말하고 조건을 제시"가 만점.
 
-> **🎯 실제 사례**
+> **🎯 가상 사례**
 >
-> **네이버 단축 URL(me2.do)** , **카카오 단축 URL** , 글로벌 **bit.ly** 모두 통계·관리 기능 때문에 사실상 302 계열 + 자체 키 풀/카운터 기반. bit.ly는 클릭 분석이 제품의 핵심 가치라 301로는 사업이 성립하지 않는다 — "통계 → 302" 인과를 보여주는 좋은 예시.
+> 통계·관리 기능이 제품 가치라면 302 계열과 클릭 이벤트 파이프라인을 선택할 수 있고, 순수 리다이렉트 성능이 우선이면 301을 검토할 수 있다. 실제 캐시·클라이언트 동작은 RFC와 사용 환경으로 검증하며 특정 단축 URL 서비스의 내부 구현을 일반화하지 않는다.
 
 ```text
 id = next_distributed_id()
@@ -320,3 +322,16 @@ short_key = base62(id)
 store(short_key -> normalized_url)
 redirect: validate -> lookup -> emit_click_event -> 302
 ```
+
+## 검수 경계와 실패 흐름
+
+- 수치와 임계값은 요구사항으로 선언하고 실제 workload·부하 테스트·관측 지표로 검증한다. 제품·기업의 내부 구현을 근거 없이 일반화하지 않는다.
+- 쓰기 성공 후 이벤트/읽기 모델 갱신 실패, 응답 유실 후 재시도, 중복·순서 역전·부분 장애를 정상적인 실패 경로로 모델링한다.
+- 원장과 캐시·검색·알림·분석 파생 모델의 상태를 구분하고, 멱등 키·버전·재처리 큐·대사 작업으로 수렴시킨다.
+- 성능 최적화는 평균이 아니라 p95/p99, 버스트와 복구 중 부하를 함께 본다. fallback을 추가할 때 정확성·보안·개인정보·비용 trade-off를 기록한다.
+
+## 공식·1차 출처
+
+- [https://www.rfc-editor.org/rfc/rfc3986](https://www.rfc-editor.org/rfc/rfc3986)
+- [https://www.rfc-editor.org/rfc/rfc9110](https://www.rfc-editor.org/rfc/rfc9110)
+- [https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html](https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html)

@@ -18,231 +18,197 @@ questions:
   - "전산재고와 실물재고의 불일치가 생기는 원인들을 분류하고, 가용재고(ATP) = 보유재고 − 예약재고 − 안전재고 공식을 근거로 \"물리적으로 있는데 팔면 안 되는\" 상황을 설명해보세요. Cycle count가 연 1회 전수 실사보다 나은 이유도 함께 서술하세요."
   - "멀티 창고 환경에서 같은 SKU에 동시 할당 요청이 들어올 때 발생하는 Race condition을 설명하고, 단일 창고 내 차감(낙관적 락/원자적 UPDATE)과 창고 간 분산 예약(Saga + 보상)의 처리 방식 차이를 서술하세요. 또한 안전재고를 변동성(Z × σ_LT) 기반으로 산정하는 이유와 결품 비용이 과소평가되기 쉬운 이유를 설명해보세요."
 ---
-## 1. 풀필먼트(Fulfillment) 개념 — 주문 이후 실물의 전 과정
+## 1. 풀필먼트는 어떤 책임을 묶는가
 
-> **핵심 정의** — Fulfillment(풀필먼트)는 판매자의 상품을 *창고 입고(Inbound)→보관(Storage)→피킹(Picking)→패킹(Packing)→출고(Outbound)*까지 대행하는, 주문 확정 이후 실물을 고객 손에 전달하기 위한 모든 물류 작업의 묶음이다.
+풀필먼트는 온라인 주문을 실제 출고로 연결하는 운영 범위다. 일반적으로 입고·검수·보관·피킹·패킹·출고와 반품 처리를 포함하지만, 회사마다 OMS·WMS·운송사 사이의 경계와 계약 범위가 다르다. 따라서 “풀필먼트는 항상 이 시스템이 담당한다”라고 단정하기보다 **재고를 누가 보유하고, 작업을 누가 수행하며, 어느 사건을 어느 시스템이 확정하는지**를 먼저 적어야 한다.
 
-OMS(Order Management System, 주문관리 시스템)가 "이 주문이 지금 어디까지 왔는가"라는 논리 상태를 책임진다면, 풀필먼트는 그 주문을 **실물 작업으로 실현**하는 영역이다. 흔히 FBA(Fulfillment by Amazon)처럼 "주문만 받으면 나머지는 우리가 다 한다"는 형태의 위탁 서비스로 상품화된다.
-
-### 풀필먼트의 범위 — 입고에서 출고까지
+[Amazon FBA의 공식 설명](https://sell.amazon.com/fulfill.html)은 판매자가 상품을 풀필먼트 센터로 보내면 Amazon이 보관·피킹·패킹·배송·고객 서비스·반품을 수행하는 한 가지 운영 예를 보여준다. 이 사례는 풀필먼트의 가능한 범위를 설명하지만, 모든 사업자의 조직 경계를 정의하지는 않는다.
 
 ```mermaid
 flowchart LR
-    Vendor(["판매자/제조사"]) -->|입고| Inbound["Inbound\n검수·적치(Putaway)"]
-    Inbound --> Storage["Storage\n보관·재고 관리"]
-    Storage -->|주문 발생| Pick["Picking\n피킹"]
-    Pick --> Pack["Packing\n패킹·검수"]
-    Pack --> Out["Outbound\n출고·송장 부착"]
-    Out --> LM(["Last-mile\n라스트마일 배송"])
+    Supplier(["판매자·공급사"]) --> Inbound["입고·검수"]
+    Inbound --> Storage["보관·재고 원장"]
+    Storage --> Pick["피킹"]
+    Pick --> Pack["패킹·출고 검증"]
+    Pack --> Handover["운송사 인계"]
+    Handover --> Customer(["고객·반품"])
 
     style Inbound fill:#fef3c7,stroke:#f59e0b
     style Storage fill:#fef3c7,stroke:#f59e0b
     style Pick fill:#fef3c7,stroke:#f59e0b
     style Pack fill:#fef3c7,stroke:#f59e0b
-    style Out fill:#fef3c7,stroke:#f59e0b
-    style LM fill:#dcfce7,stroke:#22c55e
+    style Handover fill:#dbeafe,stroke:#3b82f6
+    style Customer fill:#dcfce7,stroke:#22c55e
 ```
 
-*풀필먼트 흐름 — 입고~출고는 WMS(주황) 영역, 라스트마일(초록)로 연결*
+| 질문 | 먼저 정할 계약 |
+| --- | --- |
+| 재고 소유권 | 판매자 재고인지, 사업자가 매입한 재고인지 |
+| 수량의 권위 | WMS 원장인지, 3PL의 재고 보고서인지, 별도 동기화 원장인지 |
+| 작업 완료의 증거 | 스캔·패킹 확정·운송사 인수 중 어느 사건인지 |
+| 예외 책임 | 파손·분실·오피킹·지연을 누가 조사하고 보상하는지 |
 
-> **💡 용어 정리**
->
-> **FC(Fulfillment Center, 풀필먼트 센터)** 는 단순 보관 창고가 아니라 *주문 단위 출고(B2C)* 에 최적화된 창고다. 대량 입출고 위주의 일반 물류센터(DC, Distribution Center)와 달리, 낱개 피킹·당일/익일 출고 SLA(Service Level Agreement, 서비스 수준 협약)에 맞춰 설계된다.
+## 2. 자체 FC·3PL·드랍쉬핑 비교
 
-## 2. 풀필먼트 모델 비교 — 자체 FC vs 3PL vs 드랍쉬핑
+세 모델은 우열 순서가 아니라 책임과 고정비의 배치가 다르다.
 
-같은 "주문을 실물로 전달한다"는 목표라도, 누가 재고를 보유하고 누가 출고 작업을 하느냐에 따라 세 가지 모델로 갈린다.
-
-```mermaid
-flowchart TB
-    Order(["고객 주문"]) --> Branch{"풀필먼트 모델"}
-
-    Branch -->|"자체 FC"| Own["자사 보유·자사 운영\n재고: 자사 / 출고: 자사"]
-    Branch -->|"3PL"| TPL["재고: 자사 소유\n보관·출고: 외주 위탁"]
-    Branch -->|"드랍쉬핑"| Drop["재고 미보유\n판매자/제조사 직배송"]
-
-    Own --> OwnFC["쿠팡 로켓배송 FC"]
-    TPL --> TPLW["CJ대한통운 풀필먼트"]
-    Drop --> DropV["네이버 스마트스토어 위탁"]
-
-    style Own fill:#fef3c7,stroke:#f59e0b
-    style OwnFC fill:#fef3c7,stroke:#f59e0b
-    style TPL fill:#ede9fe,stroke:#8b5cf6
-    style TPLW fill:#ede9fe,stroke:#8b5cf6
-    style Drop fill:#dcfce7,stroke:#22c55e
-    style DropV fill:#dcfce7,stroke:#22c55e
-```
-
-*세 모델 비교 — 재고 보유 주체와 출고 운영 주체의 조합으로 구분*
-
-### 상세 비교표
-
-| 관점 | 자체 FC(Fulfillment Center) | 3PL(3자 물류, Third-Party Logistics) | 드랍쉬핑(Dropshipping) |
+| 관점 | 자체 FC | 3PL | 드랍쉬핑 |
 | --- | --- | --- | --- |
-| 초기 투자(CapEx) | 매우 높음 (FC 부지·설비 수천억~조 단위) | 중간 (입점비·보관료, 자산 미보유) | 거의 0 (재고·창고 불필요) |
-| 단위당 마진 | 규모 달성 시 가장 높음 (변동비↓) | 중간 (수수료 차감) | 가장 낮음 (판매자 마진 종속, 5~15%) |
-| 통제력(품질·SLA) | 최강 (피킹·패킹·배송 전 과정 직접 통제) | 중간 (계약 SLA 범위 내) | 약함 (출고·품질을 판매자에 의존) |
-| 확장성(Scalability) | 느림 (FC 신설은 수년 리드타임) | 빠름 (창고 빌려 즉시 확장) | 가장 빠름 (SKU만 등록하면 됨) |
-| 리드타임(Lead time) | 가장 짧음 (당일·익일, 권역 FC) | 중간 (위탁사 출고 정책 의존) | 가장 김 (판매자 출고 + 가변) |
-| 재고 정합성 책임 | 자사 (전 구간 직접 관리) | 공유 (위탁사와 데이터 연동 필요) | 판매자 (실재고 가시성 낮음) |
+| 재고·작업 | 사업자가 재고와 시설·인력을 직접 운영 | 사업자가 재고를 보유하거나 계약 조건에 따라 위탁하고, 3PL이 작업 | 공급사가 재고를 보유하고 고객에게 직접 발송 |
+| 고정비 | 시설·설비·인력의 고정비가 커질 수 있음 | 사용량·보관·작업·운송 계약으로 나뉨 | 재고·시설 고정비는 낮지만 공급사 의존 비용이 생김 |
+| 통제 | 프로세스·데이터를 직접 정할 여지가 큼 | 계약 SLA·연동 품질·예외 처리에 의존 | 재고 가시성·포장·출고 품질을 통제하기 어려울 수 있음 |
+| 확장 | 수요에 앞서 공간·인력을 준비해야 함 | 계약 가능한 공간·처리량만큼 확장 | 공급사의 품목·처리량·정책에 제약 |
+| 리드타임 | 위치와 공정 설계에 따라 달라짐 | 3PL의 위치·컷오프·처리능력에 따라 달라짐 | 공급사의 재고·출고·운송 정책에 따라 달라짐 |
 
-> **🎯 면접 포인트 — 모델 선택 Trade-off**
->
-> "스타트업 커머스가 어떤 풀필먼트 모델로 시작해야 하나?" 정답은 없고 **물동량·마진·통제 요구** 의 함수다. 초기엔 CapEx 0인 **드랍쉬핑/3PL** 로 검증하고, 물동량이 임계점(예: 일 출고 수천 건)을 넘어 *단위 풀필먼트 비용이 3PL 수수료를 역전* 하는 순간 **자체 FC** 로 내재화하는 것이 일반적 경로다. "처음부터 자체 FC"는 대부분 과잉 투자다. 🔥(Deep-dive)
+[Shopify의 드랍쉬핑 정의](https://help.shopify.com/en/manual/products/dropshipping/what-is-dropshipping)처럼 드랍쉬핑은 판매자가 재고를 보관하거나 직접 배송하지 않고 공급사가 고객에게 보내는 방식이다. 이것만으로 마진, 배송 속도, 품질이 정해지는 것은 아니다.
 
-## 3. 재고 정합성 — 전산재고 vs 실물재고
-
-재고 정합성(Inventory Accuracy)이란 시스템에 기록된 **전산재고(Book/System inventory)**와 창고에 실제로 존재하는 **실물재고(Physical inventory)**가 일치하는 정도다. 이 둘이 어긋나면 "팔 수 있다고 약속했는데 물건이 없는" 오버셀(Oversell)이 발생한다.
-
-### 불일치는 왜 생기는가
-
-```mermaid
-flowchart TB
-    Book["전산재고\n(System Inventory)"] -. 불일치 .-> Phys["실물재고\n(Physical Inventory)"]
-    Loss["손·망실(Shrinkage)\n파손·도난·분실"] --> Phys
-    MisPick["오피킹(Mis-pick)\n다른 SKU 출고"] --> Phys
-    SysErr["시스템 오류\n이중 차감·차감 누락"] --> Book
-    Unscanned["미스캔 입출고\n수기 처리"] --> Book
-
-    Phys --> Cycle["Cycle Count\n(주기 실사)"]
-    Cycle --> Adjust["재고 조정\n(Adjustment 이벤트)"]
-    Adjust --> Book
-
-    style Book fill:#fef3c7,stroke:#f59e0b
-    style Phys fill:#dcfce7,stroke:#22c55e
-    style Cycle fill:#dcfce7,stroke:#22c55e
-    style Adjust fill:#dcfce7,stroke:#22c55e
-```
-
-*정합성 깨짐의 원인과 보정 루프 — Cycle count로 실물을 측정해 전산을 조정*
-
-### 주요 원인
-
-- **손·망실(Shrinkage)**: 파손, 도난, 유통기한 폐기 등 실물이 사라지는 경우.
-- **오피킹(Mis-pick)**: 비슷한 SKU(Stock Keeping Unit, 재고 관리 단위)를 잘못 집어 다른 상품 출고 → 두 SKU 모두 정합성 깨짐.
-- **시스템 오류**: 동시성 버그로 인한 이중 차감, 이벤트 유실로 인한 차감 누락.
-- **미스캔(Unscanned)**: 입·출고 시 바코드 미스캔, 수기 처리 누락.
-
-### Cycle Count(주기 실사)와 KPI
-
-연 1회 전수 실사(Annual physical count)는 창고를 멈춰야 하므로, 실무에서는 **Cycle count(주기 순환 실사)**로 매일 일부 로케이션을 돌아가며 센다. 특히 회전율 높은 SKU(ABC 분석의 A급)는 더 자주 센다.
-
-| KPI | 정의 | 현업 기준 감각 |
-| --- | --- | --- |
-| 재고 정확도(Inventory Accuracy) | 실사 일치 로케이션 / 전체 로케이션 | 우수 운영 **99.5% 이상**, 글로벌 톱티어 **99.9%+** |
-| 오피킹률(Mis-pick rate) | 오피킹 건수 / 총 피킹 건수 | 목표 **0.1% 이하** (1만 건당 10건 미만) |
-| Shrinkage율 | 손·망실 금액 / 매출 또는 재고가 | 이커머스 통상 **1~2%**, 관리 우수 시 1% 미만 |
-
-> **⚠️ 실무 함정 — 가용재고 ≠ 보유재고**
->
-> 판매 가능한 재고는 `가용재고(ATP, Available To Promise) = 보유재고(On-hand) − 예약재고(Reserved) − 안전재고(Safety stock)` 다. "물리적으로 있다"고 다 팔면 안 된다. 다른 주문에 이미 Reserve된 수량과 완충용 안전재고를 빼고 판매해야 오버셀을 막는다.
-
-## 4. 멀티 창고 할당 — 최적 창고 선택과 동시성
-
-여러 FC에 같은 SKU가 분산 보관될 때, 하나의 주문을 "어느 창고에서 출고할지" 정하는 것이 멀티 창고 할당(Multi-warehouse allocation)이다. 배송비·재고·SLA를 종합하는 최적화 문제이며, 동시에 들어온 주문들 사이에서 **Race condition(경쟁 상태)**을 막아야 한다.
-
-### 최적 창고 선택의 변수
-
-| 변수 | 설명 | Trade-off |
-| --- | --- | --- |
-| 배송 거리/비용 | 창고 → 수령지 거리, 권역 운임 | 가까운 창고 = 비용↓·리드타임↓ |
-| 가용 재고 | 각 창고의 ATP(가용재고) | 가장 가까운 창고에 재고 없으면 차선 창고 |
-| SLA 마감(Cut-off) | 당일/익일 출고 가능 창고만 후보 | 새벽배송은 권역 FC로 후보 제한 |
-| 분할 페널티 | Split shipment(분할출고) 시 박스·운임 증가 | 속도(분할) vs 비용(묶음) |
-
-### Split shipment(분할출고) 허용 여부
-
-한 창고에 전량 재고가 없으면, **분할출고**로 여러 창고에서 나눠 보낼지(빠르지만 비쌈) 아니면 한 창고로 모일 때까지 기다릴지(느리지만 저렴) 정책으로 결정한다. 쿠팡 로켓처럼 속도 우선이면 분할을 적극 허용한다.
-
-### 동시 예약 Race condition
-
-```mermaid
-sequenceDiagram
-    participant O1 as 주문 A
-    participant O2 as 주문 B
-    participant ALLOC as 할당 서비스
-    participant INV as 재고(WMS) FC-1
-
-    Note over INV: SKU-X 가용재고 = 1
-    O1->>ALLOC: 할당 요청 (SKU-X 1개)
-    O2->>ALLOC: 할당 요청 (SKU-X 1개)
-    ALLOC->>INV: Reserve(SKU-X, 1) [주문 A]
-    ALLOC->>INV: Reserve(SKU-X, 1) [주문 B]
-    Note over INV: 원자적 차감 없으면\n둘 다 성공 → 오버셀!
-    INV-->>ALLOC: A: Reserved (재고 0)
-    INV-->>ALLOC: B: 실패 (재고 부족)
-    ALLOC->>ALLOC: 주문 B 재할당(re-allocation)\n→ FC-2 후보 탐색
-```
-
-*동시 예약 경쟁 — Reserve가 원자적이어야 오버셀 방지, 실패 주문은 다른 창고로 재할당*
-
-> **🎯 면접 포인트 — 멀티 창고 재고 차감**
->
-> "여러 창고·여러 서버에서 같은 SKU에 동시에 할당 요청이 오면?" → 단일 창고 내 차감은 **DB 원자적 UPDATE(`WHERE qty >= n`)** 또는 **낙관적 락(Optimistic Lock, 버전 컬럼)** 으로 보장한다. 창고 간 분산 재고는 단일 트랜잭션이 불가하므로, **Saga + 보상(Release)** 으로 일부 Reserve 실패 시 이미 잡은 다른 창고 예약을 풀어준다. 핫 SKU는 Redis `DECR` 같은 인메모리 카운터로 DB 경합을 흡수하기도 한다. 🔥(Deep-dive)
-
-## 5. 안전재고(Safety stock) · 재주문점(ROP)
-
-수요와 리드타임은 항상 변동한다. 평균만 보고 재고를 채우면 변동이 큰 날 결품(Stockout)이 난다. 안전재고(Safety stock)는 이 **변동성에 대비한 완충 재고**다.
-
-> **핵심 공식** — `재주문점(ROP, Reorder Point) = (평균 일수요 × 평균 리드타임) + 안전재고` 주문 가능 재고가 ROP 아래로 내려가면 보충 발주를 건다.
-
-### 안전재고 산정 — 변동성 기반
-
-통계적 안전재고는 `SS = Z × σ_LT` 로 산정한다. 여기서 `Z`는 목표 서비스 수준(Service level)에 해당하는 정규분포 계수, `σ_LT`는 리드타임 동안 수요의 표준편차다.
-
-| 목표 서비스 수준 | Z 계수 | 의미 |
-| --- | --- | --- |
-| 90% | 1.28 | 10번 중 1번 결품 허용 |
-| 95% | 1.65 | 일반 소비재 표준 |
-| 99% | 2.33 | 핵심 SKU·고마진 상품 |
-| 99.9% | 3.09 | 결품 비용이 매우 큰 경우 |
-
-> **💡 정량 예시**
->
-> 평균 일수요 100개, 리드타임 4일, 일수요 표준편차 30개라 하자. 서비스 수준 95%(Z=1.65)를 목표하면 리드타임 동안 표준편차 `σ_LT = 30 × √4 = 60` , 안전재고 `SS = 1.65 × 60 ≈ 99개` . 재주문점 `ROP = 100×4 + 99 = 499개` . 즉 재고가 약 500개로 떨어지면 발주를 걸어야 4일 리드타임 동안 95% 확률로 결품을 피한다.
-
-### 결품 vs 과잉재고 Trade-off
-
-| 관점 | 안전재고를 적게(결품 위험) | 안전재고를 많이(과잉재고) |
-| --- | --- | --- |
-| 비용 | 보관비↓, 자본 회전↑ | 보관비↑, 자본 묶임(재고 보유 비용 연 15~30%) |
-| 리스크 | 결품(Stockout) → 매출 손실·고객 이탈 | 진부화(Obsolescence)·폐기, 특히 신선/패션 |
-| 적합 SKU | 수요 안정·대체 가능 상품 | 고마진·결품 비용 큰 핵심 SKU |
-
-> **⚠️ 실무 함정 — 결품 비용은 보이지 않는다**
->
-> 과잉재고 비용(보관료·폐기)은 장부에 바로 찍히지만, 결품 비용(놓친 매출 + 고객이 경쟁사로 이탈하는 **장기 LTV 손실** )은 측정이 어려워 과소평가되기 쉽다. 그래서 핵심 SKU는 서비스 수준을 보수적으로(99%+) 잡는 것이 합리적이다.
-
-## 6. 사례 비교 — 국내외 풀필먼트 서비스
-
-| 사례 | 모델 | 특징 | 핵심 정책 |
-| --- | --- | --- | --- |
-| **쿠팡 로켓그로스** | 자체 FC + 판매자 위탁 | 판매자 재고를 쿠팡 FC에 입고, 로켓배송 SLA 적용 | 전국 FC 분산 할당, 분할출고 적극, 익일/당일 |
-| **컬리(B2B 풀필먼트)** | 자체 FC(콜드체인) | 냉장/냉동/상온 온도대 분리, 샛별배송 인프라 활용 | 23시 Cut-off, 권역 창고 제한, 온도대 분할 패킹 |
-| **Amazon FBA** | 자체 FC(글로벌) | 판매자 위탁의 원조, 멀티 FC 글로벌 재고 분산 | 비용 최소화 라우팅, Backorder/입고 ETA 정교 |
-| **네이버 도착보장** | 제휴 3PL 연계 | CJ대한통운 등 제휴 물류사 풀필먼트 연동, 도착일 보장 | 판매자 재고 데이터 연동, SLA 미달 시 보상 |
-
-> **💡 정량 감각**
->
-> 쿠팡은 전국 수십 개 FC와 100여 개 이상 물류 거점으로 인구 대다수를 **로켓배송 권역(약 10분 거리)** 안에 두는 분산 배치를 추구한다. 이렇게 재고를 수요지 가까이 분산할수록 리드타임은 짧아지지만, 같은 SKU를 여러 FC에 중복 보유해야 하므로 **총 안전재고와 보관비가 증가** 한다 — 분산 vs 집중의 전형적 Trade-off다.
-
-## 7. 백엔드 시스템 디자인 연결
-
-| 풀필먼트/재고 이슈 | 설계 패턴 | 이유 |
-| --- | --- | --- |
-| 단일 창고 재고 차감 동시성 | **낙관적 락(Optimistic Lock) / 원자적 UPDATE** | `WHERE qty >= n` 또는 버전 컬럼으로 오버셀 방지, 락 경합 최소화 |
-| 멀티 창고 분산 재고 일관성 | **Saga + 보상 트랜잭션(Release)** | 2PC 회피, 일부 Reserve 실패 시 잡은 예약 해제·재할당 |
-| 재고 조정·실사 이력 추적 | **Event Sourcing(이벤트 소싱)** | 입고·차감·조정 이벤트의 누적으로 현재 재고 재구성, 감사 추적 |
-| 재고 변경 이벤트 신뢰 발행 | **Transactional Outbox** | DB 커밋과 재고 이벤트 발행의 원자성 보장(차감 누락 방지) |
-| 재고 조회 폭주(상세/검색) | **CQRS 읽기 모델** | 쓰기(정합성 우선)와 분리된 조회 최적화 뷰, ATP 캐싱 |
-| 핫 SKU 차감 경합 | **인메모리 카운터(Redis) + 비동기 정산** | DB 락 경합을 인메모리로 흡수, 사후 DB 동기화 |
-
-> **🎯 면접 정리 — 한 문장**
->
-> "풀필먼트는 **자체 FC·3PL·드랍쉬핑** 의 CapEx/마진/통제 Trade-off로 선택되고, 재고 정합성은 **전산-실물 차이를 Cycle count로 보정** 하며, 멀티 창고 할당은 **원자적 Reserve + Saga 보상** 으로 오버셀을 막고, 안전재고는 **변동성 기반 ROP(재주문점)** 로 결품과 과잉재고를 균형 잡는다."
+전환 시점은 “일 출고량이 몇 건이면 자체 FC” 같은 보편 임계값으로 정할 수 없다. 다음의 월별 데이터를 같은 단위로 비교한다.
 
 ```text
-Available = On-hand - Reserved - Safety Stock
-ROP       = Lead-time Demand + Safety Stock
-Fill Rate = fulfilled order lines / requested order lines
+자체 운영 예상비용 = 시설·인력 고정비 + 작업·운송 변동비 + 품질·재고 리스크 비용
+외부 위탁 예상비용 = 보관료 + 입출고 작업료 + 운송료 + 연동·예외 처리 비용
+전환 판단 = 비용 차이 + SLA 위반 비용 + 필요한 통제 수준
 ```
+
+물동량이 증가해도 SKU 수, 계절성, 반품률, 권역, 냉장·위험물 제약에 따라 결과가 달라진다. 그러므로 먼저 작은 권역·SKU 집합으로 실제 피킹 시간, 재고 오차, 지연, 반품 처리 비용을 측정하고 계약 또는 내재화의 가정을 갱신한다.
+
+## 3. 전산재고·실물재고·가용재고
+
+재고를 하나의 숫자로만 저장하면 예약, 품질 보류, 입고 예정, 창고 차원을 구분할 수 없다. [Microsoft Dynamics 365의 on-hand 문서](https://learn.microsoft.com/en-us/dynamics365/supply-chain/inventory/inventory-on-hand-list)는 Physical inventory, Physical reserved, Available physical을 별도 값으로 보고하며, Available physical을 물리 재고에서 물리 예약을 뺀 값으로 설명한다. 실제 제품의 명칭·예약 계층·차원은 구현마다 다를 수 있다.
+
+```text
+PhysicalOnHand(w, sku, lot, status)
+Reserved(w, sku, reservationId)
+AvailablePhysical = PhysicalOnHand - Reserved
+```
+
+판매 화면의 ATP(Available To Promise)는 위 값과 같다고 단정하지 않는다. 채널별 안전 버퍼, 품질 보류, 유통기한, 확정 입고, 다른 주문의 우선순위가 추가될 수 있다.
+
+```text
+SellableATP
+  = policy(AvailablePhysical,
+           confirmedInbound,
+           safetyBuffer,
+           quality·expiry constraints,
+           channel allocation)
+```
+
+따라서 “물리적으로 100개가 있으니 100개 판매”가 아니라, 예를 들어 물리 재고 100개 중 30개가 예약되고 5개가 품질 보류라면 판매 정책이 허용하는 최대치는 65개보다 작거나 같을 수 있다. Safety Stock은 계획·보충 정책의 완충 목표이지 모든 WMS에서 물리 재고 원장에 별도 차감되는 상태는 아니다.
+
+### 불일치 원인과 보정
+
+- **현장 사건 누락**: 입고·이동·피킹·반품 스캔이 늦거나 누락됨.
+- **식별 오류**: 비슷한 SKU, 로트, 시리얼, 단위 환산을 잘못 처리함.
+- **실물 손실**: 파손·분실·폐기·오피킹으로 장부와 실물이 갈라짐.
+- **동시성·재처리 오류**: 같은 예약이나 이벤트를 두 번 적용하거나, 외부 연동의 결과를 확인하지 못한 채 재시도함.
+
+Cycle count는 전수 실사를 완전히 대체하는 규칙이 아니라, 위치·품목·임계값·계획에 따라 작은 범위를 반복 점검하는 통제다. [Microsoft의 cycle-counting 절차](https://learn.microsoft.com/en-us/dynamics365/supply-chain/warehousing/cycle-counting)는 작업 생성→현장 계수→차이 검토의 단계를 구분하고, 차이가 난 작업을 Pending review로 남긴다. 이처럼 조정에는 원인·승인·원장 이력이 필요하다.
+
+```text
+countedQty != systemQty
+  -> 차이 기록
+  -> 원인·승인 확인
+  -> adjustment transaction
+  -> 재고 투영과 감사 로그 갱신
+```
+
+정확도 목표, 오피킹률, 손실률의 숫자는 상품·단위·기간·분모를 밝히지 않으면 비교할 수 없다. 99.5%, 99.9%, 1~2% 같은 업계 일반값을 이 카드의 기준으로 사용하지 않는다.
+
+## 4. 멀티 창고 할당과 Race condition
+
+멀티 창고 할당은 거리만 최소화하는 문제가 아니다. 후보 창고마다 가용 수량·품질·온도·출고 마감·운송 약속·분할 출고 비용을 평가하고, 여러 라인을 한 창고에 묶을지까지 결정한다. 목적 함수는 사업 정책에 따라 달라진다.
+
+```mermaid
+flowchart LR
+    Order["주문·라인"] --> Candidates["후보 창고 조회"]
+    Candidates --> Policy["재고·SLA·분할·운송 정책 필터"]
+    Policy --> ReserveA["창고 A 예약 시도"]
+    Policy --> ReserveB["창고 B 예약 시도"]
+    ReserveA --> Result{"모든 라인 예약 성공?"}
+    ReserveB --> Result
+    Result -->|예| Commit["할당 확정·작업 지시"]
+    Result -->|아니오| Release["성공한 예약 해제·재할당 또는 보류"]
+```
+
+같은 창고의 남은 수량이 1개일 때 애플리케이션이 SELECT와 UPDATE를 나누면 두 요청이 모두 1개를 읽고 성공할 수 있다. 한 행의 조건부 갱신은 판단과 차감을 한 데이터베이스 쓰기로 묶는 기본 예다.
+
+```sql
+UPDATE inventory
+SET available = available - :qty,
+    reserved = reserved + :qty,
+    version = version + 1
+WHERE warehouse_id = :warehouse
+  AND sku_id = :sku
+  AND available >= :qty;
+```
+
+영향 행이 1이면 예약 성공, 0이면 재시도·다른 창고·품절 중 정책을 선택한다. 낙관적 락은 version이 예상값과 같은지 검사하고 충돌이면 다시 판단한다. 둘 다 예약의 고유 키, 트랜잭션 범위, 만료·해제 처리를 별도로 설계해야 한다.
+
+창고 A와 B의 예약을 하나의 로컬 트랜잭션으로 묶을 수 없다면, 다음과 같은 분산 흐름을 사용할 수 있다.
+
+1. 각 창고에 reservationId와 주문 라인 키를 포함한 예약 명령을 보낸다.
+2. 모든 필요한 예약이 확정되면 할당을 COMMITTED로 바꾼다.
+3. 하나가 실패하거나 제한 시간이 지나면 성공한 예약에 RELEASE를 보낸다.
+4. 응답이 불명확하면 재시도만 하지 말고 조회·대사로 실제 예약 상태를 확인한다.
+
+이것은 Saga 형태의 **업무 보상 흐름**이지 여러 창고의 원자 커밋을 만들어 주는 기능이 아니다. 보상 실패, 중복 명령, 창고 장애, 늦은 성공을 PENDING_RECONCILIATION 같은 상태로 관찰할 수 있어야 한다.
+
+## 5. 안전재고와 재주문점
+
+안전재고는 수요 또는 보충 리드타임의 변동 때문에 품절 위험을 낮추기 위해 보유하려는 계획상의 완충량이다. [Microsoft의 safety-stock 문서](https://learn.microsoft.com/en-us/dynamics365/supply-chain/master-planning/safety-stock-replenishment)는 최소 재고 수준 아래로 내려갈 때 계획 주문을 만들어 보충하는 한 가지 정책을 설명한다.
+
+단순한 통계 예에서는 다음을 사용한다.
+
+```text
+ROP = 평균 리드타임 수요 + Safety Stock
+SS  = Z × σ(리드타임 동안의 수요)
+```
+
+Z는 목표 서비스 수준에 따른 선택값이지 모든 상품에 적용되는 표준 상수가 아니다. 수요와 리드타임이 독립이고 변동성이 안정적이라는 가정이 깨지면, 리드타임 변동·계절성·프로모션·공급 제약을 포함한 모델이나 시뮬레이션을 검토해야 한다.
+
+예를 들어 평균 일수요 100개, 4일의 고정 리드타임, 일수요 표준편차 30개라는 **가정**에서만 σ_LT = 30 × √4 = 60이다. 목표 계수 1.65를 선택하면 SS ≈ 99, ROP ≈ 499가 된다. 이 계산은 정책을 설명하는 예시이며 실제 서비스 수준을 보장하는 측정 결과가 아니다.
+
+| 안전재고를 낮게 잡을 때 | 안전재고를 높게 잡을 때 |
+| --- | --- |
+| 보관·폐기 부담은 줄지만 수요 급증과 공급 지연에 취약 | 결품 위험은 낮출 수 있지만 자본·공간·진부화 부담 증가 |
+| 대체 가능하고 수요가 안정적인 SKU에 적합할 수 있음 | 결품 손실이 크거나 보충이 느린 SKU에 적합할 수 있음 |
+
+결품 비용은 놓친 주문, 재배송, 고객 이탈처럼 여러 기간에 분산되어 관측된다. 그래서 목표 서비스 수준은 “99%가 항상 정답”이 아니라 품목별 마진·대체 가능성·폐기 비용·고객 약속을 함께 비교해 정한다.
+
+## 6. 백엔드 설계 연결
+
+| 문제 | 설계 선택 | 반드시 기록할 것 |
+| --- | --- | --- |
+| 단일 창고의 동시 예약 | 조건부 UPDATE 또는 버전 검사 | 영향 행, reservationId, 만료·해제 |
+| 여러 창고의 부분 성공 | 단계별 예약 + 명시적 보상 | 창고별 결과, 보상 실패, 대사 상태 |
+| 재고 변경 이벤트 | 트랜잭션 안의 원장·outbox | 원장 커밋과 eventId, 재처리 결과 |
+| 조회 폭주 | 캐시·읽기 모델 | 기준 시각, 허용 지연, 원장 재조회 경로 |
+| 실물과 장부 차이 | cycle count와 승인된 조정 | 계수자, 차이 원인, adjustment 전표 |
+| 보충 판단 | ROP·안전재고 계산 | 수요 기간, 리드타임, 서비스 목표, 가정 버전 |
+
+```json
+{
+  "reservationId": "res-2026-04-0007",
+  "orderLineId": "line-42",
+  "warehouseId": "fc-seoul-1",
+  "sku": "SKU-X",
+  "quantity": 1,
+  "status": "RESERVED",
+  "expiresAt": "2026-09-27T12:15:00Z"
+}
+```
+
+### 면접에서 답할 때
+
+먼저 세 모델의 재고 소유권·작업 책임·SLA 계약을 분리한다. 다음으로 PhysicalOnHand, Reserved, AvailablePhysical, 판매 정책상 ATP를 같은 숫자로 취급하지 않는다. 멀티 창고에서는 각 창고의 원자 예약과 전체 할당의 보상·대사를 구분하고, 안전재고 공식에는 수요·리드타임 분포와 서비스 목표라는 가정을 붙인다.
+
+> **검수 경계** — 재고 계산과 할당 예제의 수치는 가상 입력이다. 실제 가용 재고와 출고 가능 시점은 원장 기준 시각, 예약·격리 상태, 창고별 계약을 확인해 판단한다.
+
+## 참고 자료
+
+- [Amazon FBA — Fulfillment by Amazon](https://sell.amazon.com/fulfill.html)
+- [Shopify Help — What is dropshipping?](https://help.shopify.com/en/manual/products/dropshipping/what-is-dropshipping)
+- [Microsoft Learn — Inventory on-hand list](https://learn.microsoft.com/en-us/dynamics365/supply-chain/inventory/inventory-on-hand-list)
+- [Microsoft Learn — Reserve inventory quantities](https://learn.microsoft.com/en-us/dynamics365/supply-chain/inventory/reserve-inventory-quantities)
+- [Microsoft Learn — Cycle counting](https://learn.microsoft.com/en-us/dynamics365/supply-chain/warehousing/cycle-counting)
+- [Microsoft Learn — Safety stock fulfillment](https://learn.microsoft.com/en-us/dynamics365/supply-chain/master-planning/safety-stock-replenishment)

@@ -18,41 +18,49 @@ questions:
 ---
 ## 1. 품질을 단계별로 측정한다
 
-비결정적 출력은 단위 테스트 하나로 충분하지 않다. 대표·경계·적대 사례를 포함한 Golden Set을 버전 관리하고 Retrieval, Tool Selection, Answer, Safety를 분리 평가한다.
+비결정적 출력은 단위 테스트 하나로 충분하지 않다. 대표·경계·적대 사례를 포함한 Golden Set을 버전 관리하고 Retrieval, Tool Selection, Answer, Safety를 분리 평가한다. Dataset의 문서 Version, 권한, 언어, 업무 유형을 함께 보존해야 모델 변경으로 인한 회귀를 재현할 수 있다.
 
 ```mermaid
 flowchart LR
-    G[Versioned Dataset] --> R[Run Candidate]
+    G[Versioned Dataset + Slices] --> R[Run Candidate]
     R --> D[Deterministic Checks]
     R --> J[Model Graders]
     R --> H[Human Sample]
     D --> B[Release Gate]
     J --> B
     H --> B
-    B --> C[Canary]
+    B --> C[Canary + Rollback]
 ```
 
 | 계층 | 예시 지표 | 주의점 |
 |---|---|---|
-| Retrieval | Recall@k·nDCG | 정답 문서 Label 필요 |
-| Generation | 정확성·근거 충실도 | 표현 다양성 허용 |
-| Tool | 선택·Argument 정확도 | 실행 결과와 분리 |
-| Operation | p50/p95·Token·오류율 | 모델별 분포 비교 |
+| Retrieval | Recall@k·nDCG·ACL 누출 | 정답 문서 Label과 권한 필요 |
+| Generation | 정확성·근거 충실도·거절 | 표현 다양성과 사실 오류 분리 |
+| Tool | 선택·Argument·실행 결과 | 모델 제안과 실제 결과 분리 |
+| Operation | p50/p95·TTFT·Token·오류율 | 길이·모델별 분포 비교 |
 | Safety | 공격 성공률·거절 정확도 | 정상 요청 과잉 거절 확인 |
 
 ```yaml
+# 수치는 제품 기본값이 아니라 예시 문제의 가정이다.
 release_gate:
   grounded_answer_rate: ">= 0.92"
   p95_latency_ms: "<= 2500"
   cost_per_success: "<= baseline * 1.05"
+  safety_regression: "no worse than baseline"
 ```
 
-> **실무 함정** — 평균 점수 상승이 핵심 고객 구간의 회귀를 숨길 수 있다. 언어·업무·난이도별 Slice를 본다.
+`LLM-as-a-Judge` 점수는 사람의 표본 평가와 agreement를 확인하고 Slice별로 보정한다. 평균 점수가 상승해도 소수 언어·고위험 업무의 회귀를 숨길 수 있으므로 Gate는 전체 평균과 Slice 하한을 함께 사용한다.
+
+> **실무 함정** — 평균 점수 상승이 핵심 고객 구간의 회귀를 숨길 수 있다. 언어·업무·권한·난이도별 Slice를 보고, Dataset이 바뀌었는지도 함께 검토한다.
 
 ## 2. 온라인 관측은 원문 수집과 다르다
 
-Trace에는 Prompt 버전, 모델, Retrieval ID, Tool Call, Token, 지연, 정책 결과를 남기되 PII와 비밀은 Redaction한다. 사용자 피드백은 편향된 신호이므로 실패 샘플링과 사람 검수를 함께 사용한다.
+Trace에는 Prompt 버전, 모델, Retrieval ID와 문서 Version, Tool Call, Token, 지연, 정책 결과를 남기되 PII와 비밀은 Redaction한다. 원문 저장은 별도 접근 통제·보존 기간·삭제 절차가 있는 경우에만 허용한다. 사용자 feedback은 성공 사용자나 적극적인 사용자에 편향될 수 있으므로 실패 샘플링과 사람 검수를 함께 사용한다.
 
-참고: [NIST AI 평가·검증 리소스](https://airc.nist.gov/), [OpenAI Evals API](https://platform.openai.com/docs/api-reference/evals)
+### 실패 입력 → 판단 → 복구
 
-> **면접 포인트** — “정확도 90%”가 아니라 Dataset 구성, Grader 신뢰도, Slice, Release Gate, 온라인 Drift를 설명한다.
+새 Reranker를 배포한 뒤 전체 grounded rate는 0.93으로 유지되었지만 `법무·한국어·권한 회수 직후` Slice의 Recall이 급락했다고 하자. 평균 Gate만 보면 배포가 통과하지만 Slice Gate가 차단하고, Trace에서 Retrieval 후보 누락인지 Generator가 근거를 무시했는지 분리한다. Dataset Version과 모델·Prompt·Retriever 버전을 고정해 재현한 뒤, 문제 모델을 Canary에서 제외하거나 이전 버전으로 Rollback한다.
+
+참고: [NIST AI Risk Management Framework: Generative AI Profile](https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf), [OpenAI Evals](https://github.com/openai/evals)
+
+> **면접 포인트** — “정확도 90%”가 아니라 Dataset 구성, Grader 신뢰도, Slice, Release Gate, Trace의 PII 경계, 온라인 Drift와 Rollback을 설명한다.

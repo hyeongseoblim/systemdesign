@@ -18,9 +18,11 @@ questions:
   - "\"내부 마이크로서비스 간 통신은 gRPC, 외부 공개 API는 REST/GraphQL\"이 정석으로 통하는 이유를 *성능·브라우저 호환·캐싱·디버깅* 관점에서 정리하고, \"gRPC가 무조건 빠르다\"가 왜 틀린지 반박해보세요."
   - "라스트마일 실시간 추적 시스템에서 DNS·CDN·LB·API Gateway·프로토콜(REST/gRPC)을 각각 어디에 배치할지, 그리고 \"추적 화면 조회 QPS 폭주\"를 어떻게 Origin DB까지 내려가지 않게 흡수할지 경로를 그려 설명해보세요."
 ---
+> **검수 경계** — DNS·CDN·LB·Gateway·프로토콜에는 하나의 정석이 없다. 브라우저 제약, 캐시 가능성, 보안 경계, 장애 도메인과 운영 역량으로 선택한다.
+
 ## 0. 요청 경로 한눈에
 
-시스템 디자인 면접에서 "사용자가 `coupang.com`을 입력하면 어떻게 되나요?"는 워밍업 단골이다. 아래 흐름을 머릿속에 그릴 수 있어야 모든 빌딩블록의 위치가 보인다.
+시스템 디자인 면접에서 "사용자가 서비스 도메인을 입력하면 어떻게 되나요?"는 요청 경로를 설명하는 워밍업 질문이다. 아래 흐름을 머릿속에 그릴 수 있어야 모든 빌딩블록의 위치가 보인다.
 
 ```mermaid
 flowchart TB
@@ -57,7 +59,7 @@ flowchart TB
 
 > **💡 팁 — "정적 vs 동적" 분기를 먼저 말하라**
 >
-> 면접에서 이 경로를 설명할 때, **정적 자원(이미지·JS·CSS)은 CDN에서 차단하고 동적 요청만 Origin으로 보낸다** 는 분기를 먼저 언급하면 트래픽 규모 감각이 있다는 인상을 준다. 쿠팡 상품 이미지가 매 요청마다 Origin을 때리면 대역폭 비용이 폭발한다.
+> 면접에서 이 경로를 설명할 때, **정적 자원(이미지·JS·CSS)은 CDN에서 차단하고 동적 요청만 Origin으로 보낸다** 는 분기를 먼저 언급하면 트래픽 규모 감각이 있다는 인상을 준다. 상품 이미지가 매 요청마다 Origin을 거치면 대역폭과 원본 부하가 커질 수 있다.
 
 ## 1. 🧭 DNS — Domain Name System
 
@@ -123,10 +125,10 @@ TTL은 레코드를 얼마나 캐싱할지 정하는 초 단위 값이다.
 - **정적 가속**: 이미지·JS·CSS·폰트·VOD처럼 변하지 않는 자원을 엣지에서 직접 응답. Cache-Control·ETag로 제어.
 - **동적 가속(Dynamic Acceleration)**: API 같은 동적 응답은 캐싱이 어렵지만, CDN이 Origin까지 **최적 경로(백본 네트워크)**와 **TLS 종료·연결 재사용**으로 가속. AWS CloudFront, Cloudflare가 제공.
 
-### 국내 사례
+### 적용 사례
 
-- **네이버·카카오**: 대용량 이미지·동영상 트래픽을 자체 CDN과 글로벌 CDN(Akamai/CloudFront) 하이브리드로 처리. 라이브 스트리밍은 엣지 트랜스코딩과 결합.
-- **쿠팡**: 상품 썸네일·상세 이미지를 CDN에서 차단해 Origin 트래픽을 수십 분의 1로 줄인다. 가격·재고처럼 자주 바뀌는 데이터는 짧은 TTL 또는 캐시 우회.
+- 대용량 이미지·동영상은 자체 CDN 또는 관리형 CDN을 조합할 수 있다. 어떤 구성을 쓰는지는 공개된 제품 문서와 트래픽 계약으로 확인한다.
+- 상품 이미지처럼 정적인 응답은 CDN으로 캐시하고, 가격·재고처럼 자주 바뀌는 응답은 짧은 TTL·버전 키·캐시 우회를 요구사항에 맞게 선택한다.
 
 > **⚠️ 실무 함정 — 캐시 무효화(Invalidation)**
 >
@@ -185,7 +187,7 @@ sequenceDiagram
 - **Health check(헬스 체크)**: LB가 주기적으로 `/healthz`를 호출해 비정상 인스턴스를 풀에서 자동 제외. *Shallow*(프로세스 살아있나) vs *Deep*(DB·의존성까지 확인) 트레이드오프 — Deep은 정확하지만 의존성 장애 시 전체 인스턴스를 죽은 것으로 오판해 연쇄 장애를 부를 수 있다.
 - **Sticky session(세션 고정)**: 같은 클라이언트를 같은 서버로 보내 로컬 세션을 재사용. 단점은 **확장성·재배포 시 세션 유실, 불균형**. 권장: 세션을 Redis 같은 외부 저장소로 빼서 **Stateless(무상태)** 서버를 만들고 Sticky를 제거하는 방향.
 
-> **💡 팁 — 쿠팡/배민 트래픽 경로 멘탈모델**
+> **💡 팁 — 대규모 서비스의 트래픽 경로 멘탈모델**
 >
 > 대규모 이커머스의 동적 트래픽은 보통 **GeoDNS → 리전 진입 → L7 LB(ALB) → API Gateway → 서비스 메시** 순. 정적 자원은 같은 도메인이라도 CDN 엣지에서 분기돼 Origin을 거치지 않는다. "트래픽 피크 시 어디가 먼저 터지나?"를 물으면 보통 *L7 LB 연결 수 한계* 와 *DB 커넥션 풀* 을 짚는다.
 
@@ -210,9 +212,9 @@ sequenceDiagram
 | 대표 제품 | Nginx, HAProxy, Envoy | Kong, AWS API Gateway, Spring Cloud Gateway |
 | 관계 | API Gateway는 사실상 **"정책 기능이 풍부한 Reverse Proxy"** — Kong은 Nginx 위에, AWS API GW도 프록시 위에 정책 계층을 얹은 형태. 둘은 배타적이 아니라 포함 관계에 가깝다. |  |
 
-> **💡 사례 — 토스 API Gateway**
+> **💡 사례 — API Gateway 설계 가설**
 >
-> 금융 서비스 특성상 토스는 게이트웨이 계층에서 **인증·트래픽 제어·감사 로깅·이상 탐지** 를 집중 처리하고, 내부 서비스는 비즈니스 로직에 집중하게 한다. 게이트웨이는 SPOF가 되기 쉬우므로 **다중화 + 무상태 설계 + 빠른 Failover** 가 필수.
+> 게이트웨이에 **인증·트래픽 제어·감사 로깅·이상 탐지**를 둘 수 있지만, 정책과 장애 격리는 제품·규제 요구에 따라 달라진다. 게이트웨이는 SPOF가 될 수 있으므로 **다중화·무상태 설계·빠른 Failover**를 부하 테스트로 검증한다.
 
 > **⚠️ 실무 함정 — Gateway에 비즈니스 로직을 넣지 마라**
 >
@@ -270,7 +272,7 @@ sequenceDiagram
 
 > **🎯 면접 함정 — "gRPC는 무조건 빠르다"는 오해**
 >
-> gRPC가 빠른 이유는 **Protobuf 바이너리 + HTTP/2 멀티플렉싱** 이지 마법이 아니다. (1) **브라우저에서 직접 못 쓴다** (gRPC-Web 프록시 필요), (2) **HTTP 캐싱·CDN과 안 맞는다** , (3) 사람이 디버깅(curl)하기 불편, (4) 작은 페이로드·낮은 호출량이면 JSON 대비 이득이 미미. 그래서 실무 정석은 **"외부=REST/GraphQL, 내부 서비스 간=gRPC"** 다.
+> gRPC가 유리할 수 있는 이유는 **Protobuf 바이너리와 HTTP/2 기능**이지 마법이 아니다. 브라우저 호환성·HTTP 캐싱·운영 도구·페이로드 크기를 비교해 선택하며, 외부는 REST/GraphQL, 내부는 gRPC라는 조합은 흔한 선택지일 뿐 요구사항에 따라 바뀐다.
 
 > **⚠️ 실무 함정 — GraphQL의 N+1과 캐싱**
 >
@@ -284,9 +286,9 @@ sequenceDiagram
 | --- | --- | --- | --- |
 | **고객 앱 ↔ 추적 API** | 외부 모바일·웹 | **REST** (+ 실시간은 SSE/WebSocket) | 브라우저·CDN 친화, 공개 계약 단순. 지도 위 위치 푸시는 WebSocket 보강 |
 | **기사 앱 ↔ 위치 수집** | 모바일 → 게이트웨이 | **REST/gRPC + 배치 업로드** | 오프라인 구간(지하·산간) 누적 후 재접속 시 배치 전송 + 멱등성(Idempotency) 필요 |
-| **추적 서비스 ↔ OMS/알림 서비스** | 내부 마이크로서비스 | **gRPC (스트리밍)** | 초당 수만 TrackingEvent를 저지연·고밀도로. Protobuf로 페이로드 최소화 |
+| **추적 서비스 ↔ OMS/알림 서비스** | 내부 마이크로서비스 | **gRPC (스트리밍) 후보** | streaming·Protobuf가 호출 패턴에 맞는지 비교하되, 처리량·지연은 payload·동시 stream·메시지 크기별 benchmark로 정한다 |
 
-정량 감각: DAU 1,000만, 1인당 추적 화면 5회 폴링이면 하루 5,000만 조회 ≈ 평균 **580 QPS(Queries Per Second, 초당 쿼리 수)**, 피크는 그 5~10배. 이걸 매번 Origin DB로 보내면 죽으니 **최신 상태는 CDN/엣지 캐시 또는 Redis**에 짧은 TTL로 두고, 변경 시 Push로 갱신하는 구조가 정석이다.
+정량 감각의 예로 DAU 1,000만, 1인당 추적 화면 5회 폴링을 가정하면 하루 5,000만 조회 ≈ 평균 **580 QPS(Queries Per Second, 초당 쿼리 수)**다. 피크 배율은 관측으로 정하고, Origin DB 보호를 위해 **최신 상태를 CDN/엣지 캐시 또는 Redis**에 둘지와 TTL·Push 정책을 비교한다.
 
 > **💡 연결 — 이 빌딩블록이 어떻게 합쳐지나**
 >
@@ -297,3 +299,17 @@ dig tracking.example.com
 curl -v --resolve tracking.example.com:443:203.0.113.10 \
   https://tracking.example.com/api/v1/shipments/W-42
 ```
+
+## 검수 경계와 실패 흐름
+
+- DNS 응답은 TTL과 resolver cache 때문에 즉시 회수되지 않을 수 있으므로 health signal·draining·전환 시간을 따로 측정한다.
+- CDN/edge에는 공개·캐시 가능한 응답만 두고, 인증·개인정보·사용자별 결과는 cache key와 `Vary` 경계를 먼저 검토한다.
+- gRPC/REST 호출은 deadline·retry budget·backpressure를 전파하고, timeout 뒤 재시도로 retry storm이 생기지 않는지 trace와 p95/p99로 확인한다.
+- Gateway·LB·origin 중 한 계층이 실패할 때의 fallback과 rate limit을 그려 보고, 캐시 미스 폭주가 원장 DB의 connection pool을 고갈시키지 않는지 부하 테스트한다.
+
+## 공식·1차 출처
+
+- [https://developer.mozilla.org/en-US/docs/Glossary/DNS](https://developer.mozilla.org/en-US/docs/Glossary/DNS)
+- [https://developers.cloudflare.com/cache/](https://developers.cloudflare.com/cache/)
+- [https://grpc.io/docs/what-is-grpc/core-concepts/](https://grpc.io/docs/what-is-grpc/core-concepts/)
+- [https://spec.graphql.org/](https://spec.graphql.org/)

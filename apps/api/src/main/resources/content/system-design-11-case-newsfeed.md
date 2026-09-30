@@ -16,6 +16,8 @@ questions:
   - "하이브리드에서 **일반 유저는 push, 셀럽은 pull** 로 나눌 때, 피드 조회 시점에 두 소스를 어떻게 **merge** 하고 정렬하나요? 셀럽 기준(팔로워 N명 이상)을 어디서 정하며, 유저가 셀럽 경계를 넘나들 때 생기는 정합성 문제는 어떻게 다루나요?"
   - "Redis에 유저별 피드 캐시를 `List`/`ZSET` 으로 둘 때 **메모리 상한·TTL·리스트 최대 길이(예: 최근 800개)** 를 어떻게 정하나요? 비활성 유저 수천만 명분의 피드를 미리 만들어두는 것(precompute)의 낭비를 어떻게 막고, 캐시 미스 시 어떻게 재생성하나요?"
 ---
+> **검수 경계** — DAU·팔로워 수·피드 길이·p99는 가상 입력이다. 특정 SNS 기업의 현재 그래프 저장소나 랭킹 구현을 사실로 단정하지 않는다.
+
 ## 1. 요구사항 명확화 — 무엇을 피드라 부를지부터 합의
 
 `News Feed(뉴스피드)`는 "내가 팔로우한 사람들의 최근 글을 시간/랭킹 순으로 모아 보여주는 화면"이다. 트위터 타임라인, 인스타 피드, 페이스북 뉴스피드가 모두 같은 문제다. 바로 그림을 그리면 감점 — 먼저 범위를 좁힌다.
@@ -33,7 +35,7 @@ questions:
 | --- | --- | --- |
 | **Read-heavy** | Read:Write ≈ 100:1 이상 | 피드는 쓰기보다 조회가 압도적. 조회 최적화가 설계의 중심 |
 | **Low latency** | 피드 조회 p99 < 200ms | 첫 화면 로딩 체감. 조회 시점에 무거운 연산을 하면 무너짐 |
-| **Eventual Consistency(최종 일관성)** | 몇 초 지연 허용 | "내 글이 팔로워 피드에 1~2초 늦게 뜨는" 건 대부분 용인됨 |
+| **Eventual Consistency(최종 일관성)** | 제품 계약이 허용한 지연 | 내 글이 피드에 늦게 보일 수 있으므로 허용 지연·read-your-writes 경로를 명시 |
 | **High availability** | 피드는 죽어도 stale하게라도 뜨게 | 은행이 아니다. 약간 오래된 피드 > 빈 화면 |
 
 > **🎯 면접 포인트 — 가장 먼저 던질 질문**
@@ -132,7 +134,7 @@ flowchart LR
 
 > **💡 사례 — 실제로 어떻게 하나**
 >
-> 초기 **Twitter** 는 Fan-out on Write 기반(Redis 타임라인)이되, 팔로워가 매우 많은 계정은 fan-out에서 제외하고 조회 시 merge하는 하이브리드로 진화했다. **Instagram/Meta** 도 유사하게 push 기반 + 랭킹 레이어. 핵심은 "대부분 push로 조회를 싸게 만들고, **소수 셀럽만 예외 처리**"라는 것.
+> **공개 패턴을 일반화할 때의 주의** — 공개된 뉴스피드 사례에서 fan-out on write와 hot-key 예외가 소개되지만, 현재 특정 회사의 내부 구현으로 단정하지 않는다. 일반 유저는 push하고 고차수 계정은 pull해 merge하는 하이브리드는 하나의 설계 가설이다.
 
 ## 5. Deep-dive 🔥
 
@@ -198,7 +200,7 @@ flowchart LR
 
 > **💡 물류 도메인 — "화주 대시보드 배송 이벤트 피드"**
 >
-> 뉴스피드를 물류로 재해석하면 **화주(shipper) 대시보드의 배송 이벤트 피드**다. 화주가 "팔로우"하는 대상 = 자기 운송장(shipment)들이고, post = 상태 이벤트(집화·간선 상차·허브 도착·배송 출발·완료). 여기서도 **셀럽 = 대형 화주**: 하루 수십만 건을 발송하는 쿠팡/컬리급 화주 한 명은 이벤트가 폭주한다. 소형 화주는 **push**(이벤트 발생 시 대시보드 피드 캐시에 삽입)로 실시간 체감을 주고, 대형 화주는 **pull + 집계뷰**(조회 시 최근 이벤트를 시계열 DB에서 range 스캔)로 폭발을 막는다. 순서 보장이 중요하므로 이벤트에 **Snowflake ID + per-shipment sequence**를 붙여, 중복/역전을 dedup한다.
+> 뉴스피드를 물류로 재해석하면 **화주(shipper) 대시보드의 배송 이벤트 피드**다. 화주가 "팔로우"하는 대상 = 자기 운송장(shipment)들이고, post = 상태 이벤트(집화·간선 상차·허브 도착·배송 출발·완료). 여기서도 **셀럽 = 대형 화주**: 하루 수십만 건을 발송하는 대형 화주 한 명은 이벤트가 폭주한다. 소형 화주는 **push**(이벤트 발생 시 대시보드 피드 캐시에 삽입)로 실시간 체감을 주고, 대형 화주는 **pull + 집계뷰**(조회 시 최근 이벤트를 시계열 DB에서 range 스캔)로 폭발을 막는다. 순서 보장이 중요하므로 이벤트에 **Snowflake ID + per-shipment sequence**를 붙여, 중복/역전을 dedup한다.
 
 ## 6. Trade-off 정리 — "정답"은 하이브리드지만 경계가 관건
 
@@ -206,10 +208,23 @@ flowchart LR
 | --- | --- | --- | --- |
 | Fan-out 전략 | Push (조회 빠름) | Pull (쓰기 저렴) | 대부분 유저는 Push, 셀럽·고팔로워만 Pull → **하이브리드** |
 | 정렬 | 시간역순 (단순·저비용) | 랭킹 (참여도↑·복잡) | MVP·실시간성 우선이면 시간순, 체류시간·광고 최적화면 랭킹 |
-| 피드 캐시 범위 | 전 유저 precompute | 활성 유저만 lazy | 저장공간·비용 고려 시 lazy가 정석, 초저지연 절대우선이면 precompute |
-| ID 발급 | auto-increment | Snowflake | 다중 샤드·시간순 정렬 필요하면 Snowflake 사실상 필수 |
+| 피드 캐시 범위 | 전 유저 precompute | 활성 유저만 lazy | 저장공간·비용을 우선하면 lazy를 검토, 초저지연 절대우선이면 precompute |
+| ID 발급 | auto-increment | Snowflake | 다중 샤드에서 시간 정렬이 필요하면 Snowflake 같은 시간 기반 ID를 검토 |
 | 일관성 | Strong (즉시 반영) | Eventual (수초 지연) | 피드는 Eventual로 충분, 결제/잔액이라면 Strong |
 
 > **🎯 마무리 한 줄 (면접 클로징)**
 >
 > "기본은 **일반 유저 push + 셀럽 pull 하이브리드**로, 조회는 Redis ZSET 피드 캐시(최근 800개, 활성 유저 lazy precompute)에서 초저지연으로 뽑고, 셀럽 글만 조회 시 merge합니다. ID는 **Snowflake**로 시간순 정렬과 dedup을 동시에 잡고, 랭킹은 후보를 수백 개로 좁힌 뒤 경량 스코어링을 태웁니다. 셀럽 경계값과 merge 정렬이 실제 난이도의 핵심입니다." — 하이브리드의 근거와 경계 관리를 한 호흡에 말하면 합격 시그널.
+
+## 검수 경계와 실패 흐름
+
+- 수치와 임계값은 요구사항으로 선언하고 실제 workload·부하 테스트·관측 지표로 검증한다. 제품·기업의 내부 구현을 근거 없이 일반화하지 않는다.
+- 쓰기 성공 후 이벤트/읽기 모델 갱신 실패, 응답 유실 후 재시도, 중복·순서 역전·부분 장애를 정상적인 실패 경로로 모델링한다.
+- 원장과 캐시·검색·알림·분석 파생 모델의 상태를 구분하고, 멱등 키·버전·재처리 큐·대사 작업으로 수렴시킨다.
+- 성능 최적화는 평균이 아니라 p95/p99, 버스트와 복구 중 부하를 함께 본다. fallback을 추가할 때 정확성·보안·개인정보·비용 trade-off를 기록한다.
+
+## 공식·1차 출처
+
+- [https://redis.io/docs/latest/develop/data-types/sorted-sets/](https://redis.io/docs/latest/develop/data-types/sorted-sets/)
+- [https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-partition-key-design.html](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/bp-partition-key-design.html)
+- [https://kafka.apache.org/documentation/#intro_consumers](https://kafka.apache.org/documentation/#intro_consumers)

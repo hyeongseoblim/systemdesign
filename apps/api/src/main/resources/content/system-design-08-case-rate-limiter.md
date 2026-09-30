@@ -15,6 +15,8 @@ questions:
   - "여러 App 인스턴스가 중앙 Redis 카운터를 공유할 때 `GET → 판단 → SET` 방식이 일으키는 **race condition**을 구체 시나리오로 설명하고, `INCR` 또는 **Lua 스크립트**로 어떻게 원자화하는지, 그리고 `INCR`과 `EXPIRE`를 따로 부르면 생기는 함정까지 짚어보세요."
   - "중앙 Redis가 **SPOF**이자 병목이 될 수 있다는 지적에 대해, 가용성(fail-open vs fail-close)·동기화 비용·Redis Cluster/복제 관점에서 대응 방안을 제시하세요. 또한 **\"배차 요청 Rate Limiter\"** 물류 시나리오에서 기사 단위와 화주 API key 단위에 각각 어떤 알고리즘을 쓰고 왜 그런지 설명해보세요."
 ---
+> **검수 경계** — 요청량·버스트·윈도우와 허용 지연은 가상 요구사항이다. Redis 원자 연산 하나로 모든 리전의 전역 제한이 자동 보장되지는 않는다.
+
 ## 1. 요구사항 명확화 — 묻지 않으면 떨어진다
 
 면접에서 바로 그림을 그리면 감점이다. `Rate Limiter(요청 제한기)`는 "누구당 / 무엇을 기준으로 / 몇 개를" 막을지부터 합의해야 한다.
@@ -109,11 +111,11 @@ flowchart LR
 
 > **💡 사례 — 어디서 막나**
 >
-> **토스·카카오 오픈 API** 는 게이트웨이 단에서 API key별 rate limit을 1차로 건다. 그 뒤 결제·송금 같은 민감 경로는 애플리케이션 레벨에서 user별 2차 제한을 추가하는 **다층 방어(layered)** 가 흔하다. "한 군데서만 막는다"보다 "엣지에서 거칠게 + 앱에서 정밀하게"가 현실적.
+> 공개 API는 게이트웨이에서 API key별 제한을 1차로 적용하고, 결제·송금처럼 민감한 경로는 애플리케이션에서 사용자별 2차 제한을 둘 수 있다. 엣지의 거친 제한과 앱의 정밀한 제한을 함께 둘 때는 두 계층의 한도·실패 정책을 명시한다.
 
 ## 5. Deep-dive 🔥(Deep-dive)
 
-### 5-1. 알고리즘 5종 비교 (반드시 외울 표)
+### 5-1. 알고리즘 5종 비교 (선택 기준을 확인할 표)
 
 | 알고리즘 | 동작 | 정확도 | 메모리 | 버스트 허용 |
 | --- | --- | --- | --- | --- |
@@ -200,3 +202,16 @@ key = tenant_id + route + time_bucket
 decision = atomic(increment(key), set_expiry_if_new)
 if limiter unavailable: apply route-specific fail-open/fail-closed policy
 ```
+
+## 검수 경계와 실패 흐름
+
+- 수치와 임계값은 요구사항으로 선언하고 실제 workload·부하 테스트·관측 지표로 검증한다. 제품·기업의 내부 구현을 근거 없이 일반화하지 않는다.
+- 쓰기 성공 후 이벤트/읽기 모델 갱신 실패, 응답 유실 후 재시도, 중복·순서 역전·부분 장애를 정상적인 실패 경로로 모델링한다.
+- 원장과 캐시·검색·알림·분석 파생 모델의 상태를 구분하고, 멱등 키·버전·재처리 큐·대사 작업으로 수렴시킨다.
+- 성능 최적화는 평균이 아니라 p95/p99, 버스트와 복구 중 부하를 함께 본다. fallback을 추가할 때 정확성·보안·개인정보·비용 trade-off를 기록한다.
+
+## 공식·1차 출처
+
+- [https://redis.io/learn/develop/java/spring/rate-limiting/fixed-window](https://redis.io/learn/develop/java/spring/rate-limiting/fixed-window)
+- [https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/rate_limit_filter](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/rate_limit_filter)
+- [https://www.rfc-editor.org/rfc/rfc6585](https://www.rfc-editor.org/rfc/rfc6585)

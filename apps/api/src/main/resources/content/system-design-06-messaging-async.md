@@ -15,6 +15,8 @@ questions:
   - "\"같은 주문(orderId)의 이벤트는 반드시 순서대로 처리\"해야 합니다. Kafka에서 이를 어떻게 보장하며, 그 결과 어떤 부작용(Hot partition·병렬성 제약)이 생길 수 있는지, 그리고 파티션 수를 늘렸을 때의 Trade-off를 설명해보세요."
   - "주문 이벤트 파이프라인에서 Consumer Lag이 시간당 100만 건씩 누적되고 있습니다. 원인 후보와 진단 방법, 그리고 완화책(scale-out / throttle / 배치 최적화)을 retention 한계와 함께 설명해보세요. 같은 워크로드를 Kafka 대신 SQS로 했다면 무엇이 달라졌을까요?"
 ---
+> **검수 경계** — 메시징 제품의 선택은 전달 보장, 순서 범위, 재생, 보존, 멱등 소비와 운영 책임을 요구사항으로 비교한 결과다.
+
 ## 1. 왜 비동기 · 메시징인가
 
 동기 호출(synchronous call)은 A가 B의 응답을 기다린다. B가 느리거나 죽으면 A도 같이 막힌다(연쇄 장애, cascading failure). 메시지 큐/스트림을 끼우면 셋이 달라진다.
@@ -126,7 +128,7 @@ Kafka의 순서 보장은 **한 파티션 안에서만** 성립한다. Topic 전
 
 > **💡 팁 — Fan-out의 두 방식**
 >
-> **Fan-out on write(쓰기 시 미리 뿌리기)** vs **Fan-out on read(읽을 때 모으기)** 는 뉴스피드 설계의 고전 Trade-off다. 팔로워 많은 셀럽 글을 쓸 때마다 수천만 명에게 미리 뿌리면(write fan-out) 쓰기 폭주가 난다. 하이브리드(보통은 write, 셀럽은 read)가 정석.
+> **Fan-out on write(쓰기 시 미리 뿌리기)** vs **Fan-out on read(읽을 때 모으기)** 는 뉴스피드 설계의 대표적인 Trade-off다. 팔로워가 많은 계정에 write fan-out을 적용하면 팔로워 수에 비례한 쓰기 폭주가 생길 수 있다. 일반 계정은 write, 고차수 계정은 read로 나누는 하이브리드는 하나의 설계 선택지다.
 
 ## 5. 전달 보장(Delivery Semantics)과 멱등 소비 🔥(Deep-dive)
 
@@ -206,8 +208,8 @@ flowchart LR
 | 관점 | Kafka | RabbitMQ | AWS SQS |
 | --- | --- | --- | --- |
 | 모델 | 분산 로그(스트림) | 메시지 브로커(AMQP) | 완전관리형 큐 |
-| 처리량 | 매우 높음(수십만~백만 msg/s) | 중간(수만) | 높음(거의 무제한, 관리형) |
-| 순서 | 파티션 단위 보장 | 큐 단위(약함) | Standard 미보장 / FIFO 큐는 보장 |
+| 처리량 | 파티션·broker·payload·batching·복제 설정별 benchmark | broker·queue·consumer·payload별 benchmark | Standard/FIFO·API action·리전 quota와 batching을 확인 |
+| 순서 | 같은 파티션 내부에서 보장 | queue·consumer·재전달 설정의 범위를 확인 | Standard는 순서 미보장, FIFO는 같은 `MessageGroupId` 내부에서 보장 |
 | 재생(Replay) | 강점(offset 되감기) | 약함(소비 후 삭제) | 불가(삭제됨) |
 | 라우팅 | 단순(토픽/파티션) | 강력(exchange·라우팅 키·바인딩) | 단순 |
 | 운영 부담 | 높음(클러스터·ZK/KRaft 관리) | 중간 | 없음(서버리스) |
@@ -217,17 +219,17 @@ flowchart LR
 >
 > **다중 소비·재처리·고처리량 → Kafka. 복잡한 라우팅·낮은 지연 태스크 큐 → RabbitMQ. AWS에서 운영 부담 없이 단순 비동기 → SQS.** "무조건 Kafka"는 over-engineering일 수 있다 — 운영 비용과 요구 처리량을 함께 따져라.
 
-## 8. 빅테크 · 물류 사례
+## 8. 이벤트·물류 설계 사례
 
-> **쿠팡 — 주문 이벤트 파이프라인(Kafka)** — 주문 한 건이 결제·재고·정산·배송·추천·BI 등 수십 개 컨슈머로 fan-out된다. Kafka로 **다중 소비 + 재처리**를 확보하고, 각 도메인은 독립 Consumer Group으로 소비. 장애 도메인이 전체를 막지 않도록 분리.
+> **가상 주문 이벤트 파이프라인** — 주문이 결제·재고·정산·배송·분석 컨슈머로 fan-out된다고 가정한다. Kafka의 다중 소비·재처리를 쓰더라도 각 도메인을 독립 Consumer Group으로 분리하고, 실패한 소비를 재시도·DLQ로 격리한다.
 
-> **카카오 — 대규모 메시징** — 메시지 전송·푸시는 순간 버스트가 극심하다. 큐로 버스트를 흡수하고, 전달 보장은 **at-least-once + 멱등 처리**로 중복 발송을 억제. "정확히 한 번"을 보장하려다 무한 대기보단, 중복을 멱등하게 흡수하는 설계.
+> **가상 메시징 파이프라인** — 전송·푸시 버스트는 큐로 흡수하고, at-least-once 전달과 멱등 처리로 중복을 억제한다. 정확히 한 번을 주장하기보다 사용자에게 보이는 중복과 재처리 비용을 측정한다.
 
-> **배민 — 주문 파이프라인** — 주문 접수 → 가게 수락 → 라이더 배차 → 배달 완료까지의 상태 이벤트를 비동기로 흘려 각 단계 서비스를 분리. 피크(점심·저녁) 버스트를 큐로 평탄화하고, 상태 순서가 중요한 단위는 주문 키로 파티셔닝.
+> **가상 배송 상태 파이프라인** — 주문 접수부터 완료까지의 이벤트를 비동기로 흘리고 상태 순서가 중요한 키로 파티셔닝한다. 피크 배율과 컨슈머 처리량은 실제 트래픽 기록으로 산정한다.
 
-### 물류 연결 — 수천만 TrackingEvent Fan-out + 멱등 소비
+### 물류 연결 — 대량 TrackingEvent Fan-out + 멱등 소비
 
-라스트마일에서 스캔·배차·배송완료 등 **운송장 추적 이벤트(TrackingEvent)**가 하루 수천만 건 발생한다. 이걸 고객 알림·ETA 갱신·정산·BI로 fan-out해야 한다.
+라스트마일에서 스캔·배차·배송완료 등 **운송장 추적 이벤트(TrackingEvent)**가 대량 발생한다고 가정한다. 이벤트를 고객 알림·ETA 갱신·정산·분석으로 fan-out할 때 발생하는 파티션 쏠림과 중복을 설계한다.
 
 ```mermaid
 flowchart LR
@@ -247,9 +249,9 @@ flowchart LR
 
 *TrackingEvent fan-out — `waybillNo` 키로 송장별 순서 보장, eventId 기반 멱등 처리로 중복 알림 차단*
 
-> **🎯 면접 포인트 — 물류 추적 설계 단골**
+> **🎯 면접 포인트 — 물류 추적 설계**
 >
-> "수천만 TrackingEvent를 어떻게 처리?"에서 핵심은 (1) **송장 키 파티셔닝** 으로 한 송장의 상태 순서 보장, (2) 기사 앱 오프라인 재접속의 **중복 전송** 을 멱등 소비로 흡수, (3) **Consumer Lag 모니터링** 으로 알림 지연 SLA 관리, (4) 키 쏠림(특정 메가허브 폭주)으로 인한 **Hot partition** 대응. 네 가지를 Trade-off와 함께 엮어야 시니어답다.
+> "대량 TrackingEvent를 어떻게 처리?"에서 핵심은 (1) **송장 키 파티셔닝** 으로 한 송장의 상태 순서 보장, (2) 기사 앱 오프라인 재접속의 **중복 전송** 을 멱등 소비로 흡수, (3) **Consumer Lag 모니터링** 으로 알림 지연 SLA 관리, (4) 키 쏠림(특정 메가허브 폭주)으로 인한 **Hot partition** 대응. 네 가지를 Trade-off와 함께 엮어야 시니어답다.
 
 ```properties
 message.key=waybillId
@@ -257,3 +259,17 @@ enable.idempotence=true
 acks=all
 max.in.flight.requests.per.connection=5
 ```
+
+## 검수 경계와 실패 흐름
+
+- 전달 보장은 at-most-once·at-least-once·Kafka read-process-write EOS처럼 경계를 나눠 적고, 외부 결제·메일 side effect에는 idempotency와 대사를 둔다.
+- 같은 주문의 순서는 partition key·consumer concurrency·retry/rebalance 경로를 포함해 검증한다. partition 간 전역 순서는 가정하지 않는다.
+- consumer lag은 처리시간·외부 의존성·partition skew·rebalance로 분해하고 oldest lag age가 retention을 넘기기 전에 scale-out·throttle·DLQ를 선택한다.
+- Kafka offset replay, RabbitMQ 재전달, SQS visibility timeout/FIFO group은 서로 다른 모델이다. 브로커를 바꾸면 순서·중복·재생·quota 계약을 다시 적는다.
+
+## 공식·1차 출처
+
+- [https://kafka.apache.org/documentation/#semantics](https://kafka.apache.org/documentation/#semantics)
+- [https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/standard-queues-at-least-once-delivery.html](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/standard-queues-at-least-once-delivery.html)
+- [https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/quotas-messages.html](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/quotas-messages.html)
+- [https://www.rabbitmq.com/docs/reliability](https://www.rabbitmq.com/docs/reliability)

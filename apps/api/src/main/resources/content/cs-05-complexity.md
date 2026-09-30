@@ -43,7 +43,7 @@ O(1)        : 1
 O(log n)    : ~20
 O(n)        : 1,000,000
 O(n log n)  : ~20,000,000
-O(n²)       : 1,000,000,000,000   ← 1초 안에 불가능
+O(n²)       : 1,000,000,000,000   ← 실제 제한·구현에 따라 대개 부담
 O(2ⁿ)       : 사실상 영원
 
 ```
@@ -62,11 +62,11 @@ flowchart LR
     style F fill:#fef2f2,stroke:#dc2626
 ```
 
-*실무 경계선: n이 크면 O(n log n) 이하로 끌어내려야 하고, O(n²)·O(2ⁿ)는 입력 크기를 의심하라*
+*실무 판단: n이 크면 O(n log n) 이하 후보를 먼저 보고, O(n²)·O(2ⁿ)는 입력 제한·가지치기·실측을 함께 검토한다.*
 
 > **💡 면접 입력 크기 감 잡기**
 >
-> 제약(constraint)이 알고리즘을 알려준다. n ≤ 20 → 비트마스크/완전탐색 O(2ⁿ) 허용. n ≤ 5,000 → O(n²) 가능. n ≤ 10⁵~10⁶ → O(n log n) 필요. n ≥ 10⁷ → O(n)/O(log n)만. "1초 ≈ 10⁸ 연산"을 기준 삼아 역산하라.
+> 제약(constraint)은 후보 알고리즘의 범위를 좁히는 힌트다. n ≤ 20에서 O(2ⁿ) 후보를 검토할 수 있고, n이 커질수록 O(n²)보다 O(n log n)·O(n)을 우선 검토한다. "1초에 고정된 연산 수" 같은 휴리스틱은 언어·자료구조·입력·실행 환경에 따라 크게 달라지므로 상한을 정한 뒤 실제 복잡도와 benchmark로 확인한다.
 
 ## 3. 시간 & 공간 복잡도 (Time & Space)
 
@@ -102,7 +102,7 @@ int sum(int n) {            // 공간 O(n) — 스택 프레임 n개 쌓임
 
 ```mermaid
 flowchart LR
-    A["append × 7각 O(1)"] --> B["8번째 append:용량 초과 → 2배 확장O(n) 복사!"]
+    A["append 여러 번각 O(1)"] --> B["용량 초과 시 확장→ O(n) 복사 가능"]
     B --> C["이후 append다시 O(1)"]
     C --> D["전체 n번 평균= amortized O(1)"]
 
@@ -128,7 +128,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | **분할정복(Divide & Conquer)** | 쪼개서 풀고 합침 | 마스터 정리(점화식) | Merge Sort T(n)=2T(n/2)+O(n)=O(n log n) |
 | **동적계획법(DP)** | 부분문제 + 메모이제이션 | 상태 수 × 전이 비용 | 0/1 Knapsack O(nW), LCS O(nm) |
-| **그리디(Greedy)** | 매 단계 국소 최적 선택 | 정렬 + 선형 스캔이 흔함 | 활동 선택 O(n log n), Dijkstra O(E log V) |
+| **그리디(Greedy)** | 매 단계 국소 최적 선택 | 정렬 + 선형 스캔이 흔함 | 활동 선택 O(n log n), Dijkstra는 조건 충족 시 O(E log V) |
 | **백트래킹(Backtracking)** | 탐색 + 가지치기 | 분기 × 깊이(지수적, 가지치기로 완화) | N-Queens O(n!), 부분집합 O(2ⁿ) |
 
 ### 마스터 정리 (Master Theorem) 직관
@@ -145,7 +145,7 @@ T(n) = a·T(n/b) + O(n^d)   (a≥1, b>1)
 
 > **💡 DP vs 그리디 — 언제 그리디가 맞나**
 >
-> 그리디는 **탐욕적 선택 속성** 과 **최적 부분 구조** 가 증명될 때만 정답을 보장한다(예: Dijkstra, MST). 증명 없이 그리디를 쓰면 반례에 깨진다 — 동전 거스름돈이 대표적(특정 액면이면 그리디 실패 → DP 필요). 면접에서 그리디를 제안하면 **왜 국소 최적이 전역 최적인지** 한 줄 근거를 붙여라.
+> 그리디는 **탐욕적 선택 속성**과 **최적 부분 구조**가 증명될 때만 정답을 보장한다. Dijkstra는 음수 가중치가 없다는 조건이 필요하고 MST도 문제 정의·간선 비교 조건을 확인한다. 증명 없이 그리디를 쓰면 반례에 깨진다 — 동전 거스름돈이 대표적이다. 면접에서 그리디를 제안하면 **왜 국소 최적이 전역 최적인지** 한 줄 근거를 붙여라.
 
 ## 6. 자료구조 연산 복잡도표 (Cheat Sheet)
 
@@ -177,5 +177,21 @@ n=1,000,000일 때 대략적인 연산 규모
 O(log n)  ≈ 20
 O(n)      = 1,000,000
 O(n log n)≈ 20,000,000
-O(n²)     = 1,000,000,000,000
+O(n²)     = 1,000,000,000,000 (기계·구현에 따라 실제 가능 여부가 달라짐)
 ```
+
+## 7. 실패 흐름과 분석 경계
+
+- Big-O만 같아도 상수·메모리 접근·캐시·I/O·할당량이 다르면 실제 성능 순서가 달라질 수 있다. 입력 분포와 측정 구간을 함께 기록한다.
+- Memoization은 상태 키가 잘못되거나 캐시가 무한히 커지면 정확성과 메모리를 잃는다. 상태 정의·기저 조건·eviction 필요성을 먼저 검증한다.
+- DP의 O(상태 수 × 전이 수)는 상태 중복 제거가 정확할 때만 성립한다. 숨은 차원·큰 정수 overflow·불가능 상태의 sentinel 충돌을 점검한다.
+- 분할상환 O(1)은 호출열 전체의 비용 분석이지 모든 단일 호출이 O(1)이라는 뜻이 아니다. 용량 확장 정책과 메모리 복사·GC 영향을 포함해 측정한다.
+- 그리디·Dijkstra·Union-Find의 복잡도는 자료구조와 조건에 의존한다. 음수 간선, rank/경로 압축 유무, 힙 구현을 명시하지 않고 숫자만 제시하지 않는다.
+
+## 8. 참고 자료
+
+- [Java SE 21 ArrayList](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/ArrayList.html)
+- [Java SE 21 HashMap](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/HashMap.html)
+- [Java SE 21 Arrays](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Arrays.html)
+- [Java SE 21 StackOverflowError](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/StackOverflowError.html)
+- [CLRS 4th edition](https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/)

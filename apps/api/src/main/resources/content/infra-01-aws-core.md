@@ -20,7 +20,7 @@ questions:
 
 > **한 줄 정의** — Region(리전) = 지리적 위치(서울 ap-northeast-2), AZ(가용영역) = 리전 안의 *물리적으로 격리된* 데이터센터 묶음.
 
-AZ는 서로 수 km~수십 km 떨어진 별개 건물·전원·네트워크로 구성된다. 한 AZ가 정전·화재로 죽어도 다른 AZ는 살아있다. 그래서 **가용성 설계의 출발점은 "최소 2개 AZ에 분산"**이다.
+AZ는 리전 안에서 독립적인 전원·네트워크 장애 도메인으로 운영된다. AZ 간 연결성과 실제 장애 범위는 리전·서비스별 문서를 확인해야 한다. 따라서 **가용성 설계의 출발점은 단일 장애 도메인에 핵심 경로를 몰아넣지 않는 것**이며, 필요한 AZ 수는 RTO/RPO와 서비스별 배치 제약으로 결정한다.
 
 ```mermaid
 flowchart TB
@@ -53,12 +53,12 @@ flowchart TB
 
 무작정 Multi-Region(다중 리전)으로 가면 비용·복잡도가 폭발한다. **RTO(Recovery Time Objective, 복구 목표 시간)**와 **RPO(Recovery Point Objective, 복구 목표 시점=허용 데이터 손실)**를 숫자로 정해야 한다.
 
-| 전략 | RTO | RPO | 월 비용 배수 | 적합 워크로드 |
+| 전략 | RTO | RPO | 비용·복잡도 | 적합 워크로드 |
 | --- | --- | --- | --- | --- |
-| 단일 AZ | 수 시간 | 마지막 백업 시점 | 1.0x | 개발/스테이징, 비핵심 배치 |
-| Multi-AZ | 1~2분 (자동 Failover) | ≈ 0 (동기 복제) | 1.5~2x | 대부분의 프로덕션 (주문/결제 DB) |
-| Multi-Region Active-Passive | 수 분~수십 분 | 초~분 (비동기) | 2.5~3x | 리전 장애까지 견뎌야 하는 핵심 |
-| Multi-Region Active-Active | ≈ 0 | 초 (충돌 해결 필요) | 3x+ | 글로벌 서비스, 토스/쿠팡 결제 코어 일부 |
+| 단일 AZ | 백업·복구 절차에 의존 | 마지막 백업 또는 복제 지점 | 기준 비용은 서비스별 산정 | 개발/스테이징, 비핵심 배치 |
+| Multi-AZ | 서비스별 자동 전환 시간 | 복제 방식에 따라 다름 | 추가 리소스·전송·운영 복잡도 | AZ 장애를 견뎌야 하는 프로덕션 |
+| Multi-Region Active-Passive | 복구 자동화 수준에 의존 | 보통 비동기 복제 지연의 영향을 받음 | 두 리전 리소스와 페일오버 절차 | 리전 장애까지 요구되는 핵심 경로 |
+| Multi-Region Active-Active | 트래픽 전환·충돌 해결 설계에 의존 | 쓰기 모델과 복제 방식에 의존 | 가장 높은 데이터·운영 복잡도 | 글로벌 지연 또는 리전 연속성이 요구되는 경우 |
 
 > **🎯 면접 포인트**
 >
@@ -114,7 +114,7 @@ flowchart TB
 
 > **⚠️ 실무 함정**
 >
-> **NAT Gateway를 통한 S3/DynamoDB 트래픽** → 데이터 전송 요금이 GB당 부과돼 비용 폭탄. S3는 **Gateway VPC Endpoint(무료)** , 그 외 AWS API는 **Interface Endpoint(PrivateLink)** 로 빼면 NAT를 우회한다. Security Group을 `0.0.0.0/0` 로 열어두는 것 — 면접에서 "보안 어떻게?" 질문에 즉시 감점. 최소 권한(Least privilege)으로 SG 간 참조(SG를 source로 지정)를 써라. 🔥(Deep-dive)
+> S3·DynamoDB처럼 VPC endpoint 경로를 지원하는 서비스는 NAT를 우회하는 Gateway Endpoint를 후보로 둔다. 그 밖의 AWS API는 Interface Endpoint 또는 NAT가 필요할 수 있으며, endpoint·NAT·리전·트래픽 요금은 현재 가격표와 경로별 데이터 처리량으로 계산한다. `0.0.0.0/0` 허용은 목적·포트·소스가 불명확한 규칙이므로 최소 권한 SG와 라우팅 검토를 우선한다. 🔥(Deep-dive)
 
 ## 3. EC2 / ECS / EKS — 컴퓨트 선택
 
@@ -122,21 +122,21 @@ flowchart TB
 
 | 옵션 | 운영 부담 | 유연성 | 비용 | 적합한 팀/상황 |
 | --- | --- | --- | --- | --- |
-| **EC2 (직접)** | 높음 (OS 패치·스케일 직접) | 최고 | 저렴 (Spot/RI 활용 시) | 특수 워크로드, 레거시, GPU |
+| **EC2 (직접)** | 높음 (OS 패치·스케일 직접) | 최고 | 인스턴스·라이선스·운영비를 별도 산정 | 특수 워크로드, 레거시, GPU |
 | **ECS on Fargate** | **낮음 (서버리스 컨테이너)** | 중 | 중상 (vCPU·메모리 단위 과금) | K8s 운영 인력 없는 중소 팀, 대부분의 웹 API |
-| **ECS on EC2** | 중 | 중상 | 저렴 (노드 직접 관리) | 비용 민감 + 컨테이너 밀도 높이고 싶을 때 |
+| **ECS on EC2** | 중 | 중상 | 노드 용량·예약·운영비를 별도 산정 | 컨테이너 밀도와 노드 제어가 중요한 경우 |
 | **EKS** | 높음 (K8s 자체 운영) | 최고 (CNCF 생태계) | 중상 (+ 컨트롤플레인 시간당 요금) | 대규모, 멀티팀, K8s 표준 필요 |
-| **Lambda** | 최저 | 낮음 (15분·콜드스타트 제약) | 요청 단위 (트래픽 적으면 매우 저렴) | 이벤트 처리, 간헐적 워크로드 |
+| **Lambda** | 최저 | 낮음 (실행·동시성·패키지 제약) | 요청·실행 시간·옵션별 산정 | 이벤트 처리, 간헐적 워크로드 |
 
 > **💡 실무 의사결정**
 >
-> 국내 스타트업·중견 백엔드 팀은 **ECS Fargate** 가 가성비 스윗스팟인 경우가 많다. K8s를 운영할 SRE 인력이 2~3명 이상 확보되고, 멀티팀이 한 클러스터를 공유해야 할 때 비로소 EKS가 정당화된다. 토스·당근 등은 EKS를 쓰지만 전담 플랫폼팀이 있다.
+> ECS Fargate와 EKS의 선택은 팀의 Kubernetes 운영 역량, 요구하는 제어면 기능, 워크로드 제약, 현재 가격표를 함께 비교한다. 특정 인원 수나 회사 사례를 기준으로 일반화하지 말고, 운영 소유권과 장애 대응 능력을 결정 근거로 남긴다.
 
 ### Lambda 운영 함정
 
-- **Cold start(콜드 스타트)**: 유휴 후 첫 호출 시 컨테이너 기동 지연(수백 ms~수 초). 지연 민감 API엔 Provisioned Concurrency로 완화.
-- **VPC 연결 비용**: Lambda를 VPC에 붙이면 ENI 생성·과거엔 콜드스타트 가중. RDS 접근 등 꼭 필요할 때만.
-- **15분 실행 제한**: 장시간 배치는 ECS Task나 Step Functions로.
+- **Cold start(콜드 스타트)**: 실행 환경 생성 시간이 요청 지연에 영향을 줄 수 있다. 지연 목표가 있으면 초기화 코드·패키지 크기·동시성 설정을 측정하고 Provisioned Concurrency 같은 선택지를 검토한다.
+- **VPC 연결**: VPC 리소스에 접근해야 할 때만 연결하고, 서브넷·보안그룹·DNS·네트워크 경로를 함께 검증한다.
+- **실행 한도**: 장시간 작업은 Lambda의 현재 서비스 한도와 워크로드 시간을 비교하고, 초과하면 ECS Task·Step Functions 등 다른 실행 모델을 검토한다.
 
 ## 4. ELB — ALB vs NLB vs API Gateway
 
@@ -161,36 +161,45 @@ flowchart LR
 | --- | --- | --- | --- |
 | OSI 레벨 | L7 (HTTP/HTTPS) | L4 (TCP/UDP) | L7 (관리형) |
 | 라우팅 | 경로/호스트/헤더 기반 | 없음 (단순 분배) | 리소스·메서드 단위 |
-| 지연 | 수 ms 오버헤드 | **초저지연·고정 IP** | 높음 (기능 풍부 대가) |
-| 강점 | WAF·SSL 종료·콘텐츠 라우팅 | 극단적 처리량, gRPC | 인증·쓰로틀·요청 변환·사용량 플랜 |
+| 지연 | 네트워크·TLS·규칙 구성에 의존 | 네트워크·프로토콜에 의존 | 기능·통합 구성에 의존 |
+| 강점 | WAF·SSL 종료·콘텐츠 라우팅 | 극단적 처리량, gRPC | API 유형별 인증·쓰로틀·요청 변환·사용량 플랜 |
 | 비용 | 중 (LCU 단위) | 중 | 요청당 (트래픽 크면 비쌈) |
+
+API Gateway의 기능은 API 유형(REST API·HTTP API·WebSocket API)에 따라 다르다. 특히 **usage plan과 API key 기반 사용량·클라이언트별 throttling은 REST API 기능**으로 분류해 확인하고, HTTP API를 같은 기능 집합으로 가정하지 않는다. 선택 전 [REST API와 HTTP API 비교 문서](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-vs-rest.html)와 [usage plan 문서](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-api-usage-plans.html)를 현재 리전·요구사항에 맞춰 확인한다.
 
 > **⚠️ 실무 함정**
 >
-> API Gateway는 편하지만 **요청당 과금** 이라 수천만 req/일 규모(예: 배송 추적 폴링)에선 ALB 대비 비용이 수 배로 뛴다. 트래픽이 크고 단순하면 ALB + 자체 인증 미들웨어가 더 싸다.
+> API Gateway와 ALB의 비용은 요청 수, 데이터 처리량, 기능, 리전, 인증·WAF 구성에 따라 달라진다. 고빈도 폴링이라면 현재 가격표와 예상 요청·응답량으로 두 경로를 계산하고, API Gateway의 인증·쓰로틀·정책 기능을 직접 구현·운영할 비용까지 포함해 결정한다.
 
 ## 5. RDS / Aurora / S3 — 데이터 계층
 
 ### RDS Multi-AZ vs Read Replica — 자주 혼동
+
+아래 표는 **RDS Multi-AZ DB instance 배포의 단일 standby**와 Read Replica를 비교한 것이다. RDS의 Multi-AZ DB cluster는 별도 모델로, writer와 두 개의 readable reader 인스턴스 및 reader endpoint를 제공할 수 있으므로 같은 “standby는 읽지 못한다” 규칙으로 일반화하지 않는다. 실제 엔진·리전·배포 유형은 [Multi-AZ DB instance 문서](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZSingleStandby.html)와 [Multi-AZ DB cluster 문서](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/multi-az-db-clusters-concepts.html)에서 확인한다.
 
 | 관점 | Multi-AZ Standby | Read Replica(읽기 복제본) |
 | --- | --- | --- |
 | 목적 | **가용성** (장애 시 Failover) | **읽기 확장** (조회 부하 분산) |
 | 복제 방식 | 동기 (Synchronous) | 비동기 (Asynchronous, 지연 존재) |
 | 트래픽 수용 | Standby는 평소 트래픽 안 받음 | 읽기 쿼리 직접 받음 |
-| 승격 | 자동 Failover (1~2분) | 수동 승격 가능 |
+| 승격 | 서비스·엔진 구성에 따른 자동 전환 | 읽기 복제본을 승격하는 별도 절차 |
+
+| 별도 배포 모델 | Multi-AZ DB cluster | 기존 Multi-AZ DB instance standby와 구분 |
+| --- | --- | --- |
+| 읽기 경로 | reader 인스턴스·reader endpoint를 사용할 수 있음 | 단일 standby가 평소 애플리케이션 트래픽을 받는 모델로 보지 않음 |
+| 복제·전환 | 세부 동작·지원 엔진은 공식 문서와 배포 유형을 확인 | 서비스·엔진 구성에 따라 자동 전환 |
 
 ### Aurora — 공유 스토리지 아키텍처
 
-Aurora는 컴퓨트(인스턴스)와 스토리지를 분리해, **6중 복제 분산 스토리지**를 여러 인스턴스가 공유한다. 그래서 Read Replica 추가가 빠르고(스토리지 복제 불필요), Failover가 수십 초로 짧다. MySQL/PostgreSQL 호환. 다만 일반 RDS보다 비싸다.
+Aurora는 컴퓨트와 분산 스토리지 계층을 분리하고, 여러 DB 인스턴스가 클러스터 스토리지를 공유하는 구조다. 복제·장애 전환·지원 엔진의 세부 동작과 한도는 엔진·리전·현재 공식 문서를 확인한다. RDS와 Aurora의 비용·기능 차이는 워크로드와 현재 가격표로 비교한다.
 
 ### S3 — 스토리지 클래스 수명주기
 
 ```mermaid
 flowchart LR
     Up["업로드"] --> Std["S3 Standard\n자주 접근"]
-    Std -->|"30일 후"| IA["Standard-IA\n가끔 접근"]
-    IA -->|"90일 후"| Gla["Glacier\n아카이브"]
+    Std -->|"정책 기준일 후"| IA["Standard-IA\n가끔 접근"]
+    IA -->|"정책 기준일 후"| Gla["Glacier 계열\n아카이브"]
     Gla -->|"수명주기 만료"| Del["삭제"]
 
     style Std fill:#dbeafe,stroke:#3b82f6
@@ -199,11 +208,11 @@ flowchart LR
     style Del fill:#fee2e2,stroke:#ef4444
 ```
 
-*S3 Lifecycle(수명주기) — 접근 빈도에 따라 자동 전환해 GB당 비용을 1/10 이하로*
+*S3 Lifecycle(수명주기) — 접근 패턴·보존 정책에 따라 저장 클래스를 전환*
 
 > **💡 물류 연결 — 배송 사진(POD) 보관**
 >
-> 라스트마일 배송 증빙(Proof of Delivery, 배송완료 사진)은 업로드 직후엔 CS 조회로 자주 열리지만 30일 지나면 거의 안 열린다. **Standard → IA → Glacier** 수명주기를 걸면 수억 장 누적 시 스토리지 비용이 극적으로 준다. 단, Glacier는 꺼내는 데 시간·요금이 드니 "법적 보관 의무 vs 조회 빈도"로 정책을 정한다.
+> 배송 증빙(Proof of Delivery, 배송완료 사진)은 보존 기간, 조회 빈도, 법적·계약상 삭제 요구를 먼저 정의한다. 그 뒤 Standard·Infrequent Access·Glacier 계열과 복원 시간·요금을 현재 S3 문서와 가격표로 비교해 Lifecycle 규칙을 만든다.
 
 ## 6. SQS / SNS — 메시징 / 비동기
 
@@ -274,9 +283,7 @@ flowchart TB
 
 *주문→재고→추적 파이프라인의 AWS 매핑 — Multi-AZ Aurora + SNS/SQS 팬아웃 + DynamoDB 추적*
 
-> **💡 정량 근거 — 주문 폭주 대응**
->
-> 블랙프라이데이·새벽 오픈 같은 주문 폭주(평소 500 QPS → 피크 5,000 QPS)에서, OMS를 ECS Fargate로 두면 **Target Tracking 오토스케일** 로 CPU 70% 기준 수 분 내 Task를 4~10배로 늘린다. 그 사이 SNS/SQS가 다운스트림(재고·추적)의 **버퍼** 역할을 해 워커가 천천히 따라잡아도 주문 접수는 안 막힌다. 동기 호출 체인이었다면 한 곳 느려질 때 전체가 타임아웃으로 무너진다.
+> 예고된 주문 폭주에서는 실제 QPS·요청 크기·DB 커넥션·워커 처리량을 부하 모델로 검증한다. ECS 오토스케일의 감지·기동 시간은 구성과 용량에 따라 달라지므로 사전 확장과 큐의 보존·재시도·DLQ 정책을 함께 설계한다. SNS/SQS가 지연을 흡수해도 재고·결제의 지속 가능 처리량을 늘리지는 않는다.
 
 ```text
 VPC
@@ -284,3 +291,25 @@ VPC
 ├─ private app subnet: ECS/EKS workload
 └─ isolated data subnet: RDS/ElastiCache
 ```
+
+## 9. 실패 흐름과 검증 순서
+
+- Private Subnet의 외부 API 호출이 실패하면 라우팅 테이블, NAT 경로, 보안그룹·NACL, DNS, 외부 API의 허용 IP를 순서대로 확인한다. S3 요청이 예상치 않게 NAT를 타면 endpoint 정책·라우팅·버킷 정책을 함께 확인하고, 경로를 바꾼 뒤 비용만으로 성공을 판단하지 않는다.
+- Multi-AZ 장애 전환 중 DB 연결이 끊길 수 있으므로 애플리케이션은 연결 재수립, 지수 백오프, 요청 멱등성을 갖춘다. Read Replica의 지연을 무시하고 즉시 읽으면 최신성 요구를 위반할 수 있어 읽기 일관성 정책을 분리한다.
+- SQS 표준 큐의 중복 전달과 순서 비보장을 전제로 소비자는 멱등키, visibility timeout, DLQ, 재처리 관찰 지표를 갖춘다. FIFO를 선택할 때는 메시지 그룹과 중복 제거 범위를 요구사항과 맞춘다.
+- CloudFront 캐시가 잘못된 대상을 공유하면 사용자 데이터가 노출될 수 있다. 캐시 정책·origin request policy·응답 `Cache-Control`을 함께 검토하고, 개인정보 응답은 캐시 금지 또는 사용자별 키를 명시한다.
+
+## 10. 참고 자료
+
+- [AWS Global Infrastructure: Regions and Availability Zones](https://docs.aws.amazon.com/global-infrastructure/latest/regions/aws-regions.html)
+- [Amazon VPC endpoints](https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints.html) 및 [NAT gateways](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html)
+- [Amazon ECS on AWS Fargate](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/AWS_Fargate.html) 및 [AWS Lambda quotas](https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html)
+- [Elastic Load Balancing](https://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/what-is-load-balancing.html)
+- [Amazon RDS Multi-AZ deployments](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZ.html)
+- [Amazon RDS Multi-AZ DB instance deployments](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZSingleStandby.html)
+- [Amazon RDS Multi-AZ DB cluster deployments](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/multi-az-db-clusters-concepts.html)
+- [Amazon API Gateway REST APIs and HTTP APIs](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-vs-rest.html)
+- [Amazon API Gateway usage plans](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-api-usage-plans.html)
+- [Amazon S3 object Lifecycle Management](https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lifecycle-mgmt.html)
+- [Amazon SQS at-least-once delivery](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/standard-queues-at-least-once-delivery.html)
+- [CloudFront Origin Access Control](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html)

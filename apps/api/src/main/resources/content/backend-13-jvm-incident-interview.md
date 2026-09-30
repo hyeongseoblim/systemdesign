@@ -17,6 +17,8 @@ questions:
   - "Heap 사용량은 안정적인데 컨테이너 OOM이 발생할 수 있는 원인을 설명해보세요."
   - "Thread Dump 한 장으로 결론 내리면 안 되는 이유와 비교 방법은 무엇인가요?"
 ---
+> **검수 경계** — 장애 대응 순서와 명령의 안전성은 JDK·컨테이너·권한·운영 도구에 따라 달라진다. CPU 100%, RSS, Dump와 Thread Dump 수치는 예시이며 사용자 영향과 증거 수집 비용을 함께 판단한다.
+
 ## 1. 복구와 증거를 함께 설계한다
 
 장애 시각, 영향 인스턴스, 배포·트래픽 변화를 먼저 고정한다. 자동 재시작 전에 비용이 낮은 메트릭과 여러 번의 Thread Dump를 수집하고, 위험한 Heap Dump는 격리된 복제본에서 판단한다.
@@ -52,3 +54,17 @@ compare at least several samples before declaring a stuck thread
 프로세스 메모리는 Heap 외 Metaspace, Code Cache, Direct Buffer, Native Library와 Thread Stack을 포함한다. JVM 설정뿐 아니라 컨테이너 Limit과 종료 사유를 확인한다.
 
 > **면접 포인트** — 관측→가설→안전한 증거→완화→재현과 회귀 방지의 순서로 답한다.
+
+## 검수 경계와 실패 흐름
+
+- CPU 포화 때 profile·Thread Dump 자체가 추가 비용을 만들 수 있으므로 영향 인스턴스를 격리하고 짧은 샘플을 여러 시점에 확보한다. 단일 snapshot으로 stuck thread를 확정하지 않는다.
+- Heap이 안정적이어도 Direct/Native, Metaspace, Code Cache, Thread Stack과 cgroup limit 때문에 OOMKilled가 날 수 있다. JVM·host·container 신호의 시간대를 맞춘다.
+- 재시작은 사용자 영향 완화일 수 있지만 증거를 잃을 수 있다. 자동 재시작 전후에 가능한 최소 메트릭·로그·JFR/Thread Dump를 보존하고, 재발 방지용 재현 workload를 만든다.
+- Dump·JFR에는 요청 정보와 개인정보가 포함될 수 있으므로 접근 권한·보존·암호화·폐기 정책을 적용한다.
+
+## 공식·1차 출처
+
+- [Java Troubleshooting Guide](https://docs.oracle.com/en/java/javase/25/troubleshoot/)
+- [Oracle `jcmd` Reference](https://docs.oracle.com/en/java/javase/25/docs/specs/man/jcmd.html)
+- [Java Flight Recorder Runtime Guide](https://docs.oracle.com/en/java/javase/25/develop/use-jfr-runtime.html)
+- [Docker Runtime Resource Constraints](https://docs.docker.com/engine/containers/resource_constraints/)

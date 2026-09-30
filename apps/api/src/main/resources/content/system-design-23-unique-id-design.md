@@ -17,6 +17,8 @@ questions:
   - "시간 기반 생성기에서 시계가 뒤로 갈 때 안전하게 대응하는 전략을 설명해보세요."
   - "노드 ID 할당이 중복되면 어떤 장애가 생기며 이를 어떻게 탐지하고 차단하나요?"
 ---
+> **검수 경계** — ID 비트 구성·생성량·시계 정밀도·수명은 요구사항으로 계산한다. UUID·Snowflake·구간 할당 중 하나가 모든 용도에 최적이라는 일반화는 피한다.
+
 ## 1. 필요한 속성을 먼저 고른다
 
 전역 고유성, 대략적 시간 순서, 생성 가용성, 예측 불가능성은 서로 다른 요구다. 외부 공개 ID는 순차 번호 노출을 피하고, 내부 저장 키는 인덱스 지역성을 고려해 분리할 수도 있다.
@@ -49,3 +51,16 @@ if clock < last_clock: stop, wait, or switch to a persisted logical epoch
 노드 ID는 임의 환경 변수보다 임대 레지스트리로 유일성을 보장한다. 시계 역행, 시퀀스 소진, 중복 제약 위반을 지표화하고 재시작 뒤 마지막 Epoch를 복구한다.
 
 > **면접 포인트** — 초당 생성량으로 Timestamp·Sequence Bit를 계산하고 수명, 정렬성, 장애 시 가용성의 Trade-off를 설명한다.
+
+## 검수 경계와 실패 흐름
+
+- clock rollback이 감지되면 대기·논리 epoch 증가·생성기 중단 중 정책을 선택하고, rollback window와 가용성 손실을 지표화한다.
+- sequence가 소진되거나 epoch가 rollover하면 충돌을 재시도만으로 숨기지 말고 생성 실패·수명·마이그레이션 경로를 명시한다.
+- node ID lease·registry가 분할되면 fencing token과 최종 저장소 UNIQUE 제약으로 중복을 차단하고, duplicate key·순서 역전·생성 지연을 알람으로 남긴다.
+- 외부 공개 ID의 예측 가능성·내부 B-Tree locality·정렬성은 서로 다른 요구사항이다. 생성량·bit 배치·DB insert benchmark를 함께 검증한다.
+
+## 공식·1차 출처
+
+- [https://www.rfc-editor.org/rfc/rfc9562](https://www.rfc-editor.org/rfc/rfc9562)
+- [https://github.com/twitter-archive/snowflake](https://github.com/twitter-archive/snowflake)
+- [https://www.postgresql.org/docs/current/datatype-uuid.html](https://www.postgresql.org/docs/current/datatype-uuid.html)

@@ -18,6 +18,8 @@ questions:
   - "\"응답시간 평균 100ms라 괜찮다\"는 보고를 **백분위(p50/p95/p99)·Tail latency** 관점에서 반박하고, RED 방법론으로 API 건강을 어떻게 볼지 설명해보세요."
   - "한 주문 요청이 OMS→WMS→TMS 5개 서비스를 거치는데 느립니다. **분산 추적·W3C Trace Context·상관관계 ID**로 병목 서비스를 어떻게 찾을지, 비동기/Kafka 경계에서 trace가 끊기는 문제는 어떻게 해결할지 답해보세요."
 ---
+> **검수 경계** — 로그·메트릭·트레이스의 필드와 보존·샘플링 값은 비용·개인정보·SLO에 따른 설계 입력이다. Micrometer, OpenTelemetry, Prometheus와 Java/Spring 연동 동작은 사용하는 라이브러리 버전 문서로 확인한다.
+
 ## 1. 관측성의 세 기둥
 
 ```mermaid
@@ -42,7 +44,7 @@ flowchart LR
 
 ## 2. 구조적 로깅 (Structured Logging)
 
-문자열 로그는 사람만 읽는다. **JSON 구조적 로그**는 기계가 파싱·검색·집계한다. Loki·ELK에서 필드로 쿼리하려면 필수다.
+문자열 로그보다 **JSON 구조적 로그**가 기계 파싱·검색·집계에 유리하다. 사용 중인 로그 수집기에서 필드 검색을 지원하는지 확인하고, 모든 로그에 무조건 필수라고 일반화하지 않는다.
 
 ```
 // ❌ 비구조적 — 파싱 불가, traceId 없음
@@ -137,7 +139,7 @@ sequenceDiagram
 
 > **🎯 면접 단골 — Last-mile TrackingEvent 추적**
 >
-> "수천만 TrackingEvent가 흐르는데 특정 운송장이 어디서 막혔는지 어떻게 찾나요?" → **운송장 번호를 상관관계 ID로 모든 로그·이벤트에 부착** + 분산 추적. 단, 전수 trace는 비싸므로 **Sampling(샘플링)** 으로 일부만 수집하되 에러는 100% 수집(tail-based sampling).
+> "대량 TrackingEvent가 흐르는데 특정 운송장이 어디서 막혔는지 어떻게 찾나요?" → **운송장 번호를 도메인 상관관계 키로 로그·이벤트에 부착**하고 trace context와 연결한다. 전수 trace는 비용·개인정보·저장량을 따져 sampling하며, 오류·고지연 요청을 우선 보존하는 정책을 SLO와 함께 정한다.
 
 ## 5. OpenTelemetry (OTel)
 
@@ -158,16 +160,30 @@ flowchart LR
 
 > **💡 왜 OTel이 표준이 됐나**
 >
-> 과거엔 APM 벤더마다 에이전트가 달라 종속(lock-in)됐다. OTel(CNCF 프로젝트)은 **계측과 백엔드를 분리** 해 종속을 끊었다. Spring Boot는 Micrometer Observation API로 OTel과 연동된다. 신규 시스템 설계 시 "OTel 기반으로 간다"가 무난한 답.
+> 계측 형식과 백엔드를 분리하면 특정 APM에 대한 종속을 줄일 수 있다. OpenTelemetry와 Spring의 Micrometer 연동은 사용 버전과 exporter 설정을 확인하고, sampling·PII·전송 비용까지 포함해 선택한다.
 
 ## 6. SLI / SLO / SLA
 
 | 용어 | 의미 | 예시 |
 | --- | --- | --- |
-| **SLI** (Indicator, 지표) | 측정하는 실제 수치 | 최근 5분 성공 요청 비율 = 99.95% |
-| **SLO** (Objective, 목표) | SLI가 만족해야 할 내부 목표 | "가용성 99.9% 이상" |
-| **SLA** (Agreement, 협약) | 고객과의 계약 + 위반 시 보상 | "99.5% 미만 시 요금 10% 환불" |
+| **SLI** (Indicator, 지표) | 측정하는 실제 수치 | 예: 최근 5분 성공 요청 비율 |
+| **SLO** (Objective, 목표) | SLI가 만족해야 할 내부 목표 | 예: 가용성 목표를 계약으로 선언 |
+| **SLA** (Agreement, 협약) | 고객과의 계약 + 위반 시 보상 | 계약에 정의한 보상 조건 |
 
 > **💡 Error Budget(에러 예산)**
 >
 > SLO가 99.9%면 0.1%는 "실패해도 되는 예산"이다. 예산이 남으면 **배포·실험을 공격적으로** , 예산을 다 쓰면 **안정화에 집중** . 신뢰성과 개발 속도를 정량적으로 조율하는 SRE 핵심 도구. SLA는 SLO보다 느슨하게 잡아 버퍼를 둔다.
+
+## 검수 경계와 실패 흐름
+
+- trace context가 HTTP에서 Kafka·Queue·스레드풀로 넘어갈 때 parent/child 관계와 sampling 상태를 명시하고, context 누락을 별도 메트릭으로 관측한다.
+- 로그·메트릭·trace 수집기가 지연되거나 장애 나도 업무 요청을 막지 않도록 비동기 buffer와 bounded queue를 두며, backpressure·드롭·재전송 정책을 정한다.
+- 고카디널리티 값(사용자 ID·운송장 ID)을 메트릭 label로 넣으면 시계열이 폭발할 수 있다. 메트릭과 로그/trace의 식별자 역할을 분리한다.
+- 오류율·지연 SLI는 측정 창·성공 정의·샘플링 편향을 문서화하고, PII·토큰·본문을 수집하지 않는 redaction과 보존기간을 적용한다.
+
+## 공식·1차 출처
+
+- [OpenTelemetry Documentation](https://opentelemetry.io/docs/)
+- [W3C Trace Context](https://www.w3.org/TR/trace-context/)
+- [Prometheus Histograms and Summaries](https://prometheus.io/docs/practices/histograms/)
+- [Micrometer Observation](https://docs.micrometer.io/micrometer/reference/observation.html)

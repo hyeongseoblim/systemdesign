@@ -2,24 +2,24 @@
 
 ## 점검 범위와 판정 원칙
 
-저장소의 수동 카드 129개 전체에 대해 프론트매터·목차·본문 구조·출처 링크·질문별 해설 연결을 조사했다. 이는 운영 DB 전수 조회나 129개 전체 문장의 사실 검증을 완료했다는 뜻이 아니다. **41개는 본문·질문 3개를 대조해 심층 보강했다. 부분 정정만 남은 카드는 0개이며, 나머지 88개는 구조 점검 상태**로 남긴다. 기존 10개 해설의 과거 검수와 이번 검수도 구분한다.
+저장소의 수동 카드 129개 전체에 대해 프론트매터·목차·본문 구조·출처 링크·질문별 해설 연결을 조사했다. 이는 운영 DB 전수 조회나 129개 전체 문장의 사실 검증을 완료했다는 뜻이 아니다. **129개 본문과 질문 3개를 대조해 심층 보강했다. 구조 점검 상태로만 남은 카드는 0개다.** 기존 10개 해설의 과거 검수와 이번 검수도 구분한다.
 
 분량 2,000자는 보강 후보를 찾는 신호이며 합격 기준이 아니다. 긴 본문이나 참고 링크 하나가 정확성·완결성을 보장하지 않는다. 특히 외부 링크가 있어도 모든 기업 사례·수치가 그 출처에서 확인됐다고 간주하지 않는다. 모드별로 DESIGN은 요구·용량·데이터·실패·대안, INTERVIEW는 질문별 근거와 후속 압박, REVIEW는 문제 코드·반례·수정·검증을 확인해야 한다.
 
 ## 전체 기준선
 
-변경 전 본문 2,000자 미만 67개, 본문 HTTPS 출처가 있는 카드 23개, 질문별 점검 해설 10개/30문항이었다. 누적 변경은 카드 수를 늘리지 않고 본문 41개를 심층 보강하고 해설을 47개/141문항으로 확대했다. 기존 카드의 slug·메타데이터·질문 순서·질문 문구는 변경하지 않았다.
+변경 전 본문 2,000자 미만 67개, 본문 HTTPS 출처가 있는 카드 23개, 질문별 점검 해설 10개/30문항이었다. 누적 변경은 카드 수를 늘리지 않고 본문 129개를 심층 보강하고 해설을 129개/387문항으로 확대했다. 기존 카드의 slug·질문 순서·질문 문구는 변경하지 않았다. `system-design-10`의 summary에는 수천만 건/일이 가상 입력이라는 표시만 추가했다.
 
 | 영역 | 카드 | 본문 2,000자 미만(변경 후) | 본문 출처 있음 | 질문별 해설 있음 |
 |---|---:|---:|---:|---:|
-| AI | 15 | 15 | 8 | 1 |
-| BACKEND_ARCHITECTURE | 15 | 7 | 6 | 6 |
-| BACKEND_DEV | 15 | 8 | 7 | 4 |
-| CS | 11 | 2 | 4 | 3 |
-| DATABASE | 15 | 6 | 7 | 6 |
-| INFRA | 13 | 2 | 4 | 4 |
-| LOGISTICS | 19 | 0 | 13 | 14 |
-| SYSTEM_DESIGN | 26 | 5 | 9 | 9 |
+| AI | 15 | 2 | 15 | 15 |
+| BACKEND_ARCHITECTURE | 15 | 0 | 15 | 15 |
+| BACKEND_DEV | 15 | 1 | 15 | 15 |
+| CS | 11 | 0 | 11 | 11 |
+| DATABASE | 15 | 2 | 15 | 15 |
+| INFRA | 13 | 0 | 13 | 13 |
+| LOGISTICS | 19 | 0 | 19 | 19 |
+| SYSTEM_DESIGN | 26 | 5 | 26 | 26 |
 
 ## 확인한 문제와 수정
 
@@ -47,13 +47,9 @@
 
 참고 근거는 각 수정 카드의 본문과 해설 `sources`에 연결했다. 기존 Outbox 질문의 “유실 0” 문구는 저장된 질문 연결을 유지하면서 본문에서 생략된 전제를 명시했다. 이후 질문 자체를 개정하려면 질문 ID를 보존하는 별도 갱신과 기존 답변의 의미 변화 안내를 함께 설계한다.
 
-## 다음 심층 검수 순서
+## 이후 검증
 
-1. **재고·동시성 경로**: database-07, backend-02/04/07은 이번에 보강했다. backend-03과 database-02도 9월 13일 보강했다. database-03도 이후 배치에서 보강했다. 다음은 database-08의 잔여 본문과 거래·격리 설명을 맞추고 실제 DB 두 세션 장애 재현을 추가한다.
-2. **합의·복제·메시징**: system-design-07/17/18은 이번에 보강했다. system-design-06/14의 메시징·다중 리전과 architecture-04/07은 9월 13일 추가 배치에서 보강했다.
-3. **물류 업무 모델**: logistics-01~03과 logistics-10~19 일부를 심층 보강했다. 다음은 logistics-04~09의 기업 사례와 운영 설명을 검수한다. 이벤트 보정, 배송 약속, 원장 대사, 기사 할당의 상태 전이 예제와 질문별 해설을 채운다. 기업별 설명은 공개 근거와 가상 설계를 분리한다.
-4. **AI/LLM 15개**: 보안·도구 실행·평가부터. 짧은 개요에서 실패 입력→판단→복구 예제로 확장하고 API·프로토콜 버전을 명시한다.
-5. **DB·백엔드·인프라·CS 잔여**: 같은 주제의 CONCEPT·INTERVIEW·REVIEW를 묶어 용어와 정답 기준이 충돌하지 않는지 비교한다.
+본문과 질문별 해설의 로컬 검수는 129개 카드까지 마쳤다. 2026-09-29 검수 배치에서는 자동 테스트와 운영 적용을 제외했으며, 2026-09-30에 아래 로컬 품질 게이트와 migration 적용 검증을 완료했다. 남은 범위는 모바일 실제 학습 흐름 점검과 운영 배포 여부 판단이다.
 
 ## 반영과 검증
 
@@ -126,99 +122,99 @@ PostgreSQL 동시 세션은 9월 13일 임시 로컬 18.4에서 아래 4개 시�
 
 | 카드 | 모드·난이도 | 본문 글자 | 이번 상태 | 확인·후속 과제 |
 |---|---|---:|---|---|
-| [ai-01-transformer-fundamentals](../apps/api/src/main/resources/content/ai-01-transformer-fundamentals.md) | CONCEPT · 3 | 1,136 | 구조 점검 | 짧은 본문 / 점검 해설 없음 |
-| [ai-02-token-context-window](../apps/api/src/main/resources/content/ai-02-token-context-window.md) | CONCEPT · 3 | 971 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [ai-03-prompt-structured-output](../apps/api/src/main/resources/content/ai-03-prompt-structured-output.md) | CONCEPT · 3 | 1,048 | 구조 점검 | 짧은 본문 / 점검 해설 없음 |
-| [ai-04-embedding-vector-search](../apps/api/src/main/resources/content/ai-04-embedding-vector-search.md) | CONCEPT · 3 | 1,007 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [ai-05-production-rag-design](../apps/api/src/main/resources/content/ai-05-production-rag-design.md) | DESIGN · 4 | 1,255 | 구조 점검 | 짧은 본문 / 점검 해설 없음 |
-| [ai-06-hybrid-retrieval-reranking](../apps/api/src/main/resources/content/ai-06-hybrid-retrieval-reranking.md) | CONCEPT · 4 | 959 | 구조 점검 | 짧은 본문 / 본문 출처 없음 |
-| [ai-07-tool-calling-mcp](../apps/api/src/main/resources/content/ai-07-tool-calling-mcp.md) | CONCEPT · 4 | 1,214 | 구조 점검 | 짧은 본문 / 점검 해설 없음 |
-| [ai-08-reliable-agent-workflow](../apps/api/src/main/resources/content/ai-08-reliable-agent-workflow.md) | DESIGN · 5 | 1,215 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [ai-09-evaluation-observability](../apps/api/src/main/resources/content/ai-09-evaluation-observability.md) | CONCEPT · 4 | 1,200 | 구조 점검 | 짧은 본문 / 점검 해설 없음 |
-| [ai-10-prompt-injection-security-review](../apps/api/src/main/resources/content/ai-10-prompt-injection-security-review.md) | REVIEW · 5 | 1,423 | 구조 점검 | 짧은 본문 / 점검 해설 없음 |
-| [ai-11-inference-serving-design](../apps/api/src/main/resources/content/ai-11-inference-serving-design.md) | DESIGN · 5 | 1,317 | 구조 점검 | 짧은 본문 / 점검 해설 없음 |
-| [ai-12-finetuning-lora-quantization](../apps/api/src/main/resources/content/ai-12-finetuning-lora-quantization.md) | CONCEPT · 4 | 1,306 | 구조 점검 | 짧은 본문 / 점검 해설 없음 |
-| [ai-13-multimodal-pipeline-design](../apps/api/src/main/resources/content/ai-13-multimodal-pipeline-design.md) | DESIGN · 4 | 1,082 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [ai-14-production-llm-system-interview](../apps/api/src/main/resources/content/ai-14-production-llm-system-interview.md) | INTERVIEW · 5 | 1,155 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [ai-15-llm-integration-code-review](../apps/api/src/main/resources/content/ai-15-llm-integration-code-review.md) | REVIEW · 4 | 1,271 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [backend-01-api-design](../apps/api/src/main/resources/content/backend-01-api-design.md) | CONCEPT · 3 | 8,583 | 구조 점검 | 점검 해설 없음 |
+| [ai-01-transformer-fundamentals](../apps/api/src/main/resources/content/ai-01-transformer-fundamentals.md) | CONCEPT · 3 | 2,344 | 심층 보강 | causal mask·Teacher Forcing·full attention 비용 범위 |
+| [ai-02-token-context-window](../apps/api/src/main/resources/content/ai-02-token-context-window.md) | CONCEPT · 3 | 1,977 | 심층 보강 | Token·과금·문맥·업무 메모리 경계 |
+| [ai-03-prompt-structured-output](../apps/api/src/main/resources/content/ai-03-prompt-structured-output.md) | CONCEPT · 3 | 2,129 | 심층 보강 | Schema·Domain·권한 검증과 실패 분기 |
+| [ai-04-embedding-vector-search](../apps/api/src/main/resources/content/ai-04-embedding-vector-search.md) | CONCEPT · 3 | 2,129 | 심층 보강 | 거리 방향·ACL 필터·ANN 평가·버전 |
+| [ai-05-production-rag-design](../apps/api/src/main/resources/content/ai-05-production-rag-design.md) | DESIGN · 4 | 2,062 | 심층 보강 | 문서 버전·권한·삭제 전파·인용 검증 |
+| [ai-06-hybrid-retrieval-reranking](../apps/api/src/main/resources/content/ai-06-hybrid-retrieval-reranking.md) | CONCEPT · 4 | 1,877 | 심층 보강 | RRF 예시 상수·후보 수·reranker 지연 |
+| [ai-07-tool-calling-mcp](../apps/api/src/main/resources/content/ai-07-tool-calling-mcp.md) | CONCEPT · 4 | 2,065 | 심층 보강 | MCP 기능과 애플리케이션 승인·멱등성 분리 |
+| [ai-08-reliable-agent-workflow](../apps/api/src/main/resources/content/ai-08-reliable-agent-workflow.md) | DESIGN · 5 | 2,278 | 심층 보강 | 지속 상태·UNKNOWN·승인 만료·재실행 방지 |
+| [ai-09-evaluation-observability](../apps/api/src/main/resources/content/ai-09-evaluation-observability.md) | CONCEPT · 4 | 2,018 | 심층 보강 | Slice·사람 평가 보정·예시 Gate·회귀 |
+| [ai-10-prompt-injection-security-review](../apps/api/src/main/resources/content/ai-10-prompt-injection-security-review.md) | REVIEW · 5 | 2,181 | 심층 보강 | 직접·간접 공격·권한·egress·결정적 정책 |
+| [ai-11-inference-serving-design](../apps/api/src/main/resources/content/ai-11-inference-serving-design.md) | DESIGN · 5 | 2,330 | 심층 보강 | TTFT·ITL·대기열·KV cache·fallback |
+| [ai-12-finetuning-lora-quantization](../apps/api/src/main/resources/content/ai-12-finetuning-lora-quantization.md) | CONCEPT · 4 | 2,159 | 심층 보강 | LoRA 가정·QLoRA·업무별 회귀 |
+| [ai-13-multimodal-pipeline-design](../apps/api/src/main/resources/content/ai-13-multimodal-pipeline-design.md) | DESIGN · 4 | 2,147 | 심층 보강 | 좌표·신뢰도·재처리·provenance |
+| [ai-14-production-llm-system-interview](../apps/api/src/main/resources/content/ai-14-production-llm-system-interview.md) | INTERVIEW · 5 | 2,337 | 심층 보강 | 용량 가정·Token 비용·SLO·장애 분기 |
+| [ai-15-llm-integration-code-review](../apps/api/src/main/resources/content/ai-15-llm-integration-code-review.md) | REVIEW · 4 | 2,640 | 심층 보강 | 429/5xx·부분 스트림·취소·PII 로그 |
+| [backend-01-api-design](../apps/api/src/main/resources/content/backend-01-api-design.md) | CONCEPT · 3 | 9,473 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
 | [backend-02-concurrency](../apps/api/src/main/resources/content/backend-02-concurrency.md) | CONCEPT · 3 | 8,214 | 심층 보강 | volatile 복합 연산, DB 잠금 범위, Redis 보상 코드·언어 태그 정정 |
 | [backend-03-transaction](../apps/api/src/main/resources/content/backend-03-transaction.md) | CONCEPT · 3 | 6,345 | 심층 보강 | 직렬성 보장·전파/예외·readOnly·프록시·외부 결제 경계 |
 | [backend-04-resilience-idempotency](../apps/api/src/main/resources/content/backend-04-resilience-idempotency.md) | CONCEPT · 3 | 7,765 | 심층 보강 | 외부 결제 상태 머신, 영속 명령, Retry/CB 순서·DB 커밋 후 ACK |
-| [backend-05-testing](../apps/api/src/main/resources/content/backend-05-testing.md) | CONCEPT · 3 | 4,793 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
-| [backend-06-observability](../apps/api/src/main/resources/content/backend-06-observability.md) | CONCEPT · 3 | 5,300 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 |
+| [backend-05-testing](../apps/api/src/main/resources/content/backend-05-testing.md) | CONCEPT · 3 | 5,780 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [backend-06-observability](../apps/api/src/main/resources/content/backend-06-observability.md) | CONCEPT · 3 | 6,164 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
 | [backend-07-interview-concurrency](../apps/api/src/main/resources/content/backend-07-interview-concurrency.md) | INTERVIEW · 4 | 6,718 | 심층 보강 | 중복/갱신 유실 구분, UNIQUE 예외 처리, 결제·Outbox 수정본 재작성 |
-| [backend-08-jvm-memory](../apps/api/src/main/resources/content/backend-08-jvm-memory.md) | CONCEPT · 4 | 1,749 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [backend-09-gc-g1-zgc](../apps/api/src/main/resources/content/backend-09-gc-g1-zgc.md) | CONCEPT · 4 | 1,729 | 구조 점검 | 짧은 본문 / 점검 해설 없음 |
-| [backend-10-gc-diagnostics](../apps/api/src/main/resources/content/backend-10-gc-diagnostics.md) | CONCEPT · 4 | 1,033 | 구조 점검 | 짧은 본문 / 점검 해설 없음 |
-| [backend-11-http-client-design](../apps/api/src/main/resources/content/backend-11-http-client-design.md) | DESIGN · 4 | 973 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [backend-12-null-safety-review](../apps/api/src/main/resources/content/backend-12-null-safety-review.md) | REVIEW · 3 | 960 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [backend-13-jvm-incident-interview](../apps/api/src/main/resources/content/backend-13-jvm-incident-interview.md) | INTERVIEW · 4 | 1,048 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [backend-14-thread-pool-sizing](../apps/api/src/main/resources/content/backend-14-thread-pool-sizing.md) | CONCEPT · 4 | 967 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [backend-15-file-streaming-design](../apps/api/src/main/resources/content/backend-15-file-streaming-design.md) | DESIGN · 4 | 1,047 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
+| [backend-08-jvm-memory](../apps/api/src/main/resources/content/backend-08-jvm-memory.md) | CONCEPT · 4 | 2,809 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [backend-09-gc-g1-zgc](../apps/api/src/main/resources/content/backend-09-gc-g1-zgc.md) | CONCEPT · 4 | 2,566 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [backend-10-gc-diagnostics](../apps/api/src/main/resources/content/backend-10-gc-diagnostics.md) | CONCEPT · 4 | 1,978 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [backend-11-http-client-design](../apps/api/src/main/resources/content/backend-11-http-client-design.md) | DESIGN · 4 | 2,561 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [backend-12-null-safety-review](../apps/api/src/main/resources/content/backend-12-null-safety-review.md) | REVIEW · 3 | 2,491 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [backend-13-jvm-incident-interview](../apps/api/src/main/resources/content/backend-13-jvm-incident-interview.md) | INTERVIEW · 4 | 2,044 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [backend-14-thread-pool-sizing](../apps/api/src/main/resources/content/backend-14-thread-pool-sizing.md) | CONCEPT · 4 | 2,027 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [backend-15-file-streaming-design](../apps/api/src/main/resources/content/backend-15-file-streaming-design.md) | DESIGN · 4 | 2,227 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
 | [backend-architecture-01-msa-vs-monolith](../apps/api/src/main/resources/content/backend-architecture-01-msa-vs-monolith.md) | CONCEPT · 3 | 4,416 | 심층 보강 | 논리/물리 DB·가용성 독립 가정·p99·쓰기 전환과 롤백 |
-| [backend-architecture-02-ddd](../apps/api/src/main/resources/content/backend-architecture-02-ddd.md) | CONCEPT · 3 | 7,025 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 |
+| [backend-architecture-02-ddd](../apps/api/src/main/resources/content/backend-architecture-02-ddd.md) | CONCEPT · 3 | 8,799 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
 | [backend-architecture-03-event-driven](../apps/api/src/main/resources/content/backend-architecture-03-event-driven.md) | CONCEPT · 3 | 4,204 | 심층 보강 | 스키마 호환 방향·흐름 소유권·Delta/Snapshot·버전 누락과 재처리 |
 | [backend-architecture-04-saga](../apps/api/src/main/resources/content/backend-architecture-04-saga.md) | CONCEPT · 4 | 5,569 | 심층 보강 | 2PC 경계·Pivot·외부 결제 명령·상태/Outbox 원자성 |
-| [backend-architecture-05-cqrs-event-sourcing](../apps/api/src/main/resources/content/backend-architecture-05-cqrs-event-sourcing.md) | CONCEPT · 4 | 5,712 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
+| [backend-architecture-05-cqrs-event-sourcing](../apps/api/src/main/resources/content/backend-architecture-05-cqrs-event-sourcing.md) | CONCEPT · 4 | 6,806 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
 | [backend-architecture-06-outbox-idempotency](../apps/api/src/main/resources/content/backend-architecture-06-outbox-idempotency.md) | CONCEPT · 4 | 4,259 | 심층 보강 | 장애 시점·eventId/파티션 키·Inbox 분기·외부 API 결과 불명 |
 | [backend-architecture-07-interview-saga](../apps/api/src/main/resources/content/backend-architecture-07-interview-saga.md) | INTERVIEW · 4 | 5,268 | 심층 보강 | 보상 미해결 관리·외부/로컬/전달 경계·집하/반품 4라운드 |
-| [backend-architecture-08-aggregate-boundary](../apps/api/src/main/resources/content/backend-architecture-08-aggregate-boundary.md) | CONCEPT · 4 | 1,948 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [backend-architecture-09-aggregate-reference](../apps/api/src/main/resources/content/backend-architecture-09-aggregate-reference.md) | CONCEPT · 4 | 1,601 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [backend-architecture-10-entity-value-object](../apps/api/src/main/resources/content/backend-architecture-10-entity-value-object.md) | CONCEPT · 3 | 929 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
+| [backend-architecture-08-aggregate-boundary](../apps/api/src/main/resources/content/backend-architecture-08-aggregate-boundary.md) | CONCEPT · 4 | 3,233 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [backend-architecture-09-aggregate-reference](../apps/api/src/main/resources/content/backend-architecture-09-aggregate-reference.md) | CONCEPT · 4 | 2,881 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [backend-architecture-10-entity-value-object](../apps/api/src/main/resources/content/backend-architecture-10-entity-value-object.md) | CONCEPT · 3 | 2,117 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
 | [backend-architecture-11-idempotent-consumer-design](../apps/api/src/main/resources/content/backend-architecture-11-idempotent-consumer-design.md) | DESIGN · 4 | 3,757 | 심층 보강 | 삽입 결과 분기, 업무 키, 보존·재처리·외부 효과 |
-| [backend-architecture-12-order-orchestration-design](../apps/api/src/main/resources/content/backend-architecture-12-order-orchestration-design.md) | DESIGN · 5 | 1,022 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [backend-architecture-13-boundary-interview](../apps/api/src/main/resources/content/backend-architecture-13-boundary-interview.md) | INTERVIEW · 4 | 874 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [backend-architecture-14-rich-domain-model](../apps/api/src/main/resources/content/backend-architecture-14-rich-domain-model.md) | CONCEPT · 3 | 946 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [backend-architecture-15-message-recovery-interview](../apps/api/src/main/resources/content/backend-architecture-15-message-recovery-interview.md) | INTERVIEW · 5 | 967 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [cs-01-ds-algo](../apps/api/src/main/resources/content/cs-01-ds-algo.md) | CONCEPT · 3 | 8,429 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 |
-| [cs-02-os](../apps/api/src/main/resources/content/cs-02-os.md) | CONCEPT · 3 | 8,114 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 |
-| [cs-03-network](../apps/api/src/main/resources/content/cs-03-network.md) | CONCEPT · 3 | 6,899 | 구조 점검 | 점검 해설 없음 |
-| [cs-04-concurrency-theory](../apps/api/src/main/resources/content/cs-04-concurrency-theory.md) | CONCEPT · 3 | 5,447 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 |
-| [cs-05-complexity](../apps/api/src/main/resources/content/cs-05-complexity.md) | CONCEPT · 3 | 5,636 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 |
-| [cs-06-interview-fundamentals](../apps/api/src/main/resources/content/cs-06-interview-fundamentals.md) | INTERVIEW · 3 | 9,268 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 |
+| [backend-architecture-12-order-orchestration-design](../apps/api/src/main/resources/content/backend-architecture-12-order-orchestration-design.md) | DESIGN · 5 | 2,322 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [backend-architecture-13-boundary-interview](../apps/api/src/main/resources/content/backend-architecture-13-boundary-interview.md) | INTERVIEW · 4 | 2,148 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [backend-architecture-14-rich-domain-model](../apps/api/src/main/resources/content/backend-architecture-14-rich-domain-model.md) | CONCEPT · 3 | 2,347 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [backend-architecture-15-message-recovery-interview](../apps/api/src/main/resources/content/backend-architecture-15-message-recovery-interview.md) | INTERVIEW · 5 | 2,382 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [cs-01-ds-algo](../apps/api/src/main/resources/content/cs-01-ds-algo.md) | CONCEPT · 3 | 9,756 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [cs-02-os](../apps/api/src/main/resources/content/cs-02-os.md) | CONCEPT · 3 | 9,624 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [cs-03-network](../apps/api/src/main/resources/content/cs-03-network.md) | CONCEPT · 3 | 8,492 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [cs-04-concurrency-theory](../apps/api/src/main/resources/content/cs-04-concurrency-theory.md) | CONCEPT · 3 | 6,858 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [cs-05-complexity](../apps/api/src/main/resources/content/cs-05-complexity.md) | CONCEPT · 3 | 6,763 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [cs-06-interview-fundamentals](../apps/api/src/main/resources/content/cs-06-interview-fundamentals.md) | INTERVIEW · 3 | 10,876 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
 | [cs-07-io-multiplexing](../apps/api/src/main/resources/content/cs-07-io-multiplexing.md) | CONCEPT · 4 | 3,654 | 심층 보강 | LT/ET·EOF/EINTR·부분 쓰기·Ready Queue·역압력 |
 | [cs-08-socket-internals](../apps/api/src/main/resources/content/cs-08-socket-internals.md) | CONCEPT · 4 | 4,147 | 심층 보강 | Backlog 계층·부분 쓰기·업무 확인·역압력·Half-close |
-| [cs-09-os-network-interview](../apps/api/src/main/resources/content/cs-09-os-network-interview.md) | INTERVIEW · 4 | 1,048 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
+| [cs-09-os-network-interview](../apps/api/src/main/resources/content/cs-09-os-network-interview.md) | INTERVIEW · 4 | 2,691 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
 | [cs-10-virtual-memory](../apps/api/src/main/resources/content/cs-10-virtual-memory.md) | CONCEPT · 4 | 4,445 | 심층 보강 | TLB/Fault·mmap·내구성·COW·RSS/PSS 구분 |
-| [cs-11-data-structures-interview](../apps/api/src/main/resources/content/cs-11-data-structures-interview.md) | INTERVIEW · 4 | 909 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [database-01-index-explain](../apps/api/src/main/resources/content/database-01-index-explain.md) | CONCEPT · 3 | 9,534 | 구조 점검 | 버전·수치·질문 대응 정밀 검수 |
+| [cs-11-data-structures-interview](../apps/api/src/main/resources/content/cs-11-data-structures-interview.md) | INTERVIEW · 4 | 2,504 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [database-01-index-explain](../apps/api/src/main/resources/content/database-01-index-explain.md) | CONCEPT · 3 | 10,613 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
 | [database-02-lock-isolation](../apps/api/src/main/resources/content/database-02-lock-isolation.md) | CONCEPT · 3 | 5,648 | 심층 보강 | 스냅샷/잠금 읽기·갭/스캔 범위·키 순차 접근·전체 재시도 |
 | [database-03-mvcc-internals](../apps/api/src/main/resources/content/database-03-mvcc-internals.md) | CONCEPT · 4 | 5,577 | 심층 보강 | 읽기 뷰·버전 수명·WAL/Checkpoint·HOT·Freeze 조건 |
-| [database-04-sharding-partitioning-replication](../apps/api/src/main/resources/content/database-04-sharding-partitioning-replication.md) | CONCEPT · 4 | 5,518 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 |
+| [database-04-sharding-partitioning-replication](../apps/api/src/main/resources/content/database-04-sharding-partitioning-replication.md) | CONCEPT · 4 | 6,821 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
 | [database-05-rdbms-vs-nosql](../apps/api/src/main/resources/content/database-05-rdbms-vs-nosql.md) | CONCEPT · 3 | 5,467 | 심층 보강 | 구성별 CAP/PACELC·트랜잭션·Query 페이지·Shard 조회 비용 |
-| [database-06-query-tuning](../apps/api/src/main/resources/content/database-06-query-tuning.md) | CONCEPT · 3 | 7,147 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
+| [database-06-query-tuning](../apps/api/src/main/resources/content/database-06-query-tuning.md) | CONCEPT · 3 | 8,794 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
 | [database-07-inventory-concurrency](../apps/api/src/main/resources/content/database-07-inventory-concurrency.md) | CONCEPT · 4 | 5,361 | 심층 보강 | 조건부 갱신·중복 예약·만료/결제 경쟁·Redis 내구성·이중 쓰기 |
 | [database-08-interview-index-lock](../apps/api/src/main/resources/content/database-08-interview-index-lock.md) | INTERVIEW · 4 | 5,647 | 심층 보강 | 정렬·ICP·커버링·PG 대기 후 실패·롤백 범위·SQL 유지 핫스팟 완화 |
-| [database-09-index-access-optimization](../apps/api/src/main/resources/content/database-09-index-access-optimization.md) | CONCEPT · 4 | 2,319 | 구조 점검 | 점검 해설 없음 |
-| [database-10-index-write-cost](../apps/api/src/main/resources/content/database-10-index-write-cost.md) | CONCEPT · 4 | 1,552 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [database-11-clustered-index-pk](../apps/api/src/main/resources/content/database-11-clustered-index-pk.md) | CONCEPT · 4 | 951 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [database-12-zero-downtime-migration](../apps/api/src/main/resources/content/database-12-zero-downtime-migration.md) | DESIGN · 5 | 925 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [database-13-index-antipattern-review](../apps/api/src/main/resources/content/database-13-index-antipattern-review.md) | REVIEW · 4 | 917 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [database-14-statistics-histogram](../apps/api/src/main/resources/content/database-14-statistics-histogram.md) | CONCEPT · 4 | 879 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [database-15-query-antipattern-review](../apps/api/src/main/resources/content/database-15-query-antipattern-review.md) | REVIEW · 4 | 890 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [infra-01-aws-core](../apps/api/src/main/resources/content/infra-01-aws-core.md) | CONCEPT · 3 | 9,624 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
-| [infra-02-kubernetes](../apps/api/src/main/resources/content/infra-02-kubernetes.md) | CONCEPT · 3 | 6,982 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
-| [infra-03-iac-terraform](../apps/api/src/main/resources/content/infra-03-iac-terraform.md) | CONCEPT · 3 | 5,579 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 |
-| [infra-04-cicd-deploy-strategy](../apps/api/src/main/resources/content/infra-04-cicd-deploy-strategy.md) | CONCEPT · 3 | 5,784 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 |
-| [infra-05-observability-stack](../apps/api/src/main/resources/content/infra-05-observability-stack.md) | CONCEPT · 3 | 5,463 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 |
-| [infra-06-sre-incident](../apps/api/src/main/resources/content/infra-06-sre-incident.md) | CONCEPT · 3 | 5,290 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
-| [infra-07-interview-incident](../apps/api/src/main/resources/content/infra-07-interview-incident.md) | INTERVIEW · 3 | 12,539 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
+| [database-09-index-access-optimization](../apps/api/src/main/resources/content/database-09-index-access-optimization.md) | CONCEPT · 4 | 3,518 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [database-10-index-write-cost](../apps/api/src/main/resources/content/database-10-index-write-cost.md) | CONCEPT · 4 | 2,630 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [database-11-clustered-index-pk](../apps/api/src/main/resources/content/database-11-clustered-index-pk.md) | CONCEPT · 4 | 2,074 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [database-12-zero-downtime-migration](../apps/api/src/main/resources/content/database-12-zero-downtime-migration.md) | DESIGN · 5 | 2,345 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [database-13-index-antipattern-review](../apps/api/src/main/resources/content/database-13-index-antipattern-review.md) | REVIEW · 4 | 1,954 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [database-14-statistics-histogram](../apps/api/src/main/resources/content/database-14-statistics-histogram.md) | CONCEPT · 4 | 2,016 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [database-15-query-antipattern-review](../apps/api/src/main/resources/content/database-15-query-antipattern-review.md) | REVIEW · 4 | 1,937 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [infra-01-aws-core](../apps/api/src/main/resources/content/infra-01-aws-core.md) | CONCEPT · 3 | 13,216 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [infra-02-kubernetes](../apps/api/src/main/resources/content/infra-02-kubernetes.md) | CONCEPT · 3 | 9,088 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [infra-03-iac-terraform](../apps/api/src/main/resources/content/infra-03-iac-terraform.md) | CONCEPT · 3 | 7,521 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [infra-04-cicd-deploy-strategy](../apps/api/src/main/resources/content/infra-04-cicd-deploy-strategy.md) | CONCEPT · 3 | 7,040 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [infra-05-observability-stack](../apps/api/src/main/resources/content/infra-05-observability-stack.md) | CONCEPT · 3 | 6,546 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [infra-06-sre-incident](../apps/api/src/main/resources/content/infra-06-sre-incident.md) | CONCEPT · 3 | 6,727 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [infra-07-interview-incident](../apps/api/src/main/resources/content/infra-07-interview-incident.md) | INTERVIEW · 3 | 13,592 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
 | [infra-08-kubernetes-networking](../apps/api/src/main/resources/content/infra-08-kubernetes-networking.md) | CONCEPT · 4 | 3,617 | 심층 보강 | EndpointSlice 제어 정보·실제 전달 경로·정책·외부 노출 |
 | [infra-09-kubernetes-storage](../apps/api/src/main/resources/content/infra-09-kubernetes-storage.md) | CONCEPT · 4 | 4,023 | 심층 보강 | RWO/RWOP·영역 바인딩·PVC 보존/회수·복제/백업 |
-| [infra-10-commerce-spike-design](../apps/api/src/main/resources/content/infra-10-commerce-spike-design.md) | DESIGN · 5 | 1,007 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
+| [infra-10-commerce-spike-design](../apps/api/src/main/resources/content/infra-10-commerce-spike-design.md) | DESIGN · 5 | 2,330 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
 | [infra-11-kubernetes-troubleshooting-interview](../apps/api/src/main/resources/content/infra-11-kubernetes-troubleshooting-interview.md) | INTERVIEW · 4 | 4,423 | 심층 보강 | Phase/STATUS·미생성/미배정/준비·이전 로그·연결 비교 |
 | [infra-12-kubernetes-resource-management](../apps/api/src/main/resources/content/infra-12-kubernetes-resource-management.md) | CONCEPT · 4 | 4,379 | 심층 보강 | Admission·QoS·OOM/축출·HPA 분모·장애/배포 여유 |
-| [infra-13-warehouse-edge-design](../apps/api/src/main/resources/content/infra-13-warehouse-edge-design.md) | DESIGN · 5 | 982 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
+| [infra-13-warehouse-edge-design](../apps/api/src/main/resources/content/infra-13-warehouse-edge-design.md) | DESIGN · 5 | 2,187 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
 | [logistics-01-oms-order-management](../apps/api/src/main/resources/content/logistics-01-oms-order-management.md) | CONCEPT · 3 | 5,888 | 심층 보강 | 상태 객체 분리·부분 이행·승인/매입 Saga·Oracle/Stripe 근거 |
 | [logistics-02-wms-warehouse](../apps/api/src/main/resources/content/logistics-02-wms-warehouse.md) | CONCEPT · 3 | 6,746 | 심층 보강 | 재고 차원·가용식·예약 정책·원자 갱신·실사·Redis 경계 |
 | [logistics-03-tms-transportation](../apps/api/src/main/resources/content/logistics-03-tms-transportation.md) | CONCEPT · 3 | 8,842 | 심층 보강 | Waybill 이벤트 원장·지연 보정·링크 수 가정·Kafka/VRP 근거 |
-| [logistics-04-fulfillment-inventory](../apps/api/src/main/resources/content/logistics-04-fulfillment-inventory.md) | CONCEPT · 4 | 9,103 | 구조 점검 | 본문 출처 없음 / 기업 언급 출처 확인 |
-| [logistics-05-last-mile-routing](../apps/api/src/main/resources/content/logistics-05-last-mile-routing.md) | CONCEPT · 4 | 8,971 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
-| [logistics-06-returns-reverse-logistics](../apps/api/src/main/resources/content/logistics-06-returns-reverse-logistics.md) | CONCEPT · 3 | 7,561 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
-| [logistics-07-case-studies](../apps/api/src/main/resources/content/logistics-07-case-studies.md) | CONCEPT · 3 | 10,551 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
-| [logistics-08-dispatch-optimization](../apps/api/src/main/resources/content/logistics-08-dispatch-optimization.md) | DESIGN · 5 | 9,194 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
-| [logistics-09-interview-domain](../apps/api/src/main/resources/content/logistics-09-interview-domain.md) | INTERVIEW · 4 | 6,550 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
+| [logistics-04-fulfillment-inventory](../apps/api/src/main/resources/content/logistics-04-fulfillment-inventory.md) | CONCEPT · 4 | 7,811 | 심층 보강 | 운영 모델·ATP·원자 예약·안전재고의 가정과 공식 근거 |
+| [logistics-05-last-mile-routing](../apps/api/src/main/resources/content/logistics-05-last-mile-routing.md) | CONCEPT · 4 | 6,942 | 심층 보강 | 비용 분모·VRP 제약·routeVersion·POD·이벤트 처리 |
+| [logistics-06-returns-reverse-logistics](../apps/api/src/main/resources/content/logistics-06-returns-reverse-logistics.md) | CONCEPT · 3 | 9,914 | 심층 보강 | 반품 Join·QC 격리·중복 환원·환불 결과 불명 |
+| [logistics-07-case-studies](../apps/api/src/main/resources/content/logistics-07-case-studies.md) | CONCEPT · 3 | 4,016 | 심층 보강 | 공개 회사 설명과 내부 설계 가설 분리·부분 예약·대사 |
+| [logistics-08-dispatch-optimization](../apps/api/src/main/resources/content/logistics-08-dispatch-optimization.md) | DESIGN · 5 | 10,932 | 심층 보강 | 배치/greedy·지오 후보·CAS 범위·fallback |
+| [logistics-09-interview-domain](../apps/api/src/main/resources/content/logistics-09-interview-domain.md) | INTERVIEW · 4 | 8,476 | 심층 보강 | 예약·Saga·Outbox·결과 불명·필드별 원장 |
 | [logistics-10-order-promise](../apps/api/src/main/resources/content/logistics-10-order-promise.md) | CONCEPT · 4 | 3,848 | 심층 보강 | ATP/CTP 범위·단위·실제 Hold·결제 경쟁·합배송 캘린더 |
 | [logistics-11-inventory-ledger](../apps/api/src/main/resources/content/logistics-11-inventory-ledger.md) | CONCEPT · 4 | 4,356 | 심층 보강 | 이동 중 계정·거래 단위 키·커밋 순서와 Snapshot·실사 정정 |
 | [logistics-12-sku-barcode-serial](../apps/api/src/main/resources/content/logistics-12-sku-barcode-serial.md) | CONCEPT · 3 | 3,752 | 심층 보강 | GS1 식별 범위·포장 환산·원문/매핑 개정·집계 계보 |
@@ -229,30 +225,30 @@ PostgreSQL 동시 세션은 9월 13일 임시 로컬 18.4에서 아래 4개 시�
 | [logistics-17-fulfillment-operations-interview](../apps/api/src/main/resources/content/logistics-17-fulfillment-operations-interview.md) | INTERVIEW · 4 | 3,736 | 심층 보강 | 병목/Starvation/Blocking·Wave 대기·부분 피킹 예외 |
 | [logistics-18-slotting-optimization](../apps/api/src/main/resources/content/logistics-18-slotting-optimization.md) | CONCEPT · 4 | 3,391 | 심층 보강 | 친화도 표본·총 작업 비용/기간·실물 재배치·실험 비교 |
 | [logistics-19-event-pipeline-interview](../apps/api/src/main/resources/content/logistics-19-event-pipeline-interview.md) | INTERVIEW · 5 | 3,312 | 심층 보강 | 세 라운드 실패 입력·권위 있는 버전·재생 및 외부 효과 분리 |
-| [system-design-01-fundamentals](../apps/api/src/main/resources/content/system-design-01-fundamentals.md) | CONCEPT · 3 | 9,595 | 구조 점검 | 본문 출처 없음 / 기업 언급 출처 확인 |
-| [system-design-02-capacity-estimation](../apps/api/src/main/resources/content/system-design-02-capacity-estimation.md) | CONCEPT · 3 | 7,441 | 구조 점검 | 본문 출처 없음 / 기업 언급 출처 확인 |
-| [system-design-03-networking](../apps/api/src/main/resources/content/system-design-03-networking.md) | CONCEPT · 3 | 11,765 | 구조 점검 | 점검 해설 없음 |
-| [system-design-04-data-storage](../apps/api/src/main/resources/content/system-design-04-data-storage.md) | CONCEPT · 3 | 8,354 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
-| [system-design-05-caching](../apps/api/src/main/resources/content/system-design-05-caching.md) | CONCEPT · 3 | 9,999 | 구조 점검 | 본문 출처 없음 / 기업 언급 출처 확인 |
-| [system-design-06-messaging-async](../apps/api/src/main/resources/content/system-design-06-messaging-async.md) | CONCEPT · 4 | 8,937 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
+| [system-design-01-fundamentals](../apps/api/src/main/resources/content/system-design-01-fundamentals.md) | CONCEPT · 3 | 10,750 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [system-design-02-capacity-estimation](../apps/api/src/main/resources/content/system-design-02-capacity-estimation.md) | CONCEPT · 3 | 8,476 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [system-design-03-networking](../apps/api/src/main/resources/content/system-design-03-networking.md) | CONCEPT · 3 | 12,577 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [system-design-04-data-storage](../apps/api/src/main/resources/content/system-design-04-data-storage.md) | CONCEPT · 3 | 9,693 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [system-design-05-caching](../apps/api/src/main/resources/content/system-design-05-caching.md) | CONCEPT · 3 | 10,889 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [system-design-06-messaging-async](../apps/api/src/main/resources/content/system-design-06-messaging-async.md) | CONCEPT · 4 | 10,254 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
 | [system-design-07-consistency-consensus](../apps/api/src/main/resources/content/system-design-07-consistency-consensus.md) | CONCEPT · 4 | 5,201 | 심층 보강 | CAP 정의·Quorum 전제·Raft 현재 임기/읽기·2PC/Saga 경계 |
-| [system-design-08-case-rate-limiter](../apps/api/src/main/resources/content/system-design-08-case-rate-limiter.md) | DESIGN · 4 | 7,921 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
-| [system-design-09-case-url-shortener](../apps/api/src/main/resources/content/system-design-09-case-url-shortener.md) | DESIGN · 4 | 10,884 | 구조 점검 | 점검 해설 없음 |
-| [system-design-10-case-delivery-tracking](../apps/api/src/main/resources/content/system-design-10-case-delivery-tracking.md) | DESIGN · 4 | 11,171 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
-| [system-design-11-case-newsfeed](../apps/api/src/main/resources/content/system-design-11-case-newsfeed.md) | DESIGN · 4 | 7,920 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
-| [system-design-12-case-chat](../apps/api/src/main/resources/content/system-design-12-case-chat.md) | DESIGN · 4 | 8,971 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
-| [system-design-13-case-search-autocomplete](../apps/api/src/main/resources/content/system-design-13-case-search-autocomplete.md) | DESIGN · 4 | 8,975 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
-| [system-design-14-multi-region](../apps/api/src/main/resources/content/system-design-14-multi-region.md) | CONCEPT · 5 | 8,936 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
-| [system-design-15-interview-framework](../apps/api/src/main/resources/content/system-design-15-interview-framework.md) | INTERVIEW · 4 | 8,990 | 구조 점검 | 본문 출처 없음 / 점검 해설 없음 / 기업 언급 출처 확인 |
-| [system-design-16-lsm-vs-btree](../apps/api/src/main/resources/content/system-design-16-lsm-vs-btree.md) | CONCEPT · 4 | 2,366 | 구조 점검 | 점검 해설 없음 |
+| [system-design-08-case-rate-limiter](../apps/api/src/main/resources/content/system-design-08-case-rate-limiter.md) | DESIGN · 4 | 8,747 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [system-design-09-case-url-shortener](../apps/api/src/main/resources/content/system-design-09-case-url-shortener.md) | DESIGN · 4 | 11,684 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [system-design-10-case-delivery-tracking](../apps/api/src/main/resources/content/system-design-10-case-delivery-tracking.md) | DESIGN · 4 | 11,948 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [system-design-11-case-newsfeed](../apps/api/src/main/resources/content/system-design-11-case-newsfeed.md) | DESIGN · 4 | 8,784 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [system-design-12-case-chat](../apps/api/src/main/resources/content/system-design-12-case-chat.md) | DESIGN · 4 | 9,724 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [system-design-13-case-search-autocomplete](../apps/api/src/main/resources/content/system-design-13-case-search-autocomplete.md) | DESIGN · 4 | 9,633 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [system-design-14-multi-region](../apps/api/src/main/resources/content/system-design-14-multi-region.md) | CONCEPT · 5 | 10,264 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [system-design-15-interview-framework](../apps/api/src/main/resources/content/system-design-15-interview-framework.md) | INTERVIEW · 4 | 9,752 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [system-design-16-lsm-vs-btree](../apps/api/src/main/resources/content/system-design-16-lsm-vs-btree.md) | CONCEPT · 4 | 3,377 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
 | [system-design-17-replication-protocols](../apps/api/src/main/resources/content/system-design-17-replication-protocols.md) | CONCEPT · 4 | 3,249 | 심층 보강 | CRAQ 버전별 읽기·지연/처리율·장애 재구성 절차 |
 | [system-design-18-distributed-clocks](../apps/api/src/main/resources/content/system-design-18-distributed-clocks.md) | CONCEPT · 5 | 3,636 | 심층 보강 | HLC 네 분기 실행 예제·LWW 반례·Commit Wait 수치 |
-| [system-design-19-cdn-origin-shield](../apps/api/src/main/resources/content/system-design-19-cdn-origin-shield.md) | CONCEPT · 4 | 846 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [system-design-20-social-graph-design](../apps/api/src/main/resources/content/system-design-20-social-graph-design.md) | DESIGN · 4 | 916 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
+| [system-design-19-cdn-origin-shield](../apps/api/src/main/resources/content/system-design-19-cdn-origin-shield.md) | CONCEPT · 4 | 1,668 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [system-design-20-social-graph-design](../apps/api/src/main/resources/content/system-design-20-social-graph-design.md) | DESIGN · 4 | 1,733 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
 | [system-design-21-distributed-lock-design](../apps/api/src/main/resources/content/system-design-21-distributed-lock-design.md) | DESIGN · 5 | 3,098 | 심층 보강 | 소유권당 한 번 쓰기 SQL, Token 재시도와 만료의 경계 |
-| [system-design-22-session-management-design](../apps/api/src/main/resources/content/system-design-22-session-management-design.md) | DESIGN · 4 | 1,054 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [system-design-23-unique-id-design](../apps/api/src/main/resources/content/system-design-23-unique-id-design.md) | DESIGN · 4 | 908 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
-| [system-design-24-storage-index-interview](../apps/api/src/main/resources/content/system-design-24-storage-index-interview.md) | INTERVIEW · 5 | 878 | 구조 점검 | 짧은 본문 / 본문 출처 없음 / 점검 해설 없음 |
+| [system-design-22-session-management-design](../apps/api/src/main/resources/content/system-design-22-session-management-design.md) | DESIGN · 4 | 1,839 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [system-design-23-unique-id-design](../apps/api/src/main/resources/content/system-design-23-unique-id-design.md) | DESIGN · 4 | 1,722 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
+| [system-design-24-storage-index-interview](../apps/api/src/main/resources/content/system-design-24-storage-index-interview.md) | INTERVIEW · 5 | 1,746 | 심층 보강 | 실패 경로·공식 출처·질문별 해설 |
 | [system-design-25-transaction-isolation](../apps/api/src/main/resources/content/system-design-25-transaction-isolation.md) | CONCEPT · 5 | 3,494 | 심층 보강 | 두 세션 재현, 업무 조건 검사, SSI·전체 재시도 |
 | [system-design-26-message-queue-selection](../apps/api/src/main/resources/content/system-design-26-message-queue-selection.md) | DESIGN · 4 | 3,390 | 심층 보강 | Queue·Stream·Standard·FIFO 구분, 처리율 단위, 순서 복구 |
 
@@ -329,3 +325,25 @@ V18/V19는 로컬 변경이며 DB 적용·API 응답·운영 배포는 수행하
 - `git diff --check`: 통과.
 
 V20은 로컬 변경이며 DB 적용·API 응답·운영 배포는 수행하지 않았다.
+
+
+## 2026-09-27 물류 04~09·AI/LLM 01~15 심층 검수
+
+- 물류 6개 카드는 풀필먼트·재고 예약, 라스트마일·POD, 반품·QC·환불, 회사 사례, 배차, OMS/WMS 면접 흐름을 검토했다. 출처가 없는 기업 내부 운영·고정 비용률·처리량은 제거하거나 가상 요구로 명시했다. 질문별 해설은 04의 기존 3문항을 갱신하고 05~09의 15문항을 추가했다.
+- AI/LLM 15개 카드는 각 질문의 답변 기준과 본문을 다시 연결했다. 보안·도구 실행·평가·RAG·서빙·통합 코드 리뷰를 실패 입력→판단→복구 흐름으로 보강하고, 본문 출처를 15개 모두에 추가했다. 기존 ai-06 해설 3문항을 유지하고 나머지 42문항을 추가했다.
+- 기존 카드 slug·프론트매터·질문 문구는 유지한다. `ContentSeeder`가 기존 slug를 건너뛰므로 운영 DB의 기존 본문을 바꾸기 위해 V21·V22 Flyway migration을 추가했다. 새 DB에서는 Markdown 시더가 같은 본문을 적재한다.
+- 누적 심층 보강은 **62개**, 구조 점검은 **67개**, 질문별 해설은 **66개/198문항**이다. 2,000자 미만은 보강 후보를 찾는 신호이며, AI 02·06의 본문이 그보다 짧아도 질문별 근거와 실패 흐름을 검토했다.
+- 웹 `npm run build`는 성공했고 workspace-root 경고가 재발하지 않았다. 자동 테스트·모바일 실사용 점검·운영 배포는 수행하지 않았다. migration과 해설의 운영 적용 결과는 확인되지 않았다. 비용이 발생하는 생성·면접 큐는 기존 기본 비활성 상태를 유지한다.
+
+## 2026-09-29 잔여 67개 심층 검수
+
+- BACKEND_ARCHITECTURE 9개, BACKEND_DEV 11개, CS 8개, DATABASE 10개, INFRA 9개, SYSTEM_DESIGN 20개를 검수했다. 본문의 제품·버전별 조건, 출처, 실패 입력→판단→복구 흐름을 확인하고 기존 질문 3개에 맞춘 해설을 연결했다.
+- 기존 slug·질문 문구를 유지했고, `system-design-10`의 summary에는 가상 규모 표시만 추가했다. 질문별 해설은 누적 129개 카드/387문항이다. `ContentSeeder`가 기존 slug를 건너뛰므로 V23 migration으로 이번 67개 MANUAL 본문을 갱신하도록 준비했다.
+- 이 배치는 로컬 소스 반영이다. 자동 테스트·모바일 실사용 점검·운영 DB 적용·API/웹 배포는 이번 범위에서 수행하지 않았다. 비용이 발생하는 생성·면접 큐는 비활성 상태를 유지한다.
+
+## 2026-09-30 로컬 품질 게이트
+
+- 콘텐츠 계약 검사에서 7개 카드의 누락된 Mermaid 다이어그램·표·콜아웃 9건을 발견해 설명에 맞게 보강했다. 해당 본문을 V21·V23에도 동일하게 반영했다. 새 Mermaid 블록 4개는 브라우저의 Mermaid 파서에서 모두 통과했다.
+- 웹 학습 테스트 22/22 통과: 129개 카드·387개 질문별 해설의 연결과 V21 6개·V22 15개·V23 67개 본문이 Markdown 소스와 일치하는지 확인했다. 과거 V8은 변경하지 않고 원본 해시로 검증한다. Python 콘텐츠 예제·I/O 검사, 웹 프로덕션 빌드, API 전체 Gradle 빌드·테스트, `git diff --check`도 통과했다.
+- 격리된 PostgreSQL 16에 V1~V20을 적용하고 기존 MANUAL 카드 88개·질문 264개를 넣은 뒤 V21~V23을 적용했다. 88개 본문이 갱신됐고 카드·질문 ID와 질문 문구는 유지됐다. 별도의 새 DB에서는 Spring Boot의 Flyway가 V1~V23 총 23개를 성공적으로 적용하고 JPA 초기화까지 완료했다. Docker 데몬이 없어 Testcontainers 기반 `CurriculumMigrationTest`는 건너뛰었으며, 위 로컬 DB 검증으로 이번 마이그레이션 적용을 별도로 확인했다.
+- 이 결과는 **로컬 검증**이다. 운영 DB 적용·API/웹 배포와 모바일 질문 입력→완료→복습 재진입은 아직 수행하지 않았다.

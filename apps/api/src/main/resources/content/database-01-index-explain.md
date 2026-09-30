@@ -17,17 +17,17 @@ questions:
   - "운송장 추적 API가 `SELECT status, eta FROM waybill WHERE tracking_no=?`를 초당 수만 번 호출합니다. 커버링 인덱스를 적용했을 때 I/O 관점에서 무엇이 달라지는지, 그리고 그 대가(쓰기/저장 비용)는 무엇인지 설명하세요. EXPLAIN에서 무엇을 확인하면 되나요?"
   - "\"인덱스를 분명히 만들었는데 EXPLAIN type이 ALL(풀스캔)로 나옵니다.\" 가능한 원인을 4가지 이상 들고, 각각 어떻게 진단·교정할지 설명하세요. PostgreSQL이라면 estimated vs actual rows를 어떻게 활용하나요?"
 ---
-> **검수 기준 — 2026-09-08**
+> **검수 기준 — 2026-09-27**
 >
 > MySQL InnoDB 8.4와 PostgreSQL 17을 기준으로 일반 원리와 예외를 구분한다. 실행계획·성능 수치는 예시이며 데이터 분포와 설정으로 달라진다.
 > 참고: [PostgreSQL 복합 인덱스](https://www.postgresql.org/docs/17/indexes-multicolumn.html), [Index-Only Scan](https://www.postgresql.org/docs/17/indexes-index-only-scans.html), [플래너 통계](https://www.postgresql.org/docs/17/planner-stats.html), [MySQL ICP](https://dev.mysql.com/doc/refman/8.4/en/index-condition-pushdown-optimization.html).
 
 ## 1. B+Tree 인덱스 구조와 Clustered vs Secondary
 
-MySQL InnoDB와 PostgreSQL의 기본 인덱스는 **B+Tree(밸런스드 트리)**다. Hash 인덱스와 달리 **범위 검색(Range Scan)과 정렬(ORDER BY)**에 강하다. 핵심은 두 가지다.
+MySQL InnoDB의 clustered/secondary index와 PostgreSQL의 기본 B-tree access method는 정렬된 키를 이용한 **범위 검색(Range Scan)과 일부 ORDER BY**에 강하다. 다만 InnoDB는 PK leaf에 행이 함께 놓이는 clustered 구조인 반면 PostgreSQL은 일반적으로 heap table과 B-tree index가 분리되어 있다. Hash·GiST·GIN 등 다른 access method도 있으므로 DBMS와 연산자에 맞춰 선택한다.
 
-- **Internal node(내부 노드)**는 탐색 키만, **Leaf node(리프 노드)**는 실제 데이터(또는 행 포인터)를 보관한다.
-- 리프 노드끼리 **이중 연결 리스트(Doubly Linked List)**로 묶여 있어, 한 지점을 찾은 뒤 옆으로 순차 스캔하면 범위 검색이 O(log n + k)로 끝난다.
+- 내부 페이지는 탐색에 필요한 키와 downlink를, leaf 페이지는 키와 행 위치 또는 행 자체를 보관한다. 정확한 페이지 포맷은 엔진별로 다르다.
+- B-tree는 sibling page 방향과 정렬 키를 이용해 범위를 스캔하지만, 모든 DBMS의 leaf를 동일한 이중 연결 리스트로 모델링하지 않는다. 이상적인 논리 비용은 `O(log n + k)`로 생각하되 실제 I/O·visibility·cache를 측정한다.
 
 ```
                  [Root]
@@ -41,9 +41,9 @@ MySQL InnoDB와 PostgreSQL의 기본 인덱스는 **B+Tree(밸런스드 트리)*
 
 ```
 
-> **정량 감각 — 트리는 생각보다 낮다**
+> **정량 감각 — 고정된 I/O 공식으로 읽지 않는다**
 >
-> InnoDB 페이지는 16KB. PK가 BIGINT(8B)면 내부 노드 한 페이지의 fan-out(분기 수)이 약 1,000개. 따라서 **약 1,000³ ≈ 10억 행도 트리 높이 3~4 레벨** 이면 도달한다. 인덱스 탐색이 디스크 I/O 3~4번에 끝난다는 의미이며, 상위 레벨은 버퍼풀에 상주하므로 실제 디스크 I/O는 1~2번 수준.
+> 페이지 크기·키 폭·포인터 폭·fill factor·압축·행 분포에 따라 fan-out과 높이가 달라진다. 트리 높이가 낮더라도 페이지가 버퍼에 있는지, 보조 인덱스에서 테이블로 재방문하는지, PostgreSQL visibility map을 확인해야 하므로 “항상 3~4번 디스크 I/O” 같은 수치로 성능을 보장하지 않는다.
 
 ```mermaid
 flowchart TB
@@ -66,7 +66,7 @@ flowchart TB
     style I3 fill:#fff7ed,stroke:#d97706
 ```
 
-*B+Tree — 리프 노드는 Linked List로 연결되어 Range Scan에 최적*
+*B-tree — 정렬 키와 sibling 탐색으로 범위 스캔을 수행하며 실제 페이지 구조는 엔진별로 다르다.*
 
 ### Clustered Index vs Secondary Index
 
@@ -90,9 +90,9 @@ flowchart LR
 
 *Secondary Index 조회는 PK를 들고 Clustered Index를 한 번 더 탐색(Bookmark Lookup)한다*
 
-> **PK가 크면 모든 보조 인덱스가 비대해진다**
+> **PK 폭과 키 순서는 엔진별 비용이다**
 >
-> Secondary Index 리프는 PK 값을 포인터로 들고 있다. PK가 `UUID(16B)` 나 긴 문자열이면 **모든 보조 인덱스가 그만큼 커진다** . PK는 짧고 단조 증가하는 값( `BIGINT AUTO_INCREMENT` )이 유리하며, 분산 환경이면 **UUIDv7/ULID** 처럼 시간 정렬성이 있는 ID를 권장한다(랜덤 UUID는 페이지 분할·단편화 유발).
+> InnoDB secondary index는 일반적으로 clustered PK를 leaf에 포함하므로 넓은 PK가 보조 인덱스 크기·cache 효율에 영향을 준다. PostgreSQL의 일반 secondary index는 heap TID를 사용하므로 같은 문장을 그대로 적용하면 안 된다. 단조 키는 오른쪽 끝 쓰기 지역성을 얻을 수 있지만 hot page·추측 가능한 ID·분산 생성 요구를 고려해야 하고, UUIDv7·ULID도 자동 정답이 아니다.
 
 ## 2. 복합 인덱스와 선두 컬럼 원칙(Leftmost Prefix)
 
@@ -118,6 +118,8 @@ CREATE INDEX idx_ws_status_date
 > 단일 탐색 범위를 줄이는 출발점으로 **등치 조건을 앞에, 범위 조건을 뒤에** 둔다. 뒤 컬럼이 탐색 구간을 줄이지 못해도 MySQL Index Condition Pushdown(인덱스 조건 푸시다운) 등 필터링에는 활용될 수 있다. ORDER BY 충족 여부는 등치로 고정된 선두 키, 정렬 방향과 전체 키 순서를 보고 판단한다.
 
 ```sql
+-- 아래 EXPLAIN 행은 교육용 예시다. key_len·rows·filtered는 실제 DDL의
+-- 자료형/문자셋, 인덱스 정의, 통계, 데이터 분포에 따라 달라진다.
 EXPLAIN SELECT * FROM orders
 WHERE warehouse_id=1 AND status='PAID' AND created_at > '2026-07-01';
 
@@ -244,6 +246,14 @@ SELECT * FROM orders WHERE warehouse_id = 1 AND status = 'PAID';
 > **가장 흔한 실수 — 날짜 함수 감싸기**
 >
 > `WHERE DATE(created_at) = '2026-07-01'` 는 모든 행에 함수를 적용해야 하므로 인덱스가 무력화된다. 반드시 **범위(Sargable) 조건** 으로: `WHERE created_at >= '2026-07-01 00:00:00' AND created_at < '2026-07-02 00:00:00'`
+
+## 7. 실패 입력 → 판단 → 복구
+
+`orders(warehouse_id, status, created_at)` 인덱스가 있는데 `WHERE status='PAID' AND created_at > :cutoff`가 `ALL` 또는 넓은 스캔으로 실행된다고 하자. 먼저 이 인덱스의 선두 `warehouse_id` 조건이 없다는 사실, 반환 행 수와 실제 분포, 커버링 여부를 확인한다. PostgreSQL은 `EXPLAIN (ANALYZE, BUFFERS)`의 estimated/actual rows와 heap fetch를, MySQL은 `EXPLAIN ANALYZE`의 actual rows·key·Extra를 확인한다.
+
+추정치가 틀렸으면 통계를 갱신하고 데이터 편향·컬럼 상관관계를 점검한다. 계획 자체는 맞지만 후보 행이 많으면 `(status, created_at)`가 실제 업무 질의에 맞는지 비교하되, 쓰기·저장 비용과 다른 질의 회귀를 함께 측정한다. 조회가 짧아져도 인덱스 강제 힌트를 바로 남기지 않고 배포 분포에서 재현한 뒤 필요할 때만 범위를 좁힌다.
+
+참고: [MySQL EXPLAIN](https://dev.mysql.com/doc/refman/8.4/en/explain.html), [PostgreSQL Using EXPLAIN](https://www.postgresql.org/docs/17/using-explain.html)
 
 ## 이해도 확인 Q&A
 

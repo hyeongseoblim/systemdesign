@@ -43,7 +43,7 @@ flowchart LR
 | --- | --- | --- |
 | **주소 공간** | 독립 가상 주소 공간 | 프로세스 내 공유(Heap·전역·FD) |
 | **통신** | IPC(파이프·공유메모리·소켓) | 공유 메모리 직접 접근 → 동기화 필요 |
-| **Context Switch** | 비쌈(주소공간 전환 + TLB flush) | 쌈(같은 주소공간 유지) |
+| **Context Switch** | 주소 공간·실행 상태 전환이 추가될 수 있음 | 같은 주소 공간을 공유하지만 실행 상태·캐시 영향은 남음 |
 | **장애 격리** | 높음(크래시 격리) | 낮음(한 스레드 크래시 → 전체) |
 | **생성 비용** | 높음(주소공간 복제) | 낮음 |
 | **Linux 구현** | `clone()` (CLONE_VM 없이) | `clone()` + `CLONE_VM`\|`CLONE_FILES`… |
@@ -54,7 +54,7 @@ flowchart LR
 
 > **🎯 면접 함정 — "스레드가 항상 빠르다"**
 >
-> 스레드 수 > CPU 코어 수가 되면 컨텍스트 스위칭이 폭증한다. Lock 경합이 심하면 직렬화되어 단일 스레드보다 느려질 수도 있다(Amdahl's Law). fork+exec 패턴은 **Copy-on-Write(COW)** 로 자식 생성을 가볍게 하지만, 자식이 큰 메모리를 쓰기 시작하면 페이지 복제가 일어나 Redis `BGSAVE` 시 메모리 스파이크의 원인이 된다.
+> runnable 스레드가 CPU와 코어 수를 크게 초과하면 스케줄링·캐시 경합이 커질 수 있다. Lock 경합이 심하면 직렬화되어 단일 스레드보다 느려질 수도 있다(Amdahl's Law). `fork`의 **Copy-on-Write(COW)** 는 공유 페이지를 유지하다 쓰기 시 복제하지만, 페이지 크기·메모리 접근·allocator에 따라 실제 비용이 달라진다.
 
 ## 2. 컨텍스트 스위칭 (Context Switch, 문맥 교환)
 
@@ -72,11 +72,11 @@ sequenceDiagram
     K->>T2: B 실행 재개
 ```
 
-*컨텍스트 스위치 — 직접 비용(저장/복구)보다 간접 비용(캐시·TLB 무효화)이 더 클 때가 많다*
+*컨텍스트 스위치 — 저장·복구와 캐시·주소 변환 계층의 영향이 워크로드·CPU·커널에 따라 달라진다*
 
-- **직접 비용**: 레지스터 저장/복구, 커널 진입/복귀 (수 μs)
-- **간접 비용**: L1/L2 캐시 무효화 → 캐시 미스 폭증 ("Cache Pollution")
-- **TLB flush**: 프로세스 전환 시 페이지 테이블 캐시 초기화 (스레드 전환에선 회피)
+- **직접 비용**: 레지스터·스케줄링 상태 저장/복구, 커널 진입/복귀. 고정된 마이크로초 값으로 일반화하지 않는다.
+- **간접 비용**: 작업 집합이 바뀌며 캐시 적중률·분기 예측·메모리 대역폭이 달라질 수 있다.
+- **주소 변환 영향**: 주소 공간 전환과 TLB 처리 방식은 CPU 기능·커널·페이지 테이블에 의존하며, 같은 프로세스의 스레드 전환도 비용이 0은 아니다.
 
 > **⚠️ 관찰 도구**
 >
@@ -104,11 +104,11 @@ stateDiagram-v2
 | **SJF / SRTF** | 짧은 작업 우선 | 평균 대기시간 최소 | 긴 작업 기아(Starvation), 실행시간 예측 불가 |
 | **Round Robin** | 타임퀀텀 순환(선점) | 응답성 좋음 | 퀀텀 작으면 스위칭 오버헤드 |
 | **Priority** | 우선순위 높은 것 먼저 | 중요 작업 우선 | 기아 → Aging으로 완화 |
-| **Linux CFS** | 가상 실행시간(vruntime) 최소 선택 | 공정성, Red-Black Tree O(log n) | 실시간 보장 아님(→ `SCHED_FIFO`) |
+| **Linux 일반 공정 스케줄링** | 커널 버전에 따라 CFS 또는 EEVDF | 가중치에 따른 CPU 시간 배분 | 실시간 보장 아님(→ `SCHED_FIFO` 등 별도 정책) |
 
 > **💡 백엔드 연결 — nice / cgroup**
 >
-> Linux **CFS(Completely Fair Scheduler, 완전 공정 스케줄러)** 는 각 task의 `vruntime` 이 가장 작은 것을 Red-Black Tree에서 골라 실행한다. `nice` 값으로 가중치를 조정하고, **cgroup** 으로 CPU 점유를 그룹 단위로 제한한다 — 이것이 컨테이너(Docker/K8s) `cpu.limit` 의 실체다. `cpu.cfs_quota_us` 를 너무 낮게 잡으면 **CFS Throttling** 으로 JVM이 멈칫거리는 지연 스파이크가 발생한다.
+> 과거 **CFS(Completely Fair Scheduler)** 는 가상 실행시간을 기준으로 실행 대상을 선택했다. Linux 6.6부터 일반 공정 스케줄링은 EEVDF로 전환되기 시작했으므로, 실행 중인 커널의 정책을 확인해야 한다. `nice`는 가중치에 영향을 주고, 컨테이너 CPU 제한은 cgroup 대역폭 제어를 통해 요청을 지연시킬 수 있다. 지연 스파이크를 볼 때 커널 버전·cgroup 버전별 throttling 지표와 CPU pressure를 확인한다.
 
 ## 4. 가상 메모리 & 페이징 (Virtual Memory & Paging)
 
@@ -128,18 +128,18 @@ flowchart LR
     style PF fill:#fef2f2,stroke:#dc2626
 ```
 
-*주소 변환 경로 — TLB Miss → 페이지 테이블 → Page Fault 시 디스크 I/O(수만 배 느림)*
+*주소 변환 경로 — TLB Miss → 페이지 테이블 → 필요하면 Page Fault 처리. Major fault의 지연은 저장장치·캐시·메모리 압력에 의존한다.*
 
 | 개념 | 의미 | 비용 / 영향 |
 | --- | --- | --- |
-| **Page Fault** | 접근 페이지가 물리 메모리에 없음 | Minor(메모리 내 매핑)는 싸고, Major(디스크 로드)는 수 ms로 치명적 |
+| **Page Fault** | 접근 페이지가 현재 매핑·메모리 상태에 없음 | Minor와 Major를 구분하고 저장장치·메모리 압력에 따른 지연을 측정 |
 | **Paging** | 고정 크기(4KB) 페이지 단위 관리 | 외부 단편화 없음, 내부 단편화 소량 |
 | **Swapping** | 메모리 부족 시 페이지를 디스크로 내림 | 과도하면 Thrashing(스래싱)으로 시스템 마비 |
 | **OOM Killer** | 메모리 고갈 시 커널이 프로세스 강제 종료 | JVM 컨테이너가 갑자기 죽는 단골 원인 |
 
 > **⚠️ 실무 함정 — Swap과 GC는 상극**
 >
-> JVM Heap이 Swap으로 디스크에 내려가면, GC가 전체 Heap을 스캔할 때 Major Page Fault가 폭발해 stop-the-world가 초 단위로 늘어진다. 그래서 프로덕션 DB·JVM 서버는 흔히 **Swap을 끄거나(`vm.swappiness=0~1`)** 관리한다. 컨테이너에서 갑작스런 종료는 `dmesg | grep -i oom` 으로 OOM Killer 흔적을 확인하라.
+> 스왑과 페이지 폴트는 메모리 접근 지연을 크게 늘릴 수 있다. GC 지연과 함께 page fault·memory pressure·스왑 입출력을 측정하되 모든 GC가 힙 전체를 스캔한다고 가정하지 않는다. 컨테이너에서 갑자기 종료됐다면 해당 cgroup의 OOM 이벤트와 오케스트레이터 종료 사유를 먼저 확인하고, 접근 가능한 호스트에서는 커널 로그도 대조한다.
 
 ## 5. 메모리 레이아웃 (Memory Layout)
 
@@ -149,7 +149,7 @@ flowchart LR
 │            Kernel Space             │
 ├─────────────────────────────────────┤
 │            Stack (스택)             │  ← 지역변수·리턴주소, 자동 관리
-│          ↓ (grows down)             │     크기 제한(~8MB) → Stack Overflow
+│          ↓ (grows down)             │     실행 환경별 스택 한도 → Stack Overflow
 ├─────────────────────────────────────┤
 │            (빈 공간)                │
 ├─────────────────────────────────────┤
@@ -177,7 +177,7 @@ flowchart LR
 
 > **🎯 면접 — "Java Heap과 OS Heap은 같은가?"**
 >
-> 다르다. JVM Heap은 OS Heap 위에 올라간 별도 풀이다. JVM이 시작 시 OS로부터 큰 블록( `-Xmx` )을 받아 객체를 배치하고 GC가 관리한다. 그래서 컨테이너 메모리 한도( `cpu/memory limit` )와 `-Xmx` 를 함께 맞추지 않으면, JVM은 여유가 있다고 믿는데 cgroup이 OOM Kill하는 사고가 난다(JDK 10+ `-XX:+UseContainerSupport` 로 완화).
+> JVM Heap은 JVM이 관리하는 객체 메모리이며 프로세스의 전체 메모리 사용량과 다르다. `-Xmx`는 힙의 최대치이지 시작 시 전부 물리 메모리로 확보한다는 뜻이 아니다. 메타스페이스, 스레드 스택, 직접 버퍼, 네이티브 라이브러리, 페이지 캐시 등도 컨테이너 한도에 영향을 준다. OOM Kill이면 힙 사용량뿐 아니라 cgroup 메모리·JVM 네이티브 메모리와 종료 사유를 함께 조사한다.
 
 ## 6. 동기화 프리미티브 (Synchronization Primitives)
 
@@ -194,7 +194,7 @@ flowchart LR
 
 > **💡 Mutex vs Spinlock — 언제 무엇을**
 >
-> 임계구역이 **매우 짧고** 멀티코어라면 Spinlock이 컨텍스트 스위치 비용을 아껴 유리하다. 임계구역이 **길거나** 싱글코어면 Spin은 CPU 낭비라 Mutex(블로킹)가 낫다. 락을 쥔 스레드가 선점되면 Spin하던 다른 스레드가 무의미하게 CPU를 태운다 — 그래서 유저 공간 락은 흔히 둘을 섞은 **Adaptive Mutex** 를 쓴다.
+> 임계구역이 **매우 짧고** 멀티코어에서 소유자가 곧 실행될 때 Spin이 유리할 수 있다. 임계구역이 **길거나** 소유자가 선점·block될 수 있으면 Spin은 CPU를 낭비하므로 blocking mutex가 적합할 수 있다. 실제 primitive의 adaptive 동작은 OS·런타임·라이브러리 구현을 확인한다.
 
 ## 7. 데드락 (Deadlock, 교착 상태)
 
@@ -226,7 +226,7 @@ flowchart LR
 
 > **🎯 면접 + 실무 — DB 데드락**
 >
-> 재고 차감에서 주문 A가 SKU1→SKU2, 주문 B가 SKU2→SKU1 순으로 락을 잡으면 DB 데드락이 난다. MySQL InnoDB는 락 그래프에서 사이클을 탐지해 한쪽을 `victim` 으로 롤백한다( `SHOW ENGINE INNODB STATUS` 에서 LATEST DETECTED DEADLOCK 확인). 해결은 OS와 동일 — **모든 트랜잭션이 동일한 순서(예: SKU id 오름차순)로 락을 잡게** 강제하면 순환 대기가 사라진다.
+> 재고 차감에서 주문 A가 SKU1→SKU2, 주문 B가 SKU2→SKU1 순으로 락을 잡으면 DB 데드락이 날 수 있다. DB 엔진마다 탐지·victim 선택·timeout 동작이 다르므로 해당 엔진의 lock graph와 로그를 확인한다. 해결은 OS와 동일 — **모든 트랜잭션이 동일한 순서로 락을 잡게** 강제하고, 실패한 트랜잭션을 안전하게 재시도하며, 재고 불변식을 원자 조건부 갱신으로 보호한다.
 
 ## Q&A 연습
 
@@ -238,3 +238,20 @@ ps -L -p <pid>
 cat /proc/<pid>/status
 ls /proc/<pid>/fd | wc -l
 ```
+
+## 8. 실패 흐름과 진단 경계
+
+- 컨테이너의 `-Xmx`는 JVM heap 상한일 뿐 프로세스 전체 메모리 상한이 아니다. metaspace·스레드 스택·direct buffer·native library·page cache·cgroup limit을 함께 보고 종료 주체가 JVM인지 커널인지 확인한다.
+- OOM killer 로그가 있다고 바로 heap을 줄이거나 늘리지 않는다. cgroup memory events, RSS·committed heap, swap·page fault·GC, sidecar와 같은 시점의 로그를 대조한 뒤 조정한다.
+- `volatile` 또는 mutex가 있어도 DB transaction·외부 호출·락 순서가 교착을 만들 수 있다. OS의 4조건과 DB의 lock graph·timeout·victim rollback을 분리해 진단한다.
+- 컨텍스트 switch·CPU pressure가 증가했다고 스레드 수를 즉시 줄이지 않는다. runnable 수·I/O 대기·lock contention·cgroup throttling을 함께 확인하고, pool·queue·downstream concurrency를 같이 조정한다.
+- Linux의 scheduler·cgroup·allocator 동작과 Java 21의 virtual/platform thread 자원은 버전에 따라 달라질 수 있다. 고정된 스택 크기·switch 비용·page fault 시간을 보편 상수로 제시하지 않는다.
+
+### 근거 자료
+
+- [Linux Kernel — EEVDF Scheduler](https://docs.kernel.org/scheduler/sched-eevdf.html): Linux 6.6 이후 일반 공정 스케줄링 전환.
+- [Linux Kernel — Pressure Stall Information](https://docs.kernel.org/accounting/psi.html): CPU·메모리·I/O 대기 관측.
+- [Java SE 21 — Thread](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Thread.html): 플랫폼·가상 스레드와 스택 자원.
+- [Java SE 21 — Java Language Specification, Threads and Locks](https://docs.oracle.com/javase/specs/jls/se21/html/jls-17.html): Java 메모리 모델과 happens-before.
+- [Linux kernel — cgroup v2 memory](https://docs.kernel.org/admin-guide/cgroup-v2.html): 컨테이너 자원 제어와 메모리 pressure 경계.
+- [Linux `proc_pid_status`](https://man7.org/linux/man-pages/man5/proc_pid_status.5.html): 프로세스·스레드·메모리 관측 필드.

@@ -20,7 +20,7 @@ questions:
 
 **문제**: 큰 시스템에서 "상품", "주문" 같은 단어가 부서마다 다른 의미인데 하나의 거대 모델로 욱여넣으면, 모든 곳에 영향을 주는 *God Model(만능 모델)*이 생겨 변경이 마비된다.
 
-**해결**: **DDD(Domain-Driven Design, 도메인 주도 설계)**는 도메인을 의미 경계로 나누고(`Bounded Context`), 그 안에서 도메인 전문가와 개발자가 같은 언어(`Ubiquitous Language`)를 쓰며, 일관성 경계(`Aggregate`)를 명확히 한다.
+**해결**: **DDD(Domain-Driven Design, 도메인 주도 설계)**는 도메인을 의미 경계로 나누고(`Bounded Context`), 그 안에서 도메인 전문가와 개발자가 같은 언어(`Ubiquitous Language`)를 쓰며, 일관성 경계(`Aggregate`)를 명확히 한다. Bounded Context는 모듈이나 서비스의 후보가 될 수 있지만 모든 경계를 별도 프로세스로 배포해야 한다는 뜻은 아니다.
 
 ```mermaid
 flowchart LR
@@ -56,7 +56,7 @@ flowchart LR
 
 ## 3. Bounded Context (경계 컨텍스트)
 
-한 모델이 일관되게 적용되는 **명시적 경계**. 같은 단어가 경계 밖에선 다른 뜻이어도 된다. Bounded Context는 곧 *서비스 경계 후보*이자 *팀 소유권의 단위*다.
+한 모델이 일관되게 적용되는 **명시적 경계**. 같은 단어가 경계 밖에선 다른 뜻이어도 된다. Bounded Context는 서비스·모듈 경계를 정할 때의 후보이며, 실제 분리는 트랜잭션·변경·소유권·운영 비용을 함께 보고 결정한다.
 
 ```mermaid
 flowchart TB
@@ -100,7 +100,7 @@ Bounded Context들 **사이의 관계와 통합 방식**을 그린 지도. "어�
 | --- | --- | --- |
 | **Partnership** | 두 팀이 운명 공동체로 함께 변경 | 주문 ↔ 결제 (동시 출시 협의) |
 | **Customer/Supplier** | 공급자가 소비자 요구를 반영 | Inventory(공급) → Ordering(소비) |
-| **Conformist** | 약자가 강자 모델을 그대로 수용 | 외부 택배사 API 포맷 그대로 따름 |
+| **Conformist** | 상류 모델의 영향력을 감수하고 그대로 따름 | 번역 비용보다 상류 계약 준수가 이득인 작은 소비자 |
 | **ACL (Anti-Corruption Layer, 부패 방지 계층)** | 외부 모델을 내 모델로 번역해 오염 차단 | 레거시 WMS / 외부 운송사 연동 어댑터 |
 | **OHS (Open Host Service)** | 공개 표준 API로 다수 소비자에 제공 | 배송추적 조회 API (수많은 셀러가 소비) |
 | **Published Language** | 공유 스키마/표준 메시지 포맷 | 운송장 이벤트 Avro/Protobuf 스키마 |
@@ -129,7 +129,7 @@ flowchart LR
 
 > **🎯 면접 포인트**
 >
-> "레거시 WMS를 새 시스템과 통합하라"는 문제에서 정답 키워드는 **ACL** . 외부의 지저분한 모델을 그대로 받지 말고 번역 계층에서 차단해야 한다고 답하면 시니어 신호. 🔥(Deep-dive)
+> 레거시 WMS의 상태·코드·오류를 Shipping의 언어로 바꿔야 하면 ACL이 적합하다. 반대로 계약을 그대로 따르는 편이 비용과 위험이 낮다면 Conformist를 택할 수 있고, OHS는 내가 다수 소비자에게 안정된 공개 계약을 제공할 때의 선택이다. 패턴 이름만으로 결론을 내리지 말고 번역 비용·변경 주체·실패 격리를 비교한다. 🔥(Deep-dive)
 
 ## 5. 전술 빌딩블록 (Tactical Building Blocks)
 
@@ -176,11 +176,11 @@ classDiagram
     Order *-- Address : shippingAddress
 ```
 
-*Order Aggregate — 외부는 오직 **Aggregate Root(Order)**를 통해서만 OrderLine에 접근한다.*
+*Order Aggregate — 외부 도메인 로직은 **Aggregate Root(Order)**를 통해 OrderLine의 변경을 요청한다. 영속화·조회 프레임워크의 내부 접근과 애그리거트 경계 밖의 조합 조회는 이 규칙과 구분한다.*
 
 ## 6. Aggregate 설계 — 한 트랜잭션 = 한 Aggregate
 
-Aggregate의 핵심은 **Invariant(불변식)**를 지키는 일관성 경계다. 규칙: *한 트랜잭션에서는 하나의 Aggregate만 수정*한다. 여러 Aggregate를 동시에 바꿔야 하면 그건 도메인 이벤트 + 최종 일관성(Eventual Consistency)으로 푼다.
+Aggregate의 핵심은 **Invariant(불변식)**를 지키는 일관성 경계다. 여러 Aggregate를 하나의 원자적 트랜잭션으로 수정할 수 없는 분산 경계라면 보통 이벤트·Saga와 최종 일관성으로 연결한다. 같은 저장소 안에서 즉시 검증해야 하는 규칙이 명확하면 여러 Aggregate를 한 트랜잭션에 포함할 수도 있지만, 락 범위·결합·재시도 비용을 설계에 명시해야 한다. “항상 한 트랜잭션 = 한 Aggregate”는 유용한 기본값이지 DB가 강제하는 보편 법칙은 아니다.
 
 > **⚠️ 실무 함정 — Aggregate를 너무 크게**
 >
@@ -233,3 +233,19 @@ Aggregate: Order
 Event: OrderConfirmed
 Policy: 주문 확정 시 재고 예약 요청
 ```
+
+## 8. 실패 입력 → 판단 → 복구
+
+| 실패 입력 | 판단 | 복구·완화 |
+|---|---|---|
+| Catalog·Inventory·Billing이 모두 `Product` 하나를 공유하다 가격 필드 변경으로 연쇄 배포가 발생함 | 같은 단어가 각 컨텍스트에서 같은 불변식·수명주기를 갖는지, 공유 코드와 데이터 소유자를 확인한다. | 컨텍스트별 모델과 명시적 계약을 분리하고, 필요한 값만 API·이벤트·Snapshot으로 전달한다. 공통 VO를 공유하더라도 변경 권한과 호환성 범위를 작게 둔다. |
+| 주문 생성과 재고 예약을 한 로컬 트랜잭션으로 묶을 수 없음 | 주문 확정 순간 필요한 규칙과 재고 예약 실패를 사용자가 언제 알아야 하는지 구분한다. 외부 WMS·결제처럼 같은 DB에 없는 참여자는 원자 rollback 대상이 아니다. | 주문을 먼저 자기 Aggregate의 유효한 상태로 저장하고 Outbox로 예약 명령을 보낸다. `RESERVATION_PENDING`·실패·취소를 명시하고 소비자 멱등성·보상 정책으로 닫는다. |
+| 레거시 WMS의 `3` 상태와 택배사의 `DELIVERED`를 Shipping 도메인에 그대로 노출함 | 상류 코드가 내 모델의 의미·오류·변경 주체를 오염시키는지, 내가 안정된 계약을 제공해야 하는지 판단한다. | 의미를 번역해야 하면 ACL을 두고, 상류 계약을 그대로 따를 때만 Conformist를 선택한다. 다수 소비자용 조회 계약은 OHS로 별도 버전 관리한다. |
+
+경계·패턴·팀 배치는 고정된 정답이 아니다. 용어 충돌, 변경 전파, 계약 실패, 배포·운영 비용을 실제 사례와 지표로 확인한 뒤 경계를 다시 조정한다.
+
+## 9. 공식 참고 자료
+
+- [Microsoft Learn — Use domain analysis to model microservices](https://learn.microsoft.com/en-us/azure/architecture/microservices/model/domain-analysis)
+- [Microsoft Learn — Designing a microservice domain model](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/microservice-domain-model)
+- [Microsoft Learn — Domain events: Design and implementation](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation)

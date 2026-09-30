@@ -16,6 +16,8 @@ questions:
   - "재고 차감 로직이 동시성 안전한지 검증하는 테스트를 어떻게 설계할지, `CountDownLatch`·스레드풀·검증 단언을 포함해 설명하고, 이 테스트가 Flaky해지지 않게 하는 방법도 답해보세요."
   - "MSA에서 OMS와 WMS가 독립 배포됩니다. 전체 E2E 없이 API 호환성 깨짐을 조기에 잡는 **Contract 테스트**의 동작과, E2E 대비 장점을 설명해보세요."
 ---
+> **검수 경계** — 테스트 계층·DB 방언·격리 수준·계약은 사용 중인 JDK, DB, 드라이버, 컨테이너 이미지, 테스트 프레임워크 버전으로 검증한다. 테스트 통과는 해당 시나리오의 증거이지 운영 전체의 보장이 아니다.
+
 ## 1. 테스트 피라미드
 
 ```mermaid
@@ -33,7 +35,7 @@ flowchart TB
 
 > **⚠️ 안티패턴 — Ice Cream Cone**
 >
-> Unit이 적고 E2E·수동 테스트가 많은 역피라미드. 빌드가 30분씩 걸리고 Flaky(불안정) 테스트로 신뢰를 잃는다. 도메인 로직은 **빠른 Unit으로 두텁게** , 연동 지점만 Integration으로 검증하는 게 원칙.
+> Unit이 적고 E2E·수동 테스트가 많은 역피라미드는 실행 시간이 길고 Flaky(불안정) 테스트로 신뢰를 잃기 쉽다. 도메인 로직은 **빠른 Unit으로 두텁게**, 연동 지점만 Integration으로 검증한다.
 
 ## 2. 테스트 더블 (Test Doubles)
 
@@ -88,7 +90,7 @@ class OrderRepositoryTest {
 
     companion object {
         @Container
-        val postgres = PostgreSQLContainer("postgres:16")   // 운영과 동일 엔진
+        val postgres = PostgreSQLContainer("postgres:16")   // 예시 버전; CI·운영과 호환되는 이미지로 고정
 
         @JvmStatic @DynamicPropertySource
         fun props(registry: DynamicPropertyRegistry) {
@@ -106,7 +108,7 @@ class OrderRepositoryTest {
 }
 ```
 
-*Docker로 실제 PostgreSQL 컨테이너를 띄워 테스트. 배민·토스 등 다수 기업이 표준으로 사용*
+*Docker로 지정한 PostgreSQL 이미지 버전을 띄워 테스트한다. 특정 기업의 내부 표준이라고 일반화하지 말고 CI와 운영이 사용하는 방언·확장·버전을 명시한다.*
 
 > **🎯 면접 포인트 — 왜 H2로 통합 테스트하면 안 되나**
 >
@@ -171,3 +173,17 @@ fun `재고100_100명동시주문_정확히0`() {
 > **⚠️ 실무 함정 — Flaky 동시성 테스트**
 >
 > 동시성 테스트는 타이밍 의존이라 가끔 통과/실패할 수 있다. (1) 충분한 스레드 수·반복, (2) 명확한 동기화(latch), (3) `@DirtiesContext` 로 상태 격리. 그래도 불안정하면 부하 테스트(Gatling/JMeter)로 보완. **Testcontainers + 실제 DB** 에서 돌려야 락 동작까지 검증된다.
+
+## 검수 경계와 실패 흐름
+
+- Testcontainers가 실제 DB를 띄워도 이미지 태그·확장·초기화 SQL·격리 수준이 운영과 다르면 검증 범위가 달라진다. 버전과 마이그레이션을 명시하고 CI에서 재현한다.
+- 동시성 테스트는 스케줄러가 모든 interleaving을 탐색하지 않으므로 반복·장벽·불변식 단언과 실제 DB 로그를 함께 사용한다. 통과 횟수만으로 race 부재를 증명하지 않는다.
+- Contract 테스트는 합의된 요청·응답 형태를 검증하지만 provider의 비즈니스 규칙, 데이터 품질, 네트워크·인증 장애까지 검증하지 않는다. 계약 변경은 consumer/provider 호환 창과 rollback을 함께 관리한다.
+- 컨테이너 시작 실패, 포트 충돌, 테스트 간 공유 상태, 외부 의존성 timeout은 제품 결함과 분리해 진단하고 cleanup·재시도 정책을 둔다.
+
+## 공식·1차 출처
+
+- [Testcontainers for Java — PostgreSQL module](https://java.testcontainers.org/modules/databases/postgres/)
+- [PostgreSQL — Transaction Isolation](https://www.postgresql.org/docs/current/transaction-iso.html)
+- [Pact — Consumer Driven Contract Testing](https://docs.pact.io/)
+- [JUnit 5 User Guide](https://junit.org/junit5/docs/current/user-guide/)

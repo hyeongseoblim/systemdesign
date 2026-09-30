@@ -52,7 +52,7 @@ flowchart TD
 
 > **🎯 면접 함정 — "HashMap이 항상 빠르다"**
 >
-> 평균 O(1)이지만 해시 충돌이 집중되면 최악 O(n). 악의적 입력으로 충돌을 유도하는 **Hash Collision DoS** 가 가능하다. Java 8+는 버킷 크기 8 초과 시 LinkedList → Red-Black Tree로 전환해 최악을 O(log n)으로 완화. `load factor` 0.75, 초기 capacity 지정으로 리사이징을 줄여라.
+> 평균 O(1)이라는 말은 키 분포와 구현의 가정을 포함한다. 충돌이 집중되면 최악 탐색 비용이 커지고 악의적 입력으로 서비스 지연이 생길 수 있다. Java 21 `HashMap`의 tree bin 전환 임계값과 용량 조건은 구현 세부사항이므로 다른 언어·JDK·자료구조에 일반화하지 않는다. 초기 용량은 예상 크기와 실제 load factor를 근거로 정하고, 충돌·resize·GC를 실측한다.
 
 ## 2. 해시 테이블 (Hash Table)
 
@@ -67,18 +67,18 @@ flowchart TD
 
 ### Load Factor & Rehashing
 
-**Load Factor(적재율)** = 저장된 항목 수 / 버킷 수. 임계치(보통 0.75)를 넘으면 **Rehashing(재해싱)**으로 버킷을 2배 늘리고 모든 항목을 재배치한다 — 이 순간 O(n) 비용이 발생하며, 대규모 맵에서는 **지연 스파이크**의 원인이 된다.
+**Load Factor(적재율)** = 저장된 항목 수 / 버킷 수. 구현이 정한 threshold를 넘으면 **Rehashing(재해싱)**으로 용량과 버킷 배치를 바꿀 수 있다. 이때 여러 항목을 재배치하는 비용이 한 호출에 몰릴 수 있으므로, 대규모 맵에서는 초기 용량·메모리·GC와 함께 지연을 측정한다.
 
 > **⚠️ 실무 함정 — 대규모 트래픽**
 >
-> 라스트마일 추적 시스템에서 수천만 운송장을 단일 `ConcurrentHashMap` 에 적재하면 리사이징 순간 지연 스파이크 + GC 압박이 온다. 예상 크기를 알면 `new HashMap<>(expectedSize / 0.75 + 1)` 로 초기화해 재해싱을 회피하라.
+> 대규모 추적 키를 단일 `ConcurrentHashMap`에 넣을 때는 resize·메모리·GC·동시 접근 경합을 함께 측정한다. 예상 크기를 알면 구현 문서의 capacity 계산을 참고해 초기 용량을 정할 수 있지만, 메모리 예산과 실제 키 분포를 확인하지 않고 큰 값을 예약하면 오히려 낭비가 된다.
 
 ### 확률적 자료구조
 
 | 자료구조 | 용도 | 특성 | 실무 예 |
 | --- | --- | --- | --- |
 | **Bloom Filter** | "존재하지 않음"을 빠르게 판정 | False Positive 가능, False Negative 없음, 공간 효율 | 캐시 미스 방지, Cassandra SSTable 조회 |
-| **HyperLogLog** | Cardinality(고유값 개수) 추정 | 오차 ~2%, 수십억 항목을 12KB로 | Redis `PFCOUNT` — 일일 UV 집계 |
+| **HyperLogLog** | Cardinality(고유값 개수) 추정 | 구현이 정한 메모리·오차 trade-off | 일일 UV 집계 |
 | **Count-Min Sketch** | 빈도(frequency) 추정 | 과대추정만 발생, 공간 고정 | Heavy Hitter 탐지, 트래픽 모니터링 |
 
 ## 3. 트리 & 힙 (Tree & Heap)
@@ -111,14 +111,14 @@ flowchart TB
 | 트리 | 균형 방식 | 특징 | 사용처 |
 | --- | --- | --- | --- |
 | **AVL Tree** | 엄격한 높이 균형(차 ≤ 1) | 조회 빠름, 삽입/삭제 시 회전 많음 | 읽기 집중 워크로드 |
-| **Red-Black Tree** | 느슨한 균형(색 규칙) | 삽입/삭제 회전 적음, 균형 살짝 약함 | Java `TreeMap`, Linux CFS 스케줄러 |
+| **Red-Black Tree** | 느슨한 균형(색 규칙) | 삽입/삭제 회전 적음, 균형 살짝 약함 | Java `TreeMap`; 과거 Linux CFS 구현 예시 |
 | **B+Tree** | 다진 트리, 리프에 데이터 | 디스크 블록 친화, 낮은 높이, Range 스캔 빠름 | MySQL InnoDB 인덱스 |
 | **Trie** | 문자 단위 분기 | 접두사 검색 O(L) | 자동완성, IP 라우팅 |
 | **Segment / Fenwick** | 구간 합·최솟값 | 구간 질의 + 갱신 O(log n) | 구간 통계, 누적 집계 |
 
 > **💡 백엔드 연결 — 왜 DB 인덱스는 B+Tree인가**
 >
-> 디스크 I/O는 메모리보다 ~10만 배 느리다. B+Tree는 한 노드에 수백 개 키를 담아(높은 fan-out) 트리 높이를 3~4단으로 낮춘다 → 수십억 행도 **3~4번의 디스크 읽기** 로 도달. 리프 노드가 연결 리스트로 이어져 `WHERE created_at BETWEEN ...` 같은 Range 스캔이 순차 I/O가 된다.
+> B+Tree는 페이지 단위 저장과 높은 fan-out으로 트리 높이와 랜덤 I/O를 줄이는 데 유리하다. 실제 높이·페이지 접근 수·캐시 적중률은 엔진·페이지 크기·키 폭·데이터 분포에 따라 달라진다. 리프 연결과 정렬된 키를 활용하는 범위 스캔도 엔진의 실행 계획과 저장 구조를 확인해야 한다.
 
 ### 힙 (Heap) — Top-K의 표준 도구
 
@@ -170,7 +170,7 @@ Radix/Counting Sort가 O(n)인 이유: 비교를 안 하기 때문 (키 범위 �
 
 > **🎯 면접 포인트 — "왜 각각인가"**
 >
-> Quick Sort는 평균 빠르지만 정렬된 입력 + 나쁜 피벗 → O(n²)이라 외부 노출 API엔 위험(피벗 랜덤화 필수). Merge Sort는 **Stable** 하고 최악도 O(n log n)이라 다중 키 정렬·외부 정렬에 적합. 그래서 Java는 객체 정렬에 Tim Sort(안정), primitive엔 Dual-Pivot Quick Sort를 쓴다 — 객체는 안정성 중요, primitive는 동치 구분 불필요라서.
+> 단순 Quick Sort는 피벗 선택과 입력에 따라 최악 O(n²)이 될 수 있다. 피벗 랜덤화만이 유일한 대응은 아니며 실제 라이브러리 구현의 최악 동작은 해당 버전 문서를 확인한다. Merge Sort는 안정성과 O(n log n) 최악 시간 보장이 있어 외부 정렬에서 정렬된 청크를 병합하는 데도 적합하다. Java SE 21 문서에서 객체 배열 정렬은 안정성을 보장하고 적응형 병합 정렬을 설명하며, primitive 배열의 `Arrays.sort(int[])`는 Dual-Pivot Quicksort 구현을 명시한다. 객체에서는 동등 비교 결과의 상대 순서를 보존해야 하지만 primitive 값에는 별도 객체 순서가 없다.
 
 ## 6. 면접 빈출 패턴 (Coding Patterns)
 
@@ -230,7 +230,23 @@ flowchart TB
 
 > **⚠️ 실무 함정 — 재귀 DFS의 Stack Overflow**
 >
-> 깊이 수만의 그래프를 재귀 DFS로 돌리면 JVM 기본 스택(~512KB~1MB)이 터진다. 프로덕션에서는 명시적 `Deque` 스택으로 변환하거나, 꼬리 재귀가 아닌 이상 반복문으로 풀어라. 방문 체크(visited)를 큐/스택에 **넣을 때** 표시해야 중복 enqueue를 막는다.
+> 깊은 그래프를 재귀 DFS로 돌리면 스레드 스택 한도와 프레임 크기에 따라 `StackOverflowError`가 날 수 있다. JVM 옵션·실행 환경의 스택 크기를 고정값으로 가정하지 말고, 깊이가 크거나 입력이 신뢰되지 않으면 명시적 `Deque` 스택으로 바꾼다. 방문 체크는 큐/스택에 **넣을 때** 표시해 중복 enqueue를 막는다.
+
+## 8. 실패 흐름과 구현 경계
+
+- HashMap 계열의 resize·treeification은 구현·JDK 버전에 따라 다르므로, 성능 문제가 생기면 평균 복잡도만 보지 말고 충돌 분포·capacity·GC pause·메모리 할당을 함께 확인한다.
+- Top-K에서 K가 입력보다 크거나 중복 허용 규칙이 다르면 힙의 비교 조건과 결과 크기가 달라진다. 빈 입력·동률·NaN·정렬 안정성 규칙을 먼저 고정한다.
+- Dijkstra는 음수 가중치에서 정답을 보장하지 않는다. 음수 간선·음수 사이클·overflow 가능성을 입력 계약에 포함하고 알고리즘을 선택한다.
+- 외부 정렬은 메모리 청크를 정렬한 뒤 디스크 run을 병합하는 동안 디스크 공간·임시 파일·재시작·부분 실패를 관리한다. 정렬 결과를 원본 파일에 바로 덮어쓰지 말고 검증 후 교체한다.
+- Java 객체 정렬의 안정성·primitive 정렬 구현은 Java SE 버전에 따라 확인한다. `Arrays.sort`의 overload와 `List.sort` 계약을 같은 구현으로 단정하지 않는다.
+
+## 9. 참고 자료
+
+- [Java SE 21 HashMap](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/HashMap.html)
+- [Java SE 21 Arrays](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Arrays.html)
+- [Java SE 21 List.sort](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/List.html#sort(java.util.Comparator))
+- [Java SE 21 PriorityQueue](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/PriorityQueue.html)
+- [Java SE 21 StackOverflowError](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/StackOverflowError.html)
 
 ## Q&A 연습
 

@@ -71,3 +71,19 @@ class Order(
 낙관적 락 충돌률이 높다면 재시도만 늘리지 말고 Root가 너무 큰지, 핫한 카운터를 별도 모델로 분리할지 검토한다. 반대로 Aggregate를 지나치게 작게 쪼개 보상 흐름이 비즈니스보다 복잡해졌다면 강한 일관성이 필요한 규칙을 다시 합친다.
 
 > **면접 포인트** — Aggregate 크기에 정답은 없다. “같이 바뀌는 데이터”가 아니라 “동시에 참이어야 하는 규칙”을 기준으로 경계를 제시하고, 경합률과 실패 복잡도로 설계를 검증한다.
+
+## 4. 실패 입력 → 판단 → 복구
+
+| 실패 입력 | 판단 | 복구·완화 |
+|---|---|---|
+| 주문 확정과 재고 차감을 한 번에 처리하려는데 특정 SKU의 동시 요청이 몰림 | 같은 Root에 모든 주문을 넣었는지, 재고 행의 경합과 낙관적 락 충돌을 분리해 측정한다. “재고는 항상 주문 Aggregate의 자식”이라고 가정하지 않는다. | 주문의 불변식과 재고 예약을 분리하고 `OrderConfirmed` 같은 명령/이벤트로 연결한다. 예약 실패·만료·취소를 명시적 상태로 저장하고 재시도는 멱등하게 한다. |
+| ID 참조로 바꾼 뒤 명령 처리마다 Customer·Warehouse를 동기 조회함 | Aggregate를 작게 만든 효과가 분산 객체 그래프로 상쇄됐는지, 참조 값이 현재값인지 사건값인지 확인한다. | 명령에 필요한 검증만 API/Read Model로 수행하고, 주문 당시 값은 Snapshot으로 저장한다. 조회 화면 조합은 별도 Query 경로로 둔다. |
+| 두 Aggregate를 같은 DB 트랜잭션에 넣을지 이벤트로 나눌지 논쟁이 생김 | 반드시 같은 커밋 순간 참이어야 하는 규칙인지, 지연과 보상을 사용자에게 노출할 수 있는지, DB 경계를 넘는지 판단한다. | 단일 저장소의 작은 원자 작업이면 트랜잭션을 선택할 수 있다. 분산 경계나 긴 업무 흐름이면 Outbox·Saga·멱등 소비자로 연결하고 상태를 `PENDING`처럼 공개한다. |
+
+Aggregate 경계·트랜잭션 수·재시도 횟수는 이 카드의 고정 숫자가 아니다. 실제 충돌률, Root 로딩 폭, p95, 보상 미해결 건수를 관측해 경계를 다시 평가한다.
+
+## 5. 공식 참고 자료
+
+- [Microsoft Learn — Use domain analysis to model microservices](https://learn.microsoft.com/en-us/azure/architecture/microservices/model/domain-analysis)
+- [Microsoft Learn — Designing a microservice domain model](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/microservice-domain-model)
+- [Microsoft Learn — Saga pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/saga)

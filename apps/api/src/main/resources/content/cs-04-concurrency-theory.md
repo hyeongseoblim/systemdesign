@@ -40,7 +40,7 @@ flowchart TB
 
 > **💡 백엔드 연결**
 >
-> I/O-bound 서버(DB·API 호출 대기 多)는 **동시성** 만으로 처리량이 크게 오른다 — Node.js 이벤트 루프, 코루틴, Virtual Thread(JDK 21+)가 그 예다. CPU-bound 작업(인코딩·연산)이라야 **병렬성** (코어 수만큼 스레드)이 의미 있다. 이 구분이 스레드 풀 사이징의 출발점.
+> I/O-bound 서버(DB·API 호출 대기 多)는 대기 중 다른 작업을 진행하는 **동시성**으로 처리량이 개선될 수 있다 — 이벤트 루프, 코루틴, Virtual Thread(JDK 21+)가 그 예다. CPU-bound 작업은 코어·스케줄러·병렬화 비용을 고려한 병렬성이 필요하다. 실제 풀 크기는 다운스트림 한도와 측정으로 정한다.
 
 ## 2. 임계 구역(Critical Section) & Race Condition
 
@@ -92,6 +92,8 @@ flowchart TB
 | 경합 높을 때 | 안정적 | 재시도 폭증으로 비효율 가능 |
 | 위험 | 데드락·우선순위 역전 | ABA 문제·라이브락 |
 | 예 | `synchronized`, `ReentrantLock` | `AtomicInteger`, `ConcurrentLinkedQueue` |
+
+`AtomicLong`은 단일 값의 원자 갱신에 적합하지만 경합이 높으면 같은 메모리 위치에서 CAS 재시도가 늘어난다. `LongAdder`는 여러 셀에 갱신을 분산하고 합산 시 값을 모으므로 통계 카운터처럼 정확한 순간값보다 높은 갱신 처리량이 중요한 경우에 유리할 수 있다. 계좌 잔액·재고처럼 매 연산의 강한 원자성이 필요한 값에 무조건 `LongAdder`를 사용하면 안 된다.
 
 > **🎯 면접 — ABA 문제**
 >
@@ -147,7 +149,7 @@ A happens-before B이면, A의 결과가 B에 **반드시 보임**이 보장된�
 
 > **💡 실무 연결**
 >
-> Go의 `goroutine + channel` 은 CSP의 구현이다 — 워커들이 채널로 작업을 주고받으면 락 없이 안전한 파이프라인이 된다. Akka/Erlang의 액터는 통신사·메신저처럼 **장애 격리(let it crash)** 가 중요한 시스템에 강하다. 결국 동시성 버그를 줄이는 가장 좋은 방법은 **공유 가변 상태를 줄이는 것** 이다.
+> Go의 `goroutine + channel`은 CSP와 유사한 통신 모델을 제공하지만 채널만으로 데이터 경합·교착·back-pressure가 자동 해결되는 것은 아니다. Akka/Erlang의 액터도 mailbox 용량·순서·재시작 전략을 설계해야 한다. 동시성 버그를 줄이는 핵심은 **공유 가변 상태와 소유권을 명확히 하는 것**이다.
 
 ## 6. Amdahl's Law (암달의 법칙)
 
@@ -181,6 +183,22 @@ flowchart LR
 > **🎯 면접 — "스레드 늘리면 빨라지죠?"는 함정**
 >
 > Amdahl's Law로 반박하라: ① 직렬 부분(락 구간·순차 I/O)이 천장을 만들고, ② 스레드가 코어 수를 넘으면 컨텍스트 스위칭·Lock Contention(락 경합)으로 오히려 느려진다. 진짜 최적화는 스레드 추가가 아니라 **직렬 구간 축소** (락 범위 최소화·샤딩·lock-free·불변 객체)다. 참고로 입력 크기를 함께 키우면 더 낙관적인 **Gustafson's Law** 가 적용된다.
+
+## 7. 실패 흐름과 구현 경계
+
+- `volatile`은 가시성과 순서 제약을 제공하지만 `count++` 같은 read-modify-write를 원자화하지 않는다. 복합 불변식은 lock·atomic compound operation·메시지 소유권 중 하나로 보호한다.
+- CAS loop는 경합이 높을 때 재시도가 폭증할 수 있고 ABA를 해결하지 않으면 오래된 관찰을 새 값으로 오인할 수 있다. 버전 태그·불변 노드·검증 가능한 소유권을 사용한다.
+- Java 21 virtual thread는 blocking I/O에 적합할 수 있지만 CPU를 추가하거나 DB·파일 디스크립터·다운스트림 한도를 없애지 않는다. `synchronized` 또는 native 구간에서 pinning이 생길 수 있으므로 JDK 버전별 문서와 JFR/스레드 관측으로 확인한다.
+- 락 순서를 일관되게 정해도 외부 호출·DB lock·콜백을 임계 구역에 넣으면 지연·교착이 생길 수 있다. timeout, 취소, 재시도, 보상 동작을 함께 설계한다.
+- Amdahl 계산은 병렬 구간이 독립이고 오버헤드가 없다는 가정이다. 실제로는 스케줄링·동기화·메모리 대역폭·불균형 작업·I/O가 speedup을 낮출 수 있으므로 4→16 코어 결과는 측정으로 검증한다.
+
+## 8. 참고 자료
+
+- [Java SE 21 JLS 17: Threads and Locks](https://docs.oracle.com/javase/specs/jls/se21/html/jls-17.html)
+- [Java SE 21 AtomicLong](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/atomic/AtomicLong.html)
+- [Java SE 21 LongAdder](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/atomic/LongAdder.html)
+- [Java SE 21 Thread](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Thread.html)
+- [JEP 444: Virtual Threads](https://openjdk.org/jeps/444)
 
 ## Q&A 연습
 

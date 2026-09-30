@@ -5,7 +5,7 @@ coach: system-design-coach
 title: "라스트마일 실시간 배송 추적 시스템 설계 — System Design 케이스"
 slug: system-design-10-case-delivery-tracking
 difficulty: 4
-summary: "대형 이커머스 시스템 디자인 면접의 **최상위 단골**. 수천만 건/일 `TrackingEvent` 수집·Fan-out, Kafka 파티셔닝, 멱등 소비, 기사앱 오프라인 동기화, 상태 머신 역행 방지까지 — 물류 도메인 강점을 어필할 결정적 케이스. Deep-dive 항목은 🔥(Deep-dive) 로 표시."
+summary: "대형 이커머스 시스템 디자인 면접의 **최상위 단골**. **가상 규모 예시인 수천만 건/일** `TrackingEvent` 수집·Fan-out, Kafka 파티셔닝, 멱등 소비, 기사앱 오프라인 동기화, 상태 머신 역행 방지까지 — 물류 도메인 강점을 어필할 결정적 케이스. Deep-dive 항목은 🔥(Deep-dive) 로 표시."
 tags:
   - "라스트마일"
   - "실시간"
@@ -16,6 +16,8 @@ questions:
   - "기사앱이 **오프라인 후 재전송**해서 늦게 도착한 과거 스캔이 \"이미 DELIVERED인 송장\"을 IN_TRANSIT으로 되돌리려 합니다. 이 **out-of-order + 상태 역행**을 데이터 모델과 처리 로직에서 각각 어떻게 막을지 구체적으로 답해보세요."
   - "이 시스템에서 **이벤트소싱과 상태 스냅샷을 함께 쓰는 이유(CQRS)**를 조회 성능·이력 보존·재처리 관점에서 설명하고, 둘 중 하나만 쓰면 어떤 문제가 생기는지 제시해보세요."
 ---
+> **검수 경계** — 이벤트 수·QPS·지연과 보존 기간은 가상 입력이다. 특정 운송 기업의 내부 처리량·토폴로지로 일반화하지 않는다.
+
 ## 1. 요구사항 명확화 (Requirements)
 
 > **한 줄 정의** — 기사앱 스캔 이벤트를 수집해 *송장(Waybill) 상태·위치*를 갱신하고, 고객에게 실시간 조회와 상태 변경 푸시를 제공한다. 압도적 read-heavy + 최종 일관성 허용.
@@ -29,22 +31,22 @@ questions:
 
 ### Non-functional(비기능) 요구사항
 
-- **수집 규모**: 수천만 `TrackingEvent`/일. 피크 시간대(오전 출고/저녁 배송) 몰림.
+- **수집 규모**: 가정한 대량 `TrackingEvent`/일. 피크 시간대(오전 출고/저녁 배송) 몰림.
 - **read-heavy**: 조회 QPS가 수집 QPS의 10~50배(고객·CS·셀러가 반복 조회).
 - **최종 일관성(Eventual Consistency) 허용**: "스캔 후 수 초 내 조회에 반영"이면 충분. 강한 일관성 불필요.
 - **순서 보장**: 같은 송장 내 이벤트는 **시간 순서**가 의미 있음(상태 역행 방지).
 - **가용성**: 수집 파이프라인이 죽어도 기사앱은 로컬 큐로 버티고 재전송. 데이터 유실 0 목표.
 - **오프라인 내성**: 지하·산간 통신 음영에서 스캔 → 재접속 시 일괄 재전송.
 
-> **🎯 면접 포인트 — 왜 이게 최상위 단골인가**
+> **🎯 면접 포인트 — 왜 범위가 넓은가**
 >
-> 쿠팡·배민·컬리·CJ대한통운 류의 시스템 디자인 면접에서 **거의 반드시 나온다.** "고객 조회 화면" 같은 표면이 아니라 **수천만 이벤트 수집 + 순서 보장 + 멱등 + Fan-out 알림 + 읽기 모델 분리(CQRS)** 를 한 번에 묻는 종합 문제이기 때문. write 파이프라인을 얼마나 깊게 파느냐가 시니어 변별점.
+> 라스트마일 추적 문제는 고객 조회 화면뿐 아니라 **대량 이벤트 수집 + 순서 보장 + 멱등 + Fan-out 알림 + 읽기 모델 분리(CQRS)**를 함께 묻기 때문에 종합 문제로 쓸 수 있다. 실제 면접의 빈도나 평가 기준은 회사별 공개 자료로 확인한다.
 
 ## 2. 용량 추정 (Back-of-the-envelope)
 
 ### 2-1. 수집(쓰기) QPS
 
-가정: **일 5천만 TrackingEvent** (송장 1건당 평균 5~10단계 스캔 × 일 수백만~천만 송장).
+가정: **일 5천만 TrackingEvent** (송장 1건당 여러 단계 스캔이라는 교육용 입력). 실제 수집량은 운송장 수·스캔 정책·운영 기록으로 재산정한다.
 
 - 1일 = 86,400초 ≈ `10⁵ 초`
 - 평균 수집 QPS = 5×10⁷ / 86,400 ≈ **≈ 580 writes/s**
@@ -230,7 +232,7 @@ sequenceDiagram
 
 ## 5. Deep-dive 🔥(Deep-dive)
 
-### 5-1. 수천만 이벤트 Fan-out & 알림
+### 5-1. 대량 이벤트 Fan-out & 알림
 
 - 상태 변경 시 **구독한 고객에게 푸시/SMS Fan-out(팬아웃)**. 모든 스캔이 아니라 **의미 있는 상태 전이**(집하/배송출발/완료)만 알림 → 트래픽 절감.
 - 알림은 별도 워커가 Kafka `status-changed` 토픽 consume → 푸시 게이트웨이로 비동기 발송. 발송 실패는 retry 큐 + DLQ(Dead Letter Queue, 실패 메시지 큐).
@@ -291,7 +293,7 @@ sequenceDiagram
 | 저장 비용 | 높음 (모든 이벤트 누적, 티어링 필요) | 낮음 |
 | 결론 | 이력·감사·재처리가 중요한 추적엔 적합 | 단순·저비용이나 추적 도메인엔 정보 손실 |
 
-→ 추적 시스템은 **하이브리드가 정석**: 이벤트 스토어(append-only)를 진실의 원천으로 두고, 빠른 조회를 위해 **스냅샷(읽기 모델)을 함께** 유지(CQRS). 이벤트소싱의 이력 강점과 스냅샷의 조회 속도를 모두 취함.
+→ 추적 시스템은 **하이브리드 설계를 검토**할 수 있다: 이벤트 스토어(append-only)를 진실의 원천으로 두고, 빠른 조회를 위해 **스냅샷(읽기 모델)을 함께** 유지(CQRS). 이벤트소싱의 이력 강점과 스냅샷의 조회 속도를 모두 취함.
 
 ### 6-3. Push vs Pull 추적
 
@@ -307,9 +309,9 @@ sequenceDiagram
 
 추적은 **Eventual로 충분**(수 초 지연 무해). Strong을 고집하면 수집 경로에 동기 합의가 끼어 처리량 급락. 단 **"배송 완료" 같은 결제·정산 트리거가 되는 전이**는 다운스트림에서 멱등하게 한 번만 처리되도록 보장(중복 정산 방지) — 일관성 등급을 이벤트별로 차등 적용하는 게 시니어다운 답변.
 
-> **🎯 실제 사례 — 풀필먼트 · 라스트마일 도메인 연결**
+> **🎯 가상 도메인 사례 — 풀필먼트·라스트마일**
 >
-> **쿠팡 CLS(쿠팡로지스틱스서비스)** : 자체 배송망 수직 통합으로 기사앱 스캔이 곧바로 추적·고객 푸시로 흐름 → 데이터 일관성·실시간성이 3PL 위탁보다 강함. **CJ대한통운** : 허브앤스포크 전 구간 송장 스캔(집하·서브터미널·허브·배송), 다수 주체 이벤트가 합류 → 멱등·순서 보장이 특히 중요. **컬리 샛별배송** : Cut-off 23:00→07:00 도착의 짧은 윈도, 새벽 음영 지역 오프라인 동기화가 빈번. 세 사례 모두 "Kafka 파티셔닝 + 멱등 + 읽기모델 분리"가 그대로 적용된다.
+> 자체 배송망, 3PL 위탁, 새벽 배송처럼 운영 모델이 다른 주체의 이벤트가 합류한다고 가정한다. 다수 주체 이벤트일수록 멱등·순서 보장과 오프라인 재전송 정책을 명시하고, 특정 기업의 실제 운영을 전제하지 않는다.
 
 ```json
 {
@@ -320,3 +322,16 @@ sequenceDiagram
   "occurredAt": "2026-08-20T05:30:00Z"
 }
 ```
+
+## 검수 경계와 실패 흐름
+
+- 한 송장의 sequence가 낮은 재전송 이벤트, 중복 eventId, 장치 clock 오류를 각각 구분하고 상태 머신의 허용 전이·idempotency key·reconciliation 경로를 둔다.
+- Kafka partition 순서는 partition 내부 범위이며, hot waybill이 생기면 key 분할·per-waybill sequencer·후속 version guard 중 trade-off를 선택한다.
+- projection/snapshot 갱신이 실패해도 append-only 원본 이벤트와 consumer offset을 보존하고, 재처리 중 고객 알림·정산 side effect가 중복되지 않게 한다.
+- 이벤트량·보존·fan-out은 가상 입력이다. ingress·consumer 처리량·lag oldest age·p95/p99와 복구 후 대사를 부하 테스트로 검증한다.
+
+## 공식·1차 출처
+
+- [https://www.gs1.org/standards/epcis](https://www.gs1.org/standards/epcis)
+- [https://kafka.apache.org/documentation/#semantics](https://kafka.apache.org/documentation/#semantics)
+- [https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html)

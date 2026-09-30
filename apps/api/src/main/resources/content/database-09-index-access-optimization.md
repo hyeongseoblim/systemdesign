@@ -18,6 +18,10 @@ questions:
   - "선두 컬럼 조건이 없는 복합 인덱스에서 Skip Scan이 유리해질 수 있는 데이터 분포와 불리한 분포를 비교해보세요."
   - "ICP와 MRR이 각각 줄이려는 비용을 인덱스 레코드 검사와 테이블 페이지 접근 관점에서 설명해보세요."
 ---
+> **검수 기준 — 2026-09-27**
+>
+> Index Merge·Skip Scan·ICP·MRR은 MySQL의 특정 버전·스토리지 엔진·옵티마이저 조건에 따라 선택되는 실행 전략이다. 존재한다고 항상 사용되거나 더 빠른 것은 아니며 `EXPLAIN ANALYZE`와 실제 데이터로 확인한다.
+
 ## 1. 네 전략은 서로 다른 낭비를 줄인다
 
 MySQL 옵티마이저는 통계와 비용 모델을 바탕으로 접근 경로를 고른다. 각 최적화가 존재한다고 해서 항상 선택되는 것은 아니며, 최종 판단은 실제 데이터 분포에서 `EXPLAIN ANALYZE`로 확인한다.
@@ -60,13 +64,21 @@ FROM orders
 WHERE created_at >= CURRENT_DATE - INTERVAL 1 DAY;
 ```
 
-첫 쿼리는 두 단일 인덱스의 Index Merge 후보가 될 수 있다. 하지만 `(status, customer_id)` 복합 인덱스가 OR 조건을 자동 해결하는 것은 아니며, 조건 형태와 선택도에 따라 쿼리 분리 후 `UNION ALL`이 더 명확할 수도 있다. 두 번째 쿼리는 `region` 종류가 매우 적다면 `(region, created_at)`을 선두값별로 탐색하는 Skip Scan 후보가 될 수 있다.
+첫 쿼리는 두 단일 인덱스의 Index Merge 후보가 될 수 있다. 하지만 `(status, customer_id)` 복합 인덱스가 OR 조건을 자동 해결하는 것은 아니며, 조건 형태와 선택도에 따라 쿼리 분리 후 `UNION ALL`이 더 명확할 수도 있다. 두 번째 쿼리는 `region` 종류가 매우 적고 통계·비용 모델이 유리하다고 판단하면 `(region, created_at)`을 선두값별로 탐색하는 Skip Scan 후보가 될 수 있다. MySQL이 해당 Access Path를 선택하지 않거나 다른 DBMS에서는 기능·이름이 다를 수 있으므로 계획을 직접 확인한다.
 
 ICP(Index Condition Pushdown, 인덱스 조건 푸시다운)는 인덱스 레코드를 읽은 시점에 조건을 먼저 평가해 Base Table 접근 횟수를 줄인다. MRR(Multi-Range Read, 다중 범위 읽기)은 Secondary Index에서 얻은 Row ID를 모아 데이터 페이지 순서에 가깝게 접근함으로써 랜덤 I/O를 줄인다.
 
 > **실무 함정** — `type=index_merge`가 보인다고 최적이라고 판단하면 안 된다. 예상 행과 실제 행의 차이, 반복 루프, Base Table 접근 수, 임시 정렬 비용을 함께 본다. 통계가 오래됐거나 컬럼 상관관계가 크면 비용 모델이 틀릴 수 있다.
 
-## 3. 튜닝 순서
+## 3. 실패 입력 → 판단 → 복구
+
+`status='READY' OR customer_id=42`에서 Index Merge가 선택됐지만 응답이 느리다고 하자. 두 인덱스에서 반환되는 후보 행의 합·중복 제거·Base Table 재방문·정렬 비용을 `EXPLAIN ANALYZE`로 비교한다. 선택도가 낮아 후보가 넓으면 조건을 업무 의미에 맞게 분리한 `UNION ALL`이나 실제 조회 패턴에 맞는 복합 인덱스를 검토하되, 중복 제거 조건을 보존한다.
+
+선두 `region`의 값이 수만 개로 늘어난 뒤 Skip Scan이 선택되면 선두값별 반복 탐색 비용이 커질 수 있다. 통계와 실제 rows/loops가 맞는지 확인하고 `(created_at, ...)` 또는 별도 파티션·정렬 경로가 더 적합한지 비교한다. ICP가 기대한 만큼 Base Table 접근을 줄이지 않거나 MRR의 버퍼링 비용이 더 크면 기능을 강제하지 말고 같은 데이터에서 대안 계획·p95·I/O를 재측정한다.
+
+참고: [MySQL 8.4 Index Merge Optimization](https://dev.mysql.com/doc/refman/8.4/en/index-merge-optimization.html), [MySQL 8.4 Skip Scan Range Access Method](https://dev.mysql.com/doc/refman/8.4/en/range-optimization.html), [MySQL 8.4 Index Condition Pushdown](https://dev.mysql.com/doc/refman/8.4/en/index-condition-pushdown-optimization.html), [MySQL 8.4 Multi-Range Read](https://dev.mysql.com/doc/refman/8.4/en/mrr-optimization.html)
+
+## 4. 튜닝 순서
 
 1. 필요한 행 수와 반환 컬럼을 줄인다.
 2. 실제 조건·정렬에 맞는 복합 인덱스를 먼저 검토한다.

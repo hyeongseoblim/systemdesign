@@ -1,7 +1,7 @@
 // 핵심 학습 규칙·콘텐츠 연결 회귀 검증. 외부 API·DB 없이 실행한다.
 const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { mkdtempSync, readFileSync, rmSync } = require('node:fs');
+const { mkdtempSync, readFileSync, readdirSync, rmSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
@@ -65,27 +65,57 @@ test('시작 경로는 미완료 카드 순서로 안내하고 기존 완료 기
 test('목차는 코드 펜스 안의 제목과 중복 질문 섹션을 제외한다', () => {
   assert.deepEqual(headings('## 1. **핵심**\n```md\n## 예시\n```\n## 이해도 확인\n'), [{ title: '1. 핵심', id: sectionId('1. 핵심') }]);
 });
-test('47개 카드의 141개 점검 기준은 실제 질문과 정확히 연결된다', () => {
+test('129개 카드의 387개 점검 기준은 실제 질문과 정확히 연결된다', () => {
   const guides = JSON.parse(readFileSync(path.join(web, 'content/answer-guides.json'), 'utf8'));
-  assert.equal(Object.keys(guides).length, 47);
+  const contentDirectory = path.join(root, 'apps/api/src/main/resources/content');
+  const slugs = readdirSync(contentDirectory).filter(name => name.endsWith('.md')).map(name => name.slice(0, -3));
+  assert.equal(slugs.length, 129);
+  assert.deepEqual(Object.keys(guides).sort(), slugs.sort());
+  let questionCount = 0;
   for (const [slug, guide] of Object.entries(guides)) {
     const raw = readFileSync(path.join(root, `apps/api/src/main/resources/content/${slug}.md`), 'utf8');
     const questions = raw.split('---')[1].split('questions:\n')[1].trim().split('\n').map(line => JSON.parse(line.trim().slice(2)));
     assert.deepEqual(guide.questions.map(item => item.question), questions, slug);
+    questionCount += guide.questions.length;
     for (const item of guide.questions) {
       assert.equal(item.points.length, 3);
       assert.ok(item.pitfall && item.followUp);
     }
     assert.ok(guide.sources.every(source => new URL(source.url).protocol === 'https:'));
   }
+  assert.equal(questionCount, 387);
 });
-test('V8은 검수 본문을 정확히 반영하고 기존 질문·카드 ID를 변경하지 않는다', () => {
+test('V8은 배포된 원본을 유지하고 기존 질문·카드 ID를 변경하지 않는다', () => {
   const directory = path.join(root, 'apps/api/src/main/resources');
-  const source = readFileSync(path.join(directory, 'content/database-01-index-explain.md'), 'utf8').split('---').slice(2).join('---').trim();
   const migration = readFileSync(path.join(directory, 'db/migration/V8__review_index_card.sql'), 'utf8');
-  assert.equal(migration.split('$card_body$')[1], source);
+  assert.equal(createHash('sha256').update(migration).digest('hex'), 'a42bb11741cffe26fec63b95306060b31299af0e84d7a0928ccecc6c431a80dd', '배포된 V8은 변경하지 않는다');
   assert.match(migration, /WHERE slug = 'database-01-index-explain' AND source = 'MANUAL'/);
   assert.doesNotMatch(migration, /DELETE FROM|UPDATE card_questions|SET id\s*=/i);
+});
+
+test('V21~V23은 검수한 88개 MANUAL 본문만 최신 Markdown과 일치하게 반영한다', () => {
+  const directory = path.join(root, 'apps/api/src/main/resources');
+  const batches = [
+    ['V21__review_logistics_04_09.sql', 6, /^logistics-0[4-9]-/],
+    ['V22__review_ai_llm_01_15.sql', 15, /^ai-(?:0[1-9]|1[0-5])-/],
+    ['V23__review_remaining_manual_cards.sql', 67, /^(?:backend-|cs-|database-|infra-|system-design-)/],
+  ];
+  const statement = /UPDATE cards\nSET content_md = (\$[A-Za-z0-9_]+\$)([\s\S]*?)\1\nWHERE slug = '([^']+)' AND source = 'MANUAL';/g;
+  const seen = new Set();
+  for (const [filename, expectedCount, slugPattern] of batches) {
+    const sql = readFileSync(path.join(directory, 'db/migration', filename), 'utf8');
+    const updates = [...sql.matchAll(statement)];
+    assert.equal(updates.length, expectedCount, filename);
+    assert.equal(sql.replace(/^--[^\n]*\n/gm, '').replace(statement, '').trim(), '', filename);
+    for (const [, , body, slug] of updates) {
+      assert.match(slug, slugPattern, slug);
+      assert.equal(seen.has(slug), false, `중복 migration: ${slug}`);
+      seen.add(slug);
+      const source = readFileSync(path.join(directory, 'content', `${slug}.md`), 'utf8').split('---').slice(2).join('---').trim();
+      assert.equal(body, source, `${filename}: ${slug}`);
+    }
+  }
+  assert.equal(seen.size, 88);
 });
 
 // SQL 본문은 마크다운 코드 예제도 포함하므로 UPDATE 바깥 구조만 파싱한다.

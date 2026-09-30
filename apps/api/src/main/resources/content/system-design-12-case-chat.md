@@ -16,9 +16,11 @@ questions:
   - "그룹 채팅방에서 메시지 **순서**를 어떻게 보장하나요? 서버 벽시계 timestamp로 정렬하면 왜 위험한가요? **per-channel monotonic sequence** 를 쓸 때 이 시퀀스를 발급하는 지점이 병목/SPOF가 되지 않게 하려면 어떻게 하나요?"
   - "1:1 채팅의 **읽음 처리(read receipt)** 와 그룹 채팅의 **안읽음 수(unread count)** 를 데이터 모델로 설계하세요. 참여자 500명 방에서 한 명이 읽을 때마다 read receipt를 전원에게 fan-out하면 어떤 문제가 생기고, 어떻게 완화하나요?"
 ---
+> **검수 경계** — 동시 연결·메시지 QPS·p99와 그룹 크기는 가상 요구사항이다. 특정 채팅 서비스의 내부 구현과 저장소를 일반화하지 않는다.
+
 ## 1. 요구사항 명확화 — 채팅은 '전달 보장'이 핵심
 
-`실시간 채팅(Real-time Chat)`은 "메시지를 낮은 지연으로 상대에게 밀어 넣고(push), 잃지 않고 순서대로 저장·표시"하는 시스템이다. 카카오톡·LINE·Discord·Slack이 같은 문제다. 먼저 범위를 좁힌다.
+`실시간 채팅(Real-time Chat)`은 "메시지를 낮은 지연으로 상대에게 밀어 넣고(push), 잃지 않고 순서대로 저장·표시"하는 시스템이다. 메신저·협업 도구·기사-고객 채널이 공유하는 문제를 추상화하고, 제품별 내부 구현은 공개 자료로 확인하지 않는다. 먼저 범위를 좁힌다.
 
 ### Functional 요구사항
 
@@ -36,11 +38,11 @@ questions:
 | **Durability(내구성)** | 메시지 유실 0 지향 | "보냈는데 안 왔다"는 채팅앱의 사망 신호 |
 | **Ordering(순서)** | 채널 내 순서 보장 | 대화 맥락이 뒤섞이면 안 됨 |
 | **High availability** | 게이트웨이 장애 시 재접속·재전송 | 연결 끊김은 상시 발생 → graceful reconnect 필수 |
-| **Scale** | 동시 접속(concurrent connections) 수천만 | 접속 자체가 자원. C10K를 넘는 C10M 문제 |
+| **Scale** | 동시 접속(concurrent connections)은 가상 입력으로 선언 | 연결 자체가 자원이므로 FD·메모리·재접속 폭주를 부하 테스트 |
 
 > **🎯 면접 포인트 — 먼저 물을 질문**
 >
-> "**1:1 위주인가 대형 그룹인가**?(Discord식 수천 명 채널이면 fan-out 설계가 완전히 달라짐)", "**전달 보장 수준**은?(at-least-once + dedup)", "**멀티 디바이스** 지원?(폰+PC 동시)", "presence·타이핑까지 필요한가?" — 이 질문들이 시니어 신호. 특히 그룹 규모는 아키텍처를 통째로 바꾼다.
+> "**1:1 위주인가 대형 그룹인가**? 그룹 크기와 fan-out 방식에 따라 설계가 달라진다", "**전달 보장 수준**은?(at-least-once + dedup)", "**멀티 디바이스** 지원?(폰+PC 동시)", "presence·타이핑까지 필요한가?" — 이 질문들이 시니어 신호. 특히 그룹 규모는 아키텍처를 통째로 바꾼다.
 
 ## 2. 용량 추정 — 동시 접속이 자원이다
 
@@ -55,12 +57,12 @@ questions:
 ### 동시 접속(concurrent connection)
 
 - 동접률 20% 가정: 1억 × 0.2 = **2,000만 동시 WebSocket 연결**.
-- 한 게이트웨이 서버가 유지 가능한 연결을 **약 50만~100만**으로 보면(메모리/FD 튜닝), 2,000만 / 65만 ≈ **약 30~40대의 게이트웨이**. → 연결 상태(누가 어디 붙었나)를 관리하는 것이 핵심 과제.
+- 게이트웨이당 유지 연결 수는 메모리·FD·TLS·메시지 패턴을 측정해 가정한다. 예컨대 65만을 가정하면 2,000만 연결은 약 30~40대지만, 이 수치는 용량 테스트 전의 계산값이다. → 연결 상태(누가 어디 붙었나)를 관리하는 것이 핵심 과제.
 
 ### 저장 용량
 
 - 메시지 1개 ≈ **300 B**(본문+메타). 40억/day × 300B = **약 1.2 TB/day** → 1년 **약 430 TB**.
-- → 단일 RDB로 불가. **wide-column store**(HBase/Cassandra류)에 채널별 시계열로 저장.
+- 이 가정의 저장량과 쓰기 패턴은 단일 RDB의 디스크·복구·파티션 한계를 먼저 benchmark한다. 필요하면 **wide-column store**에 채널별 시계열로 저장하는 선택지를 비교한다.
 
 > **💡 추정의 결론을 설계로**
 >
@@ -137,7 +139,7 @@ flowchart LR
 
 > **💡 사례 — 무엇을 쓰나**
 >
-> **Discord** 는 WebSocket 게이트웨이 + Elixir/Erlang(경량 프로세스로 대량 동접) + Cassandra(→ 후에 ScyllaDB)로 메시지를 저장한다. **Slack** 도 WebSocket 기반 이벤트 스트림. **카카오톡·LINE** 은 자체 프로토콜(LOCO 등) 위 지속 연결. 공통점: **지속 연결 + 별도 세션 레지스트리 + wide-column 저장**.
+> 공개된 기술 사례에서는 WebSocket 게이트웨이, 세션 레지스트리, wide-column 저장 같은 조합이 보이지만 제품별 프로토콜·저장소·운영 규모는 다르다. 이 조합은 요구사항을 설명하기 위한 설계 선택지로만 사용한다.
 
 ## 5. Deep-dive 🔥
 
@@ -205,7 +207,7 @@ stateDiagram-v2
 
 > **🎯 면접 함정 #2 — 대형 그룹 read receipt fan-out**
 >
-> 500명 방에서 한 명이 읽을 때마다 read receipt를 **전원에게 실시간 push**하면 500명 × 500명 = 25만 이벤트가 튄다. 1:1이나 소규모는 실시간 receipt를 주지만, **대형 그룹은 read receipt를 aggregate**(예: "N명 읽음"만, 그것도 주기적 집계/폴링)하거나 아예 제공하지 않는다(Discord는 개별 read receipt 없음). "모두에게 읽음 표시 보내면 됩니다"는 fan-out 폭발을 무시한 답.
+> 예를 들어 500명 방에서 한 명이 읽을 때마다 read receipt를 **전원에게 실시간 push**하면 500명 × 500명 = 25만 이벤트가 튈 수 있다. 1:1이나 소규모는 실시간 receipt를 제공하고, **대형 그룹은 read receipt를 집계**하거나 주기적 조회로 바꾸는 설계를 검토한다. 특정 제품의 기능 유무를 일반화하지 않는다.
 
 > **💡 물류 도메인 — "기사-고객 실시간 채팅 & 위치 공유"**
 >
@@ -224,3 +226,16 @@ stateDiagram-v2
 > **🎯 마무리 한 줄 (면접 클로징)**
 >
 > "채팅 본류는 **WebSocket 게이트웨이 + Redis 세션 레지스트리(멀티 디바이스 fan-out) + Kafka delivery bus**로 흩어진 서버 간 라우팅을 풀고, 순서는 **채널 단위 샤딩 + per-channel monotonic seq**로 병목 없이 보장합니다. 저장은 channel_id 파티션의 **wide-column**, 읽음은 **read cursor 한 개**로 O(참여자)에 잡고, 오프라인은 저장 후 **재접속 sync + 모바일 푸시**로 메웁니다. 대형 그룹의 read receipt fan-out만 집계로 눌러줍니다." — 라우팅·순서·읽음·오프라인을 한 호흡에 정리하면 합격 시그널.
+
+## 검수 경계와 실패 흐름
+
+- 수치와 임계값은 요구사항으로 선언하고 실제 workload·부하 테스트·관측 지표로 검증한다. 제품·기업의 내부 구현을 근거 없이 일반화하지 않는다.
+- 쓰기 성공 후 이벤트/읽기 모델 갱신 실패, 응답 유실 후 재시도, 중복·순서 역전·부분 장애를 정상적인 실패 경로로 모델링한다.
+- 원장과 캐시·검색·알림·분석 파생 모델의 상태를 구분하고, 멱등 키·버전·재처리 큐·대사 작업으로 수렴시킨다.
+- 성능 최적화는 평균이 아니라 p95/p99, 버스트와 복구 중 부하를 함께 본다. fallback을 추가할 때 정확성·보안·개인정보·비용 trade-off를 기록한다.
+
+## 공식·1차 출처
+
+- [https://www.rfc-editor.org/rfc/rfc6455](https://www.rfc-editor.org/rfc/rfc6455)
+- [https://developer.mozilla.org/en-US/docs/Web/API/WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket)
+- [https://cheatsheetseries.owasp.org/cheatsheets/WebSocket_Security_Cheat_Sheet.html](https://cheatsheetseries.owasp.org/cheatsheets/WebSocket_Security_Cheat_Sheet.html)

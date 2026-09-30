@@ -4,3 +4,6 @@ apps/web/.env.local
 infra/cloudrun/secrets.env
 .env.cloudrun
 infra/.env.cloudrun
+
+# Local productivity dashboard; keep it outside release artifacts.
+/dashboard.html

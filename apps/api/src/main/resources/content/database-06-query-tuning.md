@@ -17,13 +17,18 @@ questions:
   - "운송장 이력 무한스크롤이 페이지가 깊어질수록 느려진다. 원인을 EXPLAIN 관점에서 설명하고, Keyset/Cursor로 바꾸는 SQL과 필요한 인덱스를 제시하라. 동률 타임스탬프 문제도 다뤄라."
   - "`EXPLAIN ANALYZE` 결과에서 estimated rows=100, actual rows=900000으로 100배 괴리가 있고 Nested Loop가 선택됐다. 무엇을 의심하고, 어떤 순서로 진단·교정하겠는가? 힌트 강제를 최후 수단으로 두는 이유도 함께."
 ---
+> **검수 기준 — 2026-09-27**
+>
+> MySQL·PostgreSQL·ORM 예시는 서로 다른 옵티마이저와 Driver 동작을 가질 수 있다. SQL의 행 수·지연·Buffer 접근은 데이터 분포와 실행 시점에 따라 달라지므로 예시 수치를 보장으로 읽지 않는다.
+> 참고: [PostgreSQL EXPLAIN](https://www.postgresql.org/docs/17/using-explain.html), [PostgreSQL LIMIT/OFFSET](https://www.postgresql.org/docs/17/queries-limit.html), [Hibernate fetching](https://docs.jboss.org/hibernate/orm/6.5/querylanguage/html_single/Hibernate_Query_Language.html#association-fetching), [MySQL slow query log](https://dev.mysql.com/doc/refman/8.4/en/slow-query-log.html)
+
 ## 1. 슬로우쿼리 분석 프로세스
 
 튜닝의 출발점은 "느린 쿼리를 데이터로 특정하는 것"이다. 감으로 인덱스를 추가하지 않는다.
 
 ### 관측 도구
 
-- **MySQL**: `slow_query_log=ON` + `long_query_time=0.5`(초)로 임계 초과 쿼리 수집. 로그를 **pt-query-digest(Percona Toolkit)**로 정규화·집계하면 "총 시간 기여도 1위 쿼리"가 나온다. `performance_schema.events_statements_summary_by_digest`도 동일 목적.
+- **MySQL**: `slow_query_log=ON`과 `long_query_time=<워크로드별 임계값>`으로 임계 초과 쿼리를 수집한다. `0.5초`는 빠른 API를 관찰할 때 사용할 수 있는 예시일 뿐 MySQL의 보편 기본값이나 모든 서비스의 권장값이 아니다. 로그를 **pt-query-digest(Percona Toolkit)**로 정규화·집계하면 "총 시간 기여도 1위 쿼리"가 나온다. `performance_schema.events_statements_summary_by_digest`도 동일 목적.
 - **PostgreSQL**: **pg_stat_statements** 확장으로 쿼리별 총 호출수·총시간·평균을 누적 집계. 느린 쿼리를 자동 로깅하려면 **auto_explain**(`auto_explain.log_min_duration`)으로 임계 초과 시 실행계획까지 로그에 남긴다.
 
 > **팁 — 평균이 아니라 총량으로 보라**
@@ -46,7 +51,7 @@ SELECT * FROM shipment WHERE status='IN_TRANSIT' AND hub_id=42;
 -- Planning Time / Execution Time
 ```
 
-여기서 `rows=120`(추정) vs `actual rows=98000`의 큰 괴리는 통계가 낡았다는 신호이고, `Seq Scan` + 많은 `read`는 인덱스 부재 또는 인덱스가 안 타는 조건을 뜻한다.
+여기서 `rows=120`(추정) vs `actual rows=98000`의 큰 괴리는 통계·데이터 편향·컬럼 상관관계 또는 조건 추정의 한계를 조사할 신호다. `Seq Scan` + 많은 `read`가 곧 인덱스 부재를 뜻하지는 않는다. 넓은 범위 조회·낮은 선택도·작은 테이블에서는 순차 스캔이 합리적일 수 있으므로 Buffers와 대안 계획을 함께 비교한다.
 
 ```mermaid
 flowchart TD
@@ -117,8 +122,8 @@ List<OrderShipDto> findDto(@Param("st") OrderStatus st);
 | 해법 | 쿼리 수 | 주의점 |
 | --- | --- | --- |
 | Fetch join | 1 | 컬렉션 fetch join + paging 동시 사용 시 메모리 paging(전체 로딩) 발생. 컬렉션은 1개만. |
-| @EntityGraph | 1 | fetch join과 동일 원리. 선언적이라 가독성 좋음. |
-| Batch size(IN) | 1 + ceil(N/batch) | 카티전 곱(Cartesian product) 없이 컬렉션 여러 개도 안전. 쿠팡·배민급 목록 API의 현실적 기본값. |
+| @EntityGraph | 구현·연관 형태에 따라 다름 | fetch 계획과 페이징·컬렉션 중복을 실제 SQL로 확인한다. 선언적이라 가독성은 좋지만 1쿼리를 보장하지 않는다. |
+| Batch size(IN) | 1 + ceil(N/batch) | 컬렉션 여러 개를 한 번에 join하지 않아 카티전 곱을 줄일 수 있다. Batch 크기와 IN 제한은 Driver·DBMS로 확인한다. |
 | DTO projection | 1 | 영속성 컨텍스트 이점은 없지만 가장 적은 데이터·메모리. 조회 전용 화면에 최적. |
 
 > **면접 포인트**
@@ -127,27 +132,29 @@ List<OrderShipDto> findDto(@Param("st") OrderStatus st);
 
 ## 3. 커서 페이지네이션
 
-`LIMIT 20 OFFSET 100000`은 깊어질수록 느려진다. DB가 OFFSET만큼의 앞 행을 *실제로 다 읽어서 정렬한 뒤 버리고* 그 다음 20개만 반환하기 때문이다. 100,020행을 스캔해 20행만 쓰는 셈이다.
+`LIMIT 20 OFFSET 100000`은 정렬·인덱스·실행계획에 따라 앞 행을 읽고 버리는 비용이 커질 수 있어 깊은 페이지에서 악화되기 쉽다. 항상 정확히 100,020행을 디스크에서 읽는다는 뜻은 아니며, EXPLAIN과 실제 Buffer/실행 시간을 확인한다.
 
 ```sql
 -- (느림) OFFSET 방식: 앞 10만 행을 읽고 버림
 SELECT * FROM shipment_history
 ORDER BY id DESC
 LIMIT 20 OFFSET 100000;
--- EXPLAIN: rows scanned ≈ 100020, 깊이에 비례해 선형 증가
+-- EXPLAIN: 접근 경로에 따라 offset+limit에 가까운 행을 읽고 버릴 수 있음.
+-- 실제 rows/buffers와 깊이별 증가 여부는 실행계획과 데이터로 확인한다.
 
 -- (빠름) Keyset / Cursor 방식: 마지막으로 본 키를 기준으로 그 다음만
 SELECT * FROM shipment_history
 WHERE id < :lastSeenId          -- 직전 페이지 마지막 id를 커서로 전달
 ORDER BY id DESC
 LIMIT 20;
--- EXPLAIN: 인덱스 range scan으로 20행만 읽음 (OFFSET=어디든 일정)
+-- EXPLAIN: 조건·정렬과 맞는 인덱스가 있으면 offset 증가를 피할 수 있음.
+-- 실제 읽기 행 수는 선택도·가시성·동시 변경·실행계획에 따라 달라진다.
 ```
 
 | 관점 | OFFSET 100000, LIMIT 20 | Keyset/Cursor (WHERE id < ?) |
 | --- | --- | --- |
-| 스캔 행 수 | 약 100,020행 | 약 20행 |
-| 응답시간 | 페이지 깊이에 비례 증가(예: 수백 ms~초) | 깊이 무관 일정(예: 수 ms) |
+| 스캔 행 수 | 앞 행을 읽고 버리는 비용이 커질 수 있음 | 조건·인덱스가 맞으면 다음 행 중심 |
+| 응답시간 | 데이터·정렬·캐시에 따라 깊이와 함께 증가 가능 | 커서 조건·분포·동시 변경에 따라 측정 |
 | 임의 페이지 점프 | 가능(N페이지로 바로) | 불가(다음/이전만) — 무한스크롤에 적합 |
 | 정렬 안정성 | 중간 삽입/삭제 시 행 밀림·중복 가능 | 커서 키 기준이라 안정적 |
 | 적합 사례 | 관리자 페이지 등 얕은 페이징 | 운송장 이력 무한스크롤, 피드 |
@@ -160,7 +167,15 @@ LIMIT 20;
 >
 > 페이지네이션마다 전체 건수를 위해 `SELECT COUNT(*)` 를 같이 날리면 대용량에서 그 자체가 슬로우쿼리가 된다. 무한스크롤은 총건수가 필요 없는 경우가 많으니 빼고, 꼭 필요하면 근사치(추정 통계, PostgreSQL의 `reltuples` )나 캐시를 쓴다.
 
-## 4. 카디널리티 추정과 옵티마이저
+## 4. 실패 입력 → 판단 → 복구
+
+주문 100건을 조회한 뒤 화면 코드가 `order.items`와 `order.shipment`를 순서대로 접근해 N+1이 발생했다고 하자. 먼저 SQL 로그에서 호출 수·총 시간·반환 행을 확인하고, 목록의 1:1 정보는 DTO 또는 제한된 fetch로, 1:N 항목은 배치 조회·별도 Endpoint·집계로 분리한다. 컬렉션 fetch join을 페이지 쿼리에 무조건 추가하면 행이 주문 수보다 늘어나거나 ORM이 메모리에서 페이지를 자르는 문제가 생길 수 있다.
+
+운송장 이력에서 동률 `event_at`을 `WHERE event_at < :last`만으로 커서 처리하면 같은 시각의 행이 누락될 수 있다. `(event_at, id)`를 유일한 정렬 키로 정하고 `(event_at, id)` 복합 인덱스와 동일한 반열린 조건을 사용한다. 다만 해당 행이 삭제·수정되는 동안 화면의 일관성은 별도 정책이므로 snapshot, immutable event, 또는 “새 이벤트가 위로 추가될 수 있음”을 UX에 명시한다.
+
+추정 rows가 실제 90만 행으로 100배 차이 난다면 힌트를 먼저 넣지 않는다. 통계 갱신, 컬럼 상관관계, parameterized plan, 조건의 sargability, 조인 순서와 대안 Hash/Index plan을 순서대로 확인하고 수정 후 동일 workload에서 p95·Buffers·쓰기 영향까지 재측정한다.
+
+## 5. 카디널리티 추정과 옵티마이저
 
 옵티마이저(Optimizer)는 비용 기반(Cost-based)으로 실행계획을 고른다. 그 비용 계산의 핵심 입력이 **Cardinality(카디널리티, 조건을 통과하는 추정 행 수)**이고, 카디널리티는 **통계(Statistics)**에서 나온다. 통계가 낡으면 추정이 틀리고, 추정이 틀리면 잘못된 플랜을 고른다.
 
@@ -197,4 +212,4 @@ ANALYZE orders;   -- 통계 갱신 후 재측정
 >
 > "옵티마이저가 인덱스를 안 타는데 힌트로 강제하면 되지 않나요?" → 힌트( `FORCE INDEX` , `/*+ ... */` )는 **최후의 수단** 이다. 데이터 분포가 바뀌면 그 강제가 오히려 독이 된다. 먼저 *통계 갱신·히스토그램·인덱스 설계·쿼리 재작성(sargable화)* 으로 옵티마이저가 옳게 고르도록 유도하라. 힌트를 박는 건 근본 원인을 덮는 것일 수 있다.
 
-## 5. 이해도 확인 Q&A
+## 6. 이해도 확인 Q&A

@@ -17,6 +17,8 @@ questions:
   - "URL 외 헤더와 쿠키를 캐시 키에 포함할 때 적중률과 정확성 사이의 Trade-off를 설명해보세요."
   - "TTL, 버전 URL, Purge 중 상품 가격처럼 빠르게 바뀌는 데이터에 적합한 전략을 설계해보세요."
 ---
+> **검수 경계** — Origin Shield·TTL·purge·캐시 키의 효과는 CDN 제품과 트래픽 분포에 따라 달라진다.
+
 ## 1. 캐시를 계층으로 본다
 
 엣지 노드는 사용자와 가깝지만 모든 미스를 원본으로 보내면 인기 객체 만료 순간에 원본이 무너진다. 여러 엣지의 미스를 중간 Shield가 합치면 원본 요청 수를 줄일 수 있다.
@@ -48,3 +50,16 @@ freshness  = max_age - current_age
 미스율만 보지 말고 Shield 적중률, 원본 요청률, Purge 전파 시간, 오래된 응답 제공량을 함께 본다. 원본 장애 때 `stale-if-error`를 허용할 데이터와 절대 허용하지 않을 데이터를 분류한다.
 
 > **면접 포인트** — CDN 도입으로 끝내지 말고 캐시 키, 일관성 요구, Hot Key와 원본 보호까지 요청 경로 전체를 설명한다.
+
+## 검수 경계와 실패 흐름
+
+- 수치와 임계값은 요구사항으로 선언하고 실제 workload·부하 테스트·관측 지표로 검증한다. 제품·기업의 내부 구현을 근거 없이 일반화하지 않는다.
+- 쓰기 성공 후 이벤트/읽기 모델 갱신 실패, 응답 유실 후 재시도, 중복·순서 역전·부분 장애를 정상적인 실패 경로로 모델링한다.
+- 원장과 캐시·검색·알림·분석 파생 모델의 상태를 구분하고, 멱등 키·버전·재처리 큐·대사 작업으로 수렴시킨다.
+- 성능 최적화는 평균이 아니라 p95/p99, 버스트와 복구 중 부하를 함께 본다. fallback을 추가할 때 정확성·보안·개인정보·비용 trade-off를 기록한다.
+
+## 공식·1차 출처
+
+- [https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/origin-shield.html](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/origin-shield.html)
+- [https://developers.cloudflare.com/cache/concepts/cache-behavior/](https://developers.cloudflare.com/cache/concepts/cache-behavior/)
+- [https://www.rfc-editor.org/rfc/rfc9111](https://www.rfc-editor.org/rfc/rfc9111)

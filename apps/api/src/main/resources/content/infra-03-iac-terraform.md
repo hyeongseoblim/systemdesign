@@ -63,7 +63,7 @@ terraform destroy   # 리소스 정리
 
 > **⚠️ 실무 함정 — plan의 함정 신호**
 >
-> `plan` 출력에서 **destroy/recreate(삭제 후 재생성)** 표시( `-/+` )를 무심코 지나치면, RDS·EBS가 통째로 날아갈 수 있다. 어떤 속성 변경은 in-place가 아니라 **리소스 교체** 를 유발한다. plan을 반드시 읽고, 위험 리소스엔 `prevent_destroy` lifecycle을 건다. 🔥(Deep-dive)
+> `plan` 출력에서 **destroy/recreate(삭제 후 재생성)** 표시( `-/+` )를 무심코 지나치면, 데이터가 있는 리소스가 교체될 수 있다. 어떤 속성 변경이 교체를 유발하는지는 provider와 리소스 문서를 확인한다. plan을 리뷰하고, 정말 삭제되면 안 되는 리소스에는 `prevent_destroy`를 보조 안전장치로 둔다. 이 설정도 모든 삭제 경로를 막는 것은 아니므로 백업·복구 절차를 함께 검증한다. 🔥(Deep-dive)
 
 ## 3. State(상태) — Terraform의 심장
 
@@ -74,7 +74,7 @@ flowchart TB
     Code["main.tf\n(원하는 상태)"] --> TF["Terraform"]
     AWS["실제 AWS 리소스\n(현재 상태)"] --> TF
     TF <--> State["State 파일\n(매핑 장부)"]
-    State -.->|"Remote Backend"| S3[("S3 + DynamoDB Lock")]
+    State -.->|"Remote Backend"| S3[("공유 Backend + Lock")]
 
     style State fill:#ede9fe,stroke:#8b5cf6
     style S3 fill:#fef3c7,stroke:#f59e0b
@@ -84,7 +84,7 @@ flowchart TB
 
 ### Local State vs Remote Backend
 
-| 관점 | Local (로컬 파일) | Remote Backend (S3 + DynamoDB) |
+| 관점 | Local (로컬 파일) | Remote Backend (공유 저장소 + Lock) |
 | --- | --- | --- |
 | 협업 | 불가 (각자 다른 상태) | 공유 상태 |
 | 동시 실행 | 충돌 위험 | **State Lock**으로 직렬화 |
@@ -93,7 +93,7 @@ flowchart TB
 
 > **⚠️ 실무 함정 — State 충돌**
 >
-> **Remote backend + lock 없이 팀이 동시 작업** 하면, 두 사람이 동시에 apply해 State가 깨지고 리소스가 꼬인다. S3에 State를 두고 **DynamoDB로 Lock** 을 걸면 동시 apply가 직렬화된다. 또한 State 파일엔 DB 비밀번호 등 평문이 들어갈 수 있으니 절대 Git에 커밋 금지. 🔥(Deep-dive)
+> 공유 backend에 동시 실행 제어가 없으면 두 사람이 동시에 apply해 상태 저장과 실제 리소스 변경이 엇갈릴 수 있다. 사용 중인 backend의 공식 locking 방식을 활성화하고, backend의 버전 관리·암호화·접근 제어·복구를 별도로 설정한다. AWS S3 backend에서는 현재 문서의 `use_lockfile` 방식과 기존 DynamoDB locking 지원·폐기 일정을 확인해 적용한다. State에는 민감한 값이 포함될 수 있으므로 Git에 커밋하지 않고, 읽기 권한도 최소화한다. 🔥(Deep-dive)
 
 ## 4. 모듈(Module) — 재사용
 
@@ -117,9 +117,9 @@ module "vpc" {
 
 ## 5. 멱등성(Idempotency) / 불변 인프라(Immutable Infrastructure)
 
-> **멱등성이란** — **같은 코드를 몇 번 apply해도 결과가 동일**하다. 이미 원하는 상태면 아무것도 안 바꾼다("No changes").
+> **멱등성이란** — 같은 구성과 실제 입력을 반복 적용했을 때 의도하지 않은 추가 리소스나 변경이 생기지 않도록 선언 상태로 수렴하는 성질이다. provider의 외부 변경·시간·랜덤 값·순서 의존성이 있으면 반복 실행 결과가 달라질 수 있다.
 
-Terraform이 멱등한 이유: 매번 명령을 쌓는 게 아니라 **"원하는 상태"와 "현재 상태"의 차이만 계산**해 적용하기 때문. 이것이 명령형 셸 스크립트(append-only)와의 결정적 차이다.
+Terraform은 구성·state·provider가 읽은 실제 상태의 차이를 계산해 적용한다. 따라서 "원하는 상태와 현재 상태가 항상 자동으로 같아진다"고 가정하지 말고, provider의 refresh 오류·부분 실패·외부 변경을 plan과 운영 절차로 다룬다.
 
 ### 불변 인프라 원칙
 
@@ -148,7 +148,7 @@ stateDiagram-v2
 
 > **⚠️ 실무 함정**
 >
-> "급해서 콘솔에서 SG 규칙 하나만 손댐" → 다음 apply 때 Terraform이 그걸 **되돌려버려** 장애 재발. 원칙은 **"콘솔 수동 변경 금지"** . 부득이하면 즉시 코드에 반영하거나, 주기적 drift detection(예: Atlantis, terraform plan 정기 실행)으로 잡는다.
+> "급해서 콘솔에서 SG 규칙 하나만 손댐" → 다음 apply 때 Terraform이 구성대로 되돌리거나, 반대로 코드가 실제 변경을 덮어써 장애가 날 수 있다. 변경 경로를 한 곳으로 정하고, 긴급 변경은 승인·기록 후 코드와 state에 반영한다. 주기적 plan이나 별도 drift detection은 탐지 수단이지 자동 복구의 안전성을 보장하지 않으므로 변경 영향과 롤백을 먼저 검토한다.
 
 ## 7. Terraform vs CDK vs Pulumi
 
@@ -164,31 +164,60 @@ stateDiagram-v2
 
 ## 8. GitOps 개요
 
-> **한 줄 정의** — **Git을 단일 진실 원천(Single Source of Truth)**으로 삼아, 선언된 상태를 자동 동기화(주로 Pull 기반)한다.
+> **한 줄 정의** — **Git을 단일 진실 원천(Single Source of Truth)**으로 삼아, 선언된 상태를 동기화(주로 Pull 기반)한다. 자동 동기화는 controller와 정책에서 선택적으로 켠다.
 
 ```mermaid
 flowchart LR
     Dev["개발자"] -->|"PR + merge"| Git["Git 저장소\n(원하는 상태)"]
     Git -->|"감지 & Pull"| Agent["ArgoCD / Flux\n(클러스터 내 에이전트)"]
     Agent -->|"동기화"| K8s["Kubernetes 클러스터\n(실제 상태)"]
-    K8s -.->|"Drift 감지 → 자동 복원"| Agent
+    K8s -.->|"Drift 감지 → (self-heal 설정 시) 자동 복원"| Agent
 
     style Git fill:#dcfce7,stroke:#22c55e
     style Agent fill:#ede9fe,stroke:#8b5cf6
     style K8s fill:#dbeafe,stroke:#3b82f6
 ```
 
-*GitOps — Git에 머지하면 ArgoCD가 클러스터를 그 상태로 수렴. 배포가 곧 Git 커밋*
+*GitOps — 자동 sync 정책이 켜진 ArgoCD/Flux에서는 Git 변경을 감지해 클러스터를 그 상태로 수렴. 배포가 Git 커밋을 입력으로 삼을 수 있음*
 
 ### Push 배포 vs Pull(GitOps) 배포
 
 | 관점 | Push (CI가 클러스터에 kubectl apply) | Pull (GitOps, ArgoCD) |
 | --- | --- | --- |
 | 자격증명 | CI가 클러스터 접근 권한 보유 (위험) | 에이전트가 클러스터 안에서 Pull (외부 노출↓) |
-| Drift 처리 | 수동 | 자동 감지·복원 |
-| 롤백 | 스크립트 | **Git revert**로 자동 |
+| Drift 처리 | 수동 | 감지는 가능하며 복원은 controller·sync/self-heal 정책에 따름 |
+| 롤백 | 스크립트 | **Git revert 후 자동 sync가 켜져 있으면** 원하는 상태로 수렴 |
 | 감사 | 분산 | Git 히스토리 일원화 |
 
 > **🎯 면접 포인트**
 >
-> "GitOps가 일반 CI/CD 배포와 뭐가 다른가?" → **선언적 + Pull 기반 + Git이 진실** . 롤백이 `git revert` 로 단순화되고, 클러스터 자격증명을 CI에 안 줘도 돼 보안이 낫다. 단, IaC(Terraform)와 GitOps(ArgoCD)는 계층이 다름 — 인프라 프로비저닝은 Terraform, 앱/매니페스트 배포는 ArgoCD로 역할 분담하는 게 일반적.
+> "GitOps가 일반 CI/CD 배포와 뭐가 다른가?" → 선언적 구성과 Git 변경 이력을 배포의 입력으로 삼고, pull agent가 실제 상태를 수렴시키는 운영 모델이다. 자격증명 노출이 줄어들 수 있지만 agent 권한·저장소 신뢰·비밀값 전달·drift 정책을 별도로 설계해야 한다. Terraform과 Kubernetes GitOps의 경계는 조직과 도구에 따라 정하되, 같은 리소스를 두 시스템이 동시에 소유하지 않게 한다.
+
+Argo CD는 수동 sync가 기본이며 자동 sync, self-heal, prune을 별도 정책으로 설정한다. 예를 들어 다음은 자동 sync와 drift 복원·고아 리소스 정리를 모두 켠 예시일 뿐, 모든 환경에 적용할 기본값은 아니다.
+
+```yaml
+spec:
+  syncPolicy:
+    automated:
+      enabled: true
+      selfHeal: true
+      prune: true
+```
+
+## 9. 실패 흐름과 복구 경계
+
+- `plan`이 provider 조회 오류로 불완전한 결과를 만들거나 refresh 중 권한 오류가 난 경우에는 결과를 승인하지 않는다. provider 버전·자격증명·대상 계정·state lock을 확인하고 정상 plan을 다시 생성한다.
+- apply가 일부 리소스만 만든 뒤 실패할 수 있다. 즉시 `destroy`를 실행하지 말고 state와 실제 리소스를 조회해 이미 반영된 변경, 재시도 가능 작업, 수동 조정이 필요한 작업을 구분한다.
+- `-/+` 교체가 표시되면 백업·복구·대체 리소스·트래픽 전환을 확인한 뒤 별도 승인한다. `prevent_destroy`는 보호 장치이며, state를 삭제하거나 다른 workspace를 적용하는 사고까지 막아주지 않는다.
+- state lock을 획득하지 못하면 lock을 강제로 지우기 전에 해당 apply가 실제로 종료됐는지 확인한다. stale lock을 잘못 해제하면 동시 apply가 가능해진다.
+- 콘솔 drift를 코드로 되돌릴지 코드에 반영할지 결정하지 않은 채 apply하지 않는다. 보안그룹·라우팅·데이터베이스 같은 리소스는 현재 트래픽과 데이터 영향부터 확인한다.
+
+## 10. 참고 자료
+
+- [Terraform plan command](https://developer.hashicorp.com/terraform/cli/commands/plan)
+- [Terraform state](https://developer.hashicorp.com/terraform/language/state)
+- [Terraform S3 backend and locking](https://developer.hashicorp.com/terraform/language/backend/s3)
+- [Terraform lifecycle meta-arguments](https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle)
+- [Terraform backends](https://developer.hashicorp.com/terraform/language/backend)
+- [OpenGitOps principles](https://opengitops.dev/)
+- [Argo CD automated sync policy](https://argo-cd.readthedocs.io/en/stable/user-guide/auto_sync/)

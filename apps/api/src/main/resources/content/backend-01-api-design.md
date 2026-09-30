@@ -16,6 +16,8 @@ questions:
   - "토스 거래내역처럼 수천만 건을 무한스크롤로 보여줘야 합니다. Offset 페이지네이션을 쓰면 안 되는 이유 2가지와, Cursor 방식의 **커서 구성·정렬 키 선택**을 구체적으로 설명해보세요."
   - "\"모든 응답을 200으로 주고 body에서 성공/실패를 판단하자\"는 동료의 제안을 **관측성·운영 관점**에서 반박하고, RFC 7807을 어떻게 도입할지 설명해보세요."
 ---
+> **검수 경계** — HTTP 메서드 의미·상태 코드·Problem Details는 표준 문서에 근거하지만, 리소스 경계·버전 방식·HATEOAS 채택은 제품 계약과 클라이언트 제약에 따른 설계 선택이다. 예시 ID·수치와 Spring API 동작은 해당 버전의 문서로 확인한다.
+
 ## 1. REST 제약과 Richardson 성숙도 모델
 
 `REST(Representational State Transfer, 표현 상태 전이)`는 프로토콜이 아니라 **아키텍처 제약(Constraints)의 집합**이다. 핵심 6개 제약 중 면접에서 자주 묻는 것은 **Stateless(무상태)**와 **Uniform Interface(균일 인터페이스)**다.
@@ -37,7 +39,7 @@ flowchart LR
 
 > **💡 현실적 목표**
 >
-> 국내 대부분 서비스(토스·배민·쿠팡 내부 API)는 **Level 2** 를 표준으로 둔다. Level 3(HATEOAS)는 공개 API나 장기 진화가 중요한 경우 부분 채택. "우리는 Level 2를 기본으로 하되, 결제 흐름처럼 상태 전이가 복잡한 곳은 next-action 링크를 제공한다"가 시니어다운 답변.
+> 구현 비용 때문에 많은 API가 Level 2 제약의 일부를 선택하지만, 특정 회사의 내부 표준으로 일반화할 수는 없다. Level 3(HATEOAS)는 공개 API나 장기 진화·상태 전이가 중요한 경우 검토하고, 채택 범위는 클라이언트 계약으로 정한다.
 
 ## 2. 리소스 모델링 — 명사로 쪼개기
 
@@ -138,7 +140,7 @@ flowchart TB
 
 ## 6. 페이지네이션 — Offset vs Cursor
 
-면접에서 **"수천만 건 목록을 페이징하라"**는 거의 항상 나온다. Offset 기반의 함정을 모르면 감점이다.
+면접에서 **"대용량 목록을 페이징하라"**는 질문은 흔하다. Offset 기반의 함정을 모르면 감점이다.
 
 ```mermaid
 sequenceDiagram
@@ -165,7 +167,7 @@ sequenceDiagram
 | 임의 페이지 점프 | 가능 (5페이지로 바로) | 불가 (다음/이전만) |
 | 실시간 데이터 안정성 | 중간 INSERT/DELETE 시 중복·누락 | 안정적 |
 | 전체 개수 | 쉬움 | 비싸거나 근사치 |
-| 적합 케이스 | 관리자 페이지·소규모·페이지 번호 필요 | 무한스크롤·피드·대용량 (배민 가게목록, 토스 거래내역) |
+| 적합 케이스 | 관리자 페이지·소규모·페이지 번호 필요 | 무한스크롤·피드·대용량 목록 |
 
 #### Cursor 페이지네이션 응답 형태
 
@@ -225,7 +227,7 @@ class GlobalExceptionHandler {
 }
 ```
 
-*Spring 6 / Boot 3는 `ProblemDetail`을 기본 제공. traceId를 넣어 로그·추적과 연결하는 게 핵심*
+*Spring 6 / Boot 3 계열에서는 `ProblemDetail` API를 사용할 수 있다. 실제 적용 여부와 필드 동작은 프로젝트가 사용하는 Spring 버전 문서로 확인하고 traceId를 로그·추적과 연결한다.*
 
 > **💡 에러 분류 체계**
 >
@@ -263,3 +265,17 @@ stateDiagram-v2
 > **🎯 면접 포인트 — HATEOAS 채택 Trade-off**
 >
 > "왜 대부분 HATEOAS를 안 쓰나요?" → **(1) 페이로드 비대화, (2) 클라이언트가 실제로 링크를 따라가도록 구현하는 비용, (3) 모바일 앱은 어차피 화면 흐름을 하드코딩** . 반대로 채택 가치가 큰 곳은 **장기 진화하는 공개 API, 워크플로 엔진, 결제 같은 복잡 상태 전이** . "무조건 좋다/나쁘다"가 아니라 맥락으로 답하는 게 핵심.
+
+## 검수 경계와 실패 흐름
+
+- `POST`의 멱등 키는 요청 본문 해시·사용자·리소스 범위와 함께 저장하고, 응답 유실 후 재시도해도 같은 결과를 반환하도록 만료·동시 요청 정책을 정한다.
+- 커서가 발급된 뒤 새 행이 삽입되거나 삭제되면 정렬 키와 cursor version이 일관된 페이지 경계를 유지하는지 확인한다. `(created_at, id)`가 유일하지 않으면 누락·중복이 생길 수 있다.
+- 4xx·5xx·429를 재시도 정책과 연결하되, `Retry-After`가 없거나 결과가 unknown인 외부 호출은 중복 생성 방지·상태 조회·대사 경로를 별도로 둔다.
+- 에러 응답의 `type`·`status`·확장 필드는 계약으로 버전 관리하고, 로그·메트릭의 개인정보와 내부 stack trace 노출을 차단한다.
+
+## 공식·1차 출처
+
+- [RFC 9110 — HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110)
+- [RFC 9457 — Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457)
+- [RFC 7807 — Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc7807)
+- [RFC 8288 — Web Linking](https://www.rfc-editor.org/rfc/rfc8288)

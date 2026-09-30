@@ -68,7 +68,7 @@ sequenceDiagram
     S->>B: 200 OK
 ```
 
-*첫 화면까지 DNS + TCP 1-RTT + TLS 1-RTT + HTTP 1-RTT — RTT 40ms 환경이면 핸드셰이크만 ~120ms.*
+*첫 화면의 왕복 수는 DNS 캐시·TCP/TLS 버전·연결 재사용·HTTP 응답 구조에 따라 달라진다. RTT 숫자는 문제에서 주어진 가정으로 계산하고 실제 경로는 도구로 측정한다.*
 
 **꼬리 질문 체인:**
 
@@ -81,7 +81,7 @@ sequenceDiagram
    → *여기서 "HTTP/2면 다 해결됐죠"라 답하면 미들 컷.*
 
 3. **꼬리 3 — "그럼 HTTP/3는 그걸 어떻게 풀죠?"**
-   **QUIC(UDP 기반)**은 스트림별로 독립된 시퀀스 번호를 갖는다. 한 스트림의 패킷이 유실돼도 다른 스트림은 영향받지 않는다. 또 TLS를 프로토콜에 내장해 연결 수립이 1-RTT(재방문 0-RTT), 연결 이주(Connection Migration)로 IP가 바뀌어도 세션 유지.
+   **QUIC(UDP 기반)**은 스트림별 전송을 분리해 한 스트림의 손실이 다른 스트림의 전달을 같은 방식으로 막지 않게 한다. TLS 1.3을 사용하며, full handshake·재개·HelloRetryRequest에 따라 왕복 수가 달라진다. 0-RTT early data는 replay 가능한 요청을 구분해야 하고, Connection Migration도 경로·서버 정책에 따라 검증한다.
 
 4. **꼬리 4 — "백엔드 서버 간 통신에선 이게 어떻게 연결되죠?"**
    서버↔서버는 매 요청마다 3-way + TLS를 다시 하면 RTT 낭비 + `TIME_WAIT` 소켓 폭증. 그래서 **Keep-Alive 커넥션 풀**로 연결을 재사용한다. HikariCP·Netty·gRPC 채널이 모두 이 원리. keep-alive idle timeout과 서버의 timeout을 맞추지 않으면 "서버가 이미 닫은 소켓을 풀이 재사용 → `Connection reset`" 장애가 난다.
@@ -92,7 +92,7 @@ sequenceDiagram
 
 > **💡 팁**
 >
-> RTT 숫자를 손에 쥐고 답하라. "TLS 1.2는 2-RTT, 1.3은 1-RTT, RTT 40ms면 핸드셰이크 한 번에 40ms 절약"처럼 정량화하면 "실측해본 사람"으로 보인다. 관찰 도구도 함께: `tcpdump -i any port 443`, `ss -ti`(RTT·cwnd 확인), `curl -w '%{time_connect} %{time_appconnect}'`.
+> RTT는 문제에서 주어진 가정으로 계산하고, TLS 재개·HTTP 연결 재사용·서버 처리 시간을 분리해 말한다. 관찰 도구도 함께 제시한다: `tcpdump -i any port 443`, `ss -ti`(RTT·cwnd 확인), `curl -w '%{time_connect} %{time_appconnect}'`.
 
 ---
 
@@ -104,9 +104,9 @@ sequenceDiagram
 flowchart LR
     Q["프로세스 vs 스레드?"] --> A["스레드는 Heap·Code 공유Stack·레지스터만 독립"]
     A --> T1["꼬리: 스위칭 비용 차이는?"]
-    T1 --> B["프로세스 전환 = TLB flush스레드 전환 = 캐시만 오염"]
+    T1 --> B["주소 공간·실행 상태 전환 비용은 CPU·커널·워크로드에 의존"]
     B --> T2["꼬리: 스레드 1만 개 만들면?"]
-    T2 --> C["스택 1MB × 1만 = 10GB VM스위칭 폭증으로 CPU가 일 안 함"]
+    T2 --> C["스택 예약·실제 사용량·runnable 수·컨텍스트 전환 측정"]
     C --> T3["꼬리: 그럼 어떻게 풀지?"]
     T3 --> D["이벤트 루프 / 가상 스레드"]
 
@@ -117,29 +117,29 @@ flowchart LR
 **꼬리 질문 체인:**
 
 1. **꼬리 1 — "컨텍스트 스위칭 비용이 왜 다르죠?"**
-   프로세스 전환은 주소 공간이 바뀌므로 **TLB(Translation Lookaside Buffer) flush**가 일어나 이후 메모리 접근이 모두 TLB miss. 스레드 전환은 같은 주소 공간이라 TLB는 유지되고 L1/L2 캐시 오염만 발생. 스위칭 자체의 직접 비용은 **~1~5µs**지만, 캐시·TLB 재적재라는 간접 비용이 더 크다.
+   프로세스 전환에는 주소 공간 전환이 추가될 수 있지만, 모든 TLB 항목이 항상 비워지거나 이후 접근이 모두 miss가 되는 것은 아니다. 스레드 전환도 레지스터·스케줄링 상태와 캐시 영향이 있어 비용을 0으로 볼 수 없다. CPU 기능, 커널, 실행·대기 패턴에 따라 차이가 달라지므로 고정된 마이크로초 수치를 외우기보다 실제 워크로드에서 측정한다.
    → *"스레드가 더 싸요"만 답하고 이유를 못 대면 주니어.*
 
 2. **꼬리 2 — "스레드 1만 개 만들면 어떻게 되죠?"**
-   두 가지로 터진다. ① **메모리**: JVM 스레드 스택 기본 ~1MB × 1만 = 10GB 가상 메모리 예약. ② **스케줄링**: 코어 8개인데 실행 가능 스레드 1만 개면, 비자발적 컨텍스트 스위치가 폭증해 CPU가 "일하는 시간보다 전환하는 시간"이 커진다(`vmstat`의 `cs` 컬럼 급등). 처리량이 오히려 떨어진다.
-   → *"많으면 좀 느려져요"만 답하면 미들 컷. 숫자를 대야 한다.*
+   ① **메모리**: 플랫폼 스레드마다 스택 예약과 네이티브 자원이 필요하다. 스택 예약 크기와 실제 committed/RSS는 JVM·OS·옵션에 따라 다르므로 고정된 1MiB로 계산하지 않는다. ② **스케줄링**: 많은 runnable 스레드는 경합과 전환 비용을 키울 수 있지만 대부분 I/O 대기라면 양상이 다르다. 실제 스택 크기·RSS·runnable 수·전환 횟수·처리량을 측정한다.
+   → *숫자를 쓸 때는 가정과 예약·실사용의 차이를 함께 밝힌다.*
 
 3. **꼬리 3 — "그럼 동시 접속 10만을 어떻게 처리하죠?"**
-   두 갈래. ① **이벤트 루프(Reactor 패턴)**: 소수 스레드가 `epoll`로 수만 소켓을 non-blocking 다중화(Netty·Node.js·nginx). 스레드당 커넥션이 아니라 이벤트당 콜백. ② **가상 스레드(JDK 21 Virtual Thread)**: 블로킹 코드를 그대로 쓰되, JVM이 블로킹 시점에 캐리어 스레드에서 언마운트해 OS 스레드를 점유하지 않게 한다. 스택은 힙에 저장돼 수백만 개도 가능.
+   두 갈래. ① **이벤트 루프(Reactor 패턴)**: 소수 스레드가 준비된 소켓 이벤트를 다중화한다. ② **가상 스레드(JDK 21)**: I/O 대기가 많은 코드를 스레드별로 작성하되 대기 중 캐리어를 다른 작업에 쓸 수 있게 한다. 둘 다 연결 수만으로 처리량이 보장되지는 않으며, CPU·메모리·파일 디스크립터·다운스트림 한도가 남는다.
 
 4. **꼬리 4 — "이벤트 루프와 가상 스레드, 뭘 언제 쓰죠?"**
-   이벤트 루프는 최고 성능이지만 콜백 지옥 + 한 콜백에서 블로킹하면 전체 루프가 멈추는 위험. 가상 스레드는 명령형 코드의 가독성을 유지하면서 확장. 단, `synchronized` 안에서 블로킹하면 캐리어를 pin해 효과가 반감된다(JDK 21 한계, 이후 개선).
+   이벤트 루프는 적은 스레드로 준비된 I/O를 다중화하지만 콜백에서 블로킹하면 해당 loop의 진행을 막는다. 가상 스레드는 명령형 blocking 코드의 동시성을 높일 수 있지만 CPU·메모리·파일 디스크립터·다운스트림 한도를 없애지 않는다. JDK 21에서는 `synchronized` 또는 native 구간의 pinning 가능성을 문서와 관측으로 확인하고, 다른 JDK 버전의 동작을 JDK 21과 동일하다고 가정하지 않는다.
 
 > **⚠️ 실무 함정**
 >
-> "멀티스레드면 빨라진다"는 Amdahl's Law를 무시한 오해다. 직렬 구간 비율이 5%만 돼도 무한 코어로도 최대 20배 이상 못 간다. 게다가 Lock 경합(contention)이 심하면 스레드를 늘릴수록 오히려 느려진다. `ThreadPoolExecutor` 크기는 CPU-bound면 `코어 수 + 1`, I/O-bound면 `코어 수 × (1 + 대기시간/연산시간)`이 출발점. 무작정 크게 잡으면 스위칭 비용만 늘어난다.
+> "멀티스레드면 빨라진다"는 Amdahl's Law를 무시한 오해다. 직렬 구간 비율이 5%라는 가정에서는 이상적인 최대 speedup이 20배지만, 실제로는 Lock 경합·메모리 대역폭·스케줄링·I/O가 더 낮춘다. `ThreadPoolExecutor` 크기 공식은 출발점일 뿐이며 CPU-bound·I/O-bound를 구분해 queue, downstream concurrency, latency, CPU pressure로 튜닝한다.
 
 ```java
-// I/O 대기가 연산의 9배인 워크로드, 8코어 기준
-// 최적 스레드 수 ≈ 8 × (1 + 9) = 80
+// I/O 대기가 연산의 9배라는 가정의 출발점 예시
+// poolSize ≈ cores × (1 + wait/compute) 이후 부하 측정으로 조정
 int cores = Runtime.getRuntime().availableProcessors(); // 8
 double waitRatio = 9.0; // (대기시간 / 연산시간)
-int poolSize = (int) (cores * (1 + waitRatio)); // 80
+int poolSize = (int) (cores * (1 + waitRatio)); // 예: 80, 실제 값은 측정으로 결정
 // 하지만 가상 스레드라면 이 계산 자체가 불필요 —
 // executor = Executors.newVirtualThreadPerTaskExecutor();
 ```
@@ -174,18 +174,18 @@ flowchart TD
 **꼬리 질문 체인:**
 
 1. **꼬리 1 — "그럼 HashMap은 O(1)이 보장되나요?"**
-   아니다. **평균 O(1), 최악 O(n)**. 해시 충돌이 많거나(나쁜 해시 함수), Load Factor(적재율, 기본 0.75) 초과로 resize가 잦으면 성능이 무너진다. JDK 8부터는 한 버킷의 노드가 8개를 넘고 전체 용량이 64 이상이면 버킷을 **Red-Black Tree(균형 트리)**로 바꿔 최악을 O(log n)으로 방어(treeify).
+   아니다. **평균 O(1), 최악 O(n)**이라는 설명은 키 분포와 구현을 전제로 한다. 충돌이 많거나 resize가 반복되면 지연이 커질 수 있다. JDK 8 이후 OpenJDK `HashMap`의 tree bin 임계값·용량 조건은 구현 세부사항이므로 Java 21 문서와 실제 JDK를 확인하고 다른 언어·버전에 일반화하지 않는다.
    → *"O(1)이요"만 답하고 최악을 못 대면 주니어.*
 
 2. **꼬리 2 — "resize는 정확히 언제, 무슨 일이 일어나죠?"**
-   `size > capacity × loadFactor`가 되면 용량을 2배로 늘리고 모든 엔트리를 새 버킷에 재배치(rehash). 이때 **O(n) 순간 지연**이 생긴다. 그래서 크기를 알면 `new HashMap<>(expectedSize / 0.75 + 1)`로 초기 용량을 지정해 resize를 피한다.
+   threshold를 넘으면 구현이 용량과 버킷 배치를 바꾸고 엔트리를 재배치할 수 있다. 이때 **O(n) 수준의 순간 비용**이 생길 수 있다. 크기를 알면 Java 문서의 capacity·load factor 의미를 확인해 초기 용량을 정하되, 메모리 예약과 실제 키 분포를 함께 측정한다.
 
 3. **꼬리 3 — "resize 도중 다른 스레드가 put하면요?"**
-   여기가 진짜 컷라인. **JDK 7**은 리스트를 head-insert로 옮겨서 두 스레드가 동시에 rehash하면 링크가 순환(cycle)을 이뤄 다음 `get`이 **무한 루프(CPU 100%)**에 빠지는 악명 높은 버그가 있었다. **JDK 8**은 순서를 유지하는 방식으로 바꿔 무한 루프는 사라졌지만, 여전히 lost update·데이터 유실이 가능해 **스레드 안전하지 않다**.
-   → *"동시성 문제 나요"만 답하면 컷. 무한 루프 vs 유실을 버전별로 구분해야 시니어.*
+   여기가 진짜 컷라인. JDK 7 계열의 역사적 OpenJDK 구현에서는 동시 resize에서 순환 링크 사례가 보고됐고, 이후 구현은 이를 바꾸었지만 `HashMap`이 thread-safe가 된 것은 아니다. 현재 JDK에서도 동시 put·resize는 데이터 유실·관찰 불일치·예외를 만들 수 있으므로 버전별 내부 구현을 일반 API 계약처럼 외우지 말고 동기화된 자료구조를 사용한다.
+   → *"동시성 문제 나요"라고만 하지 말고, 역사적 구현 차이와 현재 API의 thread-safety 경계를 구분한다.*
 
 4. **꼬리 4 — "그래서 ConcurrentHashMap은 어떻게 안전하죠?"**
-   **JDK 7**은 Segment(기본 16개) 단위 락으로 동시성 수준을 16으로 제한. **JDK 8**은 Segment를 버리고, 버킷(bin) **헤드 노드 단위로만 `synchronized`** + 빈 버킷 삽입은 **CAS(Compare-And-Swap)**로 락 없이 처리. 락 범위가 버킷 하나로 좁아져 경합이 급감하고, `get`은 대부분 락 없이(volatile 읽기) 동작한다. resize도 여러 스레드가 나눠 돕는다(transfer 분담).
+   **JDK 7 계열 구현**은 Segment 기반 구조를 사용했지만 segment 수와 동작은 구현 세부사항이다. **JDK 8 이후 OpenJDK 구현**은 bin 헤드 동기화와 CAS를 활용하는 구조로 바뀌었지만, API 계약은 내부 락 방식·경합·처리량을 보장하지 않는다. Java 21 문서와 소스, workload 측정으로 `get`·update·resize 특성을 확인한다.
 
 > **⚠️ 실무 함정**
 >
@@ -202,9 +202,9 @@ flowchart TD
 | 질문 | 🔴 나쁜 답변 (컷) | 🟢 좋은 답변 (통과) |
 | --- | --- | --- |
 | HTTP/2인데 왜 느리죠? | "HTTP/2면 다 해결됐는데요?" | "앱 레벨 HOL은 풀었지만 TCP는 바이트 스트림 하나라 패킷 유실 시 전 스트림이 대기. HTTP/3의 QUIC이 스트림 독립으로 해결." |
-| 스레드 1만 개는? | "좀 느려질 것 같아요" | "스택 1MB×1만=10GB VM + 코어 8개에 실행 스레드 1만 → `cs` 폭증. 이벤트 루프나 가상 스레드로 전환." |
+| 스레드 1만 개는? | "좀 느려질 것 같아요" | "플랫폼 스레드의 스택 예약·runnable 경합·파일 디스크립터·다운스트림 한도를 측정하고, 이벤트 루프나 가상 스레드를 조건에 맞게 비교." |
 | HashMap은 O(1)? | "네, O(1)입니다" | "평균 O(1), 최악 O(n). JDK 8은 버킷 8개 초과 시 트리화로 O(log n) 방어." |
-| resize 중 동시 put? | "동시성 문제 나요" | "JDK 7은 순환 링크로 무한 루프, JDK 8은 유실. 그래서 ConcurrentHashMap은 bin 단위 synchronized + CAS." |
+| resize 중 동시 put? | "동시성 문제 나요" | "JDK 7/8의 역사적 구현 차이를 구분하되 현재 JDK의 HashMap은 thread-safe가 아니므로 ConcurrentHashMap의 API 계약·구현을 확인." |
 | TCP는 신뢰성 있죠? | "네, 손실 없어요" | "세그먼트 전달은 보장하지만 앱 처리는 별개. ACK 후 크래시 시 유실 → 멱등키로 앱 레벨 보장." |
 
 > **🎯 면접 포인트**
@@ -242,3 +242,23 @@ flowchart TD
 ## Q&A 연습
 
 위 세 체인(네트워크 HOL, 스레드 1만 개, HashMap resize)을 실제 면접처럼 소리 내어 답해보세요. 각 체인의 꼬리 4까지 정량 근거를 붙여 답할 수 있으면 시니어 라운드 대비가 된 것입니다. 아래 질문에 직접 답변을 작성하면 자동 저장됩니다.
+
+## 7. 버전·환경에 따른 실패 경계
+
+- HTTP/2·HTTP/3의 왕복 수와 HOL 동작은 연결 재사용·손실·0-RTT 요청 종류·경로에 따라 달라진다. 문제의 RTT를 실제 네트워크 성능으로 일반화하지 않는다.
+- Linux의 스케줄러·TCP·cgroup 동작은 커널 버전·설정·컨테이너 런타임에 의존한다. `CFS`, `EEVDF`, congestion control을 모든 Linux 환경의 동일한 기본값으로 말하지 않는다.
+- 플랫폼 스레드와 virtual thread는 같은 방식으로 자원을 쓰지 않는다. JDK 21의 pinning·스택·scheduler 설명을 현재 JDK의 변경사항과 섞지 않고, 파일 디스크립터·DB pool·메모리·CPU pressure를 함께 측정한다.
+- JDK HashMap의 resize·tree bin·ConcurrentHashMap 내부 구조는 구현 세부사항이다. 현재 API의 thread-safety 계약과 역사적 OpenJDK 구현의 장애 사례를 구분하고, 내부 구조를 근거로 성능을 보장하지 않는다.
+- 면접 수치는 가정일 때만 계산한다. 실제 장애의 원인은 `ss`, `tcpdump`, `jstack`, JFR, `vmstat`, `/proc`, 메트릭과 trace를 조합해 확인하고, 재시작·강제 GC·무지성 scale-out으로 증거를 먼저 지우지 않는다.
+
+## 8. 참고 자료
+
+- [RFC 9114 — HTTP/3](https://www.rfc-editor.org/rfc/rfc9114.html)
+- [RFC 9000 — QUIC](https://www.rfc-editor.org/rfc/rfc9000.html)
+- [RFC 8446 — TLS 1.3](https://www.rfc-editor.org/rfc/rfc8446.html)
+- [Java SE 21 Thread](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Thread.html)
+- [JEP 444: Virtual Threads](https://openjdk.org/jeps/444)
+- [Java SE 21 HashMap](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/HashMap.html)
+- [Java SE 21 ConcurrentHashMap](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/ConcurrentHashMap.html)
+- [Linux kernel EEVDF Scheduler](https://docs.kernel.org/scheduler/sched-eevdf.html)
+- [Linux kernel TCP sysctl](https://docs.kernel.org/networking/ip-sysctl.html)

@@ -18,6 +18,8 @@ questions:
   - "B+Tree의 페이지 분할과 LSM-Tree의 Compaction이 각각 Write Amplification을 만드는 과정을 비교하고, SSD 수명과 Tail Latency에 미치는 영향을 설명해보세요."
   - "Bloom Filter가 LSM-Tree의 존재하지 않는 키 조회를 어떻게 줄이는지, False Positive가 발생해도 정답 정확성이 깨지지 않는 이유를 설명해보세요."
 ---
+> **검수 경계** — 쓰기량·조회 비율·증폭 수치는 가상 워크로드다. 엔진 구현·압축·SSD·compaction 정책에 따라 벤치마크 결과가 달라진다.
+
 ## 1. 저장 엔진 선택은 증폭 비용 선택이다
 
 `B+Tree`는 정렬된 페이지를 제자리 갱신하고, `LSM-Tree(Log-Structured Merge-Tree, 로그 구조 병합 트리)`는 쓰기를 메모리와 순차 파일에 모은 뒤 백그라운드에서 합친다. “LSM은 쓰기가 빠르고 B+Tree는 읽기가 빠르다”는 출발점일 뿐이다. 운영에서는 사용자 I/O 한 번이 내부적으로 몇 번의 I/O와 몇 바이트의 저장 공간을 만드는지 봐야 한다.
@@ -77,3 +79,16 @@ Compaction은 중복 버전과 Tombstone을 제거하지만 데이터를 다시 
 
 - [RocksDB Compaction](https://github.com/facebook/rocksdb/wiki/Compaction)
 - [RocksDB Universal Compaction](https://github.com/facebook/rocksdb/wiki/Universal-Compaction)
+
+## 검수 경계와 실패 흐름
+
+- L0 file 수·pending compaction bytes·compaction debt가 증가하면 read p99와 write stall이 함께 악화되는지 관측하고, compaction이 ingest를 따라잡지 못할 때 rate limit·retention·storage tier를 조정한다.
+- Bloom filter false positive는 추가 block/SSTable read를 만들 뿐 false negative로 정답을 놓치는 경로가 아니다. bits-per-key와 메모리·I/O 비용을 함께 benchmark한다.
+- tombstone이 compaction 전까지 남아 오래된 값이 읽히는 것처럼 보이지 않는지, snapshot/WAL recovery 뒤 삭제 불변식이 유지되는지 검증한다.
+- B+Tree page split과 LSM flush/compaction의 write amplification을 SSD write budget·GC·복제 I/O와 함께 측정하고, 평균이 아닌 p95/p99와 stall time으로 선택을 재검증한다.
+
+## 공식·1차 출처
+
+- [https://github.com/facebook/rocksdb/wiki/Compaction](https://github.com/facebook/rocksdb/wiki/Compaction)
+- [https://github.com/facebook/rocksdb/wiki/RocksDB-Bloom-Filter](https://github.com/facebook/rocksdb/wiki/RocksDB-Bloom-Filter)
+- [https://www.postgresql.org/docs/current/indexes.html](https://www.postgresql.org/docs/current/indexes.html)

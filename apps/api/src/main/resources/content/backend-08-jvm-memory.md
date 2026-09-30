@@ -18,6 +18,8 @@ questions:
   - "TLAB이 객체 할당 경합을 줄이는 원리와, TLAB에 할당됐다는 사실이 객체 수명이나 GC 대상 여부를 바꾸지 않는 이유를 설명해보세요."
   - "Heap Dump에는 큰 객체가 없는데 RSS가 계속 증가할 때 사용할 진단 순서와 도구를 제시해보세요."
 ---
+> **검수 경계** — JVM 메모리 영역·컨테이너 cgroup 동작·NMT 명령은 JDK와 런타임 버전에 따라 달라질 수 있다. `1GiB`, `640MiB`, `-Xmx` 값은 계산 예시이며 실제 RSS·Limit·Native 영역을 같은 시각에 측정한다.
+
 ## 1. 프로세스 메모리는 Heap보다 크다
 
 JVM 프로세스의 RSS(Resident Set Size, 실제 상주 메모리)는 Java Heap뿐 아니라 Metaspace, Code Cache, Thread Stack, Direct Buffer, GC 자료구조, JNI 라이브러리를 포함한다. 컨테이너에서는 합계가 메모리 제한을 넘으면 Java `OutOfMemoryError` 전에 프로세스가 종료될 수도 있다.
@@ -62,3 +64,17 @@ jcmd <pid> Thread.print
 4. 메모리 증가율과 트래픽·배포·클래스 로딩 이벤트를 연결한다.
 
 > **면접 포인트** — Heap OOM, Direct Buffer OOM, Native Thread 생성 실패, 컨테이너 OOMKilled는 원인과 증거가 다르다. “Heap Dump부터”가 아니라 계층을 먼저 분류한다.
+
+## 검수 경계와 실패 흐름
+
+- Heap 사용량이 안정적이어도 Metaspace·Code Cache·Thread Stack·Direct Buffer·JNI와 allocator fragmentation이 RSS를 올릴 수 있다. cgroup의 limit·current·events와 JVM 로그를 함께 본다.
+- NMT는 시작 옵션과 수집 오버헤드가 있으므로 장애 중 처음 켜는 도구가 아니다. 재현 환경에서 활성화하고 운영에서는 비용·보안 노출을 검토한다.
+- Heap Dump에 큰 객체가 없어도 native leak, classloader leak, thread 증가가 남을 수 있다. RSS delta를 영역별로 대사하고 재배포·트래픽·클래스 로딩과 상관분석한다.
+- OOMKilled와 Java OOM은 증거와 완화가 다르다. 재시작 전에 영향 완화, 최소 메트릭, 반복 Thread Dump를 확보하고 원인별 limit·pool·buffer 정책을 조정한다.
+
+## 공식·1차 출처
+
+- [Oracle Java Launcher Options](https://docs.oracle.com/en/java/javase/25/docs/specs/man/java.html)
+- [Oracle `jcmd` Reference](https://docs.oracle.com/en/java/javase/25/docs/specs/man/jcmd.html)
+- [Oracle Native Memory Tracking](https://docs.oracle.com/en/java/javase/25/vm/native-memory-tracking.html)
+- [Docker Runtime Resource Constraints](https://docs.docker.com/engine/containers/resource_constraints/)
