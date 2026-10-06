@@ -4,15 +4,24 @@ import { useEffect, useState } from "react";
 import { readKey, doneKey } from "@/lib/api";
 import { Mastery, MASTERY_LABELS, masteryKey, readStudy, writeStorage } from "@/lib/study";
 
-export default function LearnActions({ cardId, step = 3, simple = false }: { cardId: string; step?: number; simple?: boolean }) {
+export default function LearnActions({ cardId, step = 3, compact = false }: { cardId: string; step?: number; compact?: boolean }) {
   const [done, setDone] = useState(false);
   const [mastery, setMastery] = useState<Mastery>();
   const [error, setError] = useState(false);
   useEffect(() => {
-    const record = readStudy(cardId);
-    setDone(!!record.done);
-    setMastery(record.mastery);
+    function refresh() {
+      const record = readStudy(cardId);
+      setDone(!!record.done);
+      setMastery(record.mastery);
+    }
+    refresh();
+    window.addEventListener("study-change", refresh);
+    window.addEventListener("storage", refresh);
     setError(!writeStorage(readKey(cardId), new Date().toISOString()));
+    return () => {
+      window.removeEventListener("study-change", refresh);
+      window.removeEventListener("storage", refresh);
+    };
   }, [cardId]);
   function rate(value: Mastery) {
     if (!writeStorage(masteryKey(cardId), value)) { setError(true); return; }
@@ -22,28 +31,14 @@ export default function LearnActions({ cardId, step = 3, simple = false }: { car
     if (!writeStorage(doneKey(cardId), done ? null : new Date().toISOString())) { setError(true); return; }
     setDone(!done); setError(false);
   }
-  function finish(reviewLater: boolean) {
-    const time = new Date().toISOString();
-    if (!writeStorage(masteryKey(cardId), reviewLater ? "review" : null)) { setError(true); return; }
-    setMastery(reviewLater ? "review" : undefined);
-    if (!writeStorage(doneKey(cardId), time)) { setError(true); return; }
-    setDone(true); setError(false);
-  }
-  if (simple) return (
-    <section id="complete" className={`learn-actions ${done ? "is-done" : ""}`}>
-      <div className="learn-actions-copy"><span>STEP {step}</span><div>
-        <h2>오늘은 여기까지 해도 좋아요</h2>
-        <p>한 장을 마치고, 다시 보고 싶으면 복습 목록에 남겨두세요.</p>
-      </div></div>
-      <div className="quick-finish-actions" role="group" aria-label="학습 마무리">
-        <button className="done-btn" onClick={() => finish(false)} aria-pressed={done && mastery !== "review"}>오늘은 여기까지</button>
-        <button className="done-btn" onClick={() => finish(true)} aria-pressed={done && mastery === "review"}>다음에 다시 보기</button>
-      </div>
-      {done && <p className="hint" aria-live="polite">{mastery === "review" ? "복습 목록과 홈에서 다시 볼 수 있어요." : "오늘 학습으로 기록했어요. 다음 시작 카드를 홈에서 볼 수 있어요."}</p>}
-      {done && <button className="quick-undo" onClick={toggle}>완료 표시 해제</button>}
-      {error && <p role="alert">이 브라우저에 기록을 저장하지 못했어요. 저장소 사용 설정을 확인해 주세요.</p>}
-    </section>
-  );
+  if (compact) return <div className="starter-record" aria-label="학습 기록">
+    <div className="starter-record-buttons">
+      <button className={`chip ${done ? "on" : ""}`} onClick={toggle} aria-pressed={done}>{done ? "✓ 학습 완료 · 표시 해제" : "학습 완료로 표시"}</button>
+      <button className={`chip ${mastery === "review" || mastery === "hint" ? "on" : ""}`} onClick={() => rate(mastery === "review" || mastery === "hint" ? "confident" : "review")} aria-pressed={mastery === "review" || mastery === "hint"}>{mastery === "review" || mastery === "hint" ? "✓ 복습에 저장됨 · 해제" : "복습에 저장"}</button>
+    </div>
+    <p className="hint" aria-live="polite">{done ? "완료를 기록했어요. 홈에서 다음 학습을 확인할 수 있어요." : "답을 비교한 뒤 완료를 표시하면 홈의 다음 학습에 반영됩니다."}</p>
+    {error && <p role="alert">학습 기록을 저장하지 못했어요. 브라우저의 저장소 설정을 확인해 주세요.</p>}
+  </div>;
   return (
     <section id="complete" className={`learn-actions ${done ? "is-done" : ""}`}>
       <div className="learn-actions-copy"><span>STEP {step}</span><div>

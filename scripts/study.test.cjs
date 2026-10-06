@@ -10,12 +10,13 @@ const root = path.resolve(__dirname, '..');
 const web = path.join(root, 'apps/web');
 const output = mkdtempSync(path.join(tmpdir(), 'jobstudy-study-test-'));
 execFileSync(process.execPath, [path.join(web, 'node_modules/typescript/bin/tsc'),
-  path.join(web, 'lib/study.ts'), path.join(web, 'lib/reading.ts'), path.join(web, 'lib/starterPath.ts'), '--outDir', output,
+  path.join(web, 'lib/study.ts'), path.join(web, 'lib/reading.ts'), path.join(web, 'lib/starterPath.ts'), path.join(web, 'lib/home.ts'), '--outDir', output,
   '--module', 'commonjs', '--target', 'ES2022', '--skipLibCheck', '--types', 'node',
   '--typeRoots', path.join(web, 'node_modules/@types')]);
 const { matchesSearch, matchesStudy, needsReview, readStudy, writeStorage, shuffleRank } = require(path.join(output, 'study.js'));
 const { headings, sectionId } = require(path.join(output, 'reading.js'));
 const { nextStarter, STARTER_LESSONS } = require(path.join(output, 'starterPath.js'));
+const { homeLearning, randomRecommendation } = require(path.join(output, 'home.js'));
 after(() => rmSync(output, { recursive: true, force: true }));
 
 test('검색은 제목·태그·요약, 대소문자와 공백 분리 검색어를 지원한다', () => {
@@ -59,11 +60,53 @@ test('시작 경로는 미완료 카드 순서로 안내하고 기존 완료 기
   assert.equal(STARTER_LESSONS.length, new Set(STARTER_LESSONS.map((lesson) => lesson.slug)).size);
   for (const lesson of STARTER_LESSONS) {
     assert.ok(readFileSync(path.join(root, `apps/api/src/main/resources/content/${lesson.slug}.md`), 'utf8').includes(`slug: ${lesson.slug}`));
-    assert.ok(lesson.takeaway && lesson.example && lesson.question && lesson.check);
+    assert.ok(lesson.takeaway && lesson.explanation && lesson.example && lesson.question && lesson.answer && lesson.answerExplanation);
   }
 });
 test('목차는 코드 펜스 안의 제목과 중복 질문 섹션을 제외한다', () => {
   assert.deepEqual(headings('## 1. **핵심**\n```md\n## 예시\n```\n## 이해도 확인\n'), [{ title: '1. 핵심', id: sectionId('1. 핵심') }]);
+});
+test('홈은 첫 방문·학습 중·초기 학습 완료에 따라 다음 행동을 바꾼다', () => {
+  const starters = STARTER_LESSONS.map((lesson, i) => ({ id: `start-${i}`, slug: lesson.slug, area: 'BACKEND_DEV' }));
+  const regular = [
+    { id: 'database', slug: 'database-02', area: 'DATABASE' },
+    { id: 'infra', slug: 'infra-01', area: 'INFRA' },
+    { id: 'database-next', slug: 'database-03', area: 'DATABASE' },
+    { id: 'cs', slug: 'cs-01', area: 'CS' },
+  ];
+  const cards = [...starters, ...regular];
+  assert.equal(homeLearning(cards, {}).action, 'starter');
+  assert.equal(homeLearning(cards, {}).primary.id, 'start-0');
+  const completed = Object.fromEntries(starters.map(card => [card.id, { done: '2026-10-07' }]));
+  const finished = homeLearning(cards, completed);
+  assert.equal(finished.starterComplete, true);
+  assert.equal(finished.action, 'explore');
+  assert.equal(finished.primary.id, 'database');
+  assert.equal(finished.starter, undefined);
+  const continuing = homeLearning(cards, { ...completed, database: { read: '2026-10-06' }, infra: { read: '2026-10-07' } });
+  assert.equal(continuing.action, 'continue');
+  assert.equal(continuing.primary.id, 'infra');
+  const reviewing = homeLearning(cards, { ...completed, infra: { done: 'today', mastery: 'hint' } });
+  assert.equal(reviewing.action, 'review');
+  assert.equal(reviewing.primary.id, 'infra');
+  assert.equal(reviewing.review.length, 1);
+  assert.equal(homeLearning(cards, { database: { done: 'today' } }).action, 'explore', '일반 학습을 시작했다면 초기 학습으로 강제 복귀하지 않는다');
+  assert.equal(homeLearning(cards.slice(1), completed).starterComplete, false, '누락된 목록을 완료로 오인하지 않는다');
+  assert.equal(new Set(finished.recommendations.map(card => card.area)).size, finished.recommendations.length);
+  assert.ok(finished.recommendations.every(card => card.id !== finished.primary.id));
+  const allDone = Object.fromEntries(cards.map(card => [card.id, { done: 'today' }]));
+  assert.equal(homeLearning(cards, allDone).primary, undefined);
+  assert.equal(homeLearning(cards, allDone).completeCount, cards.length);
+});
+test('랜덤 추천은 미학습을 우선하고 재추천·모두 완료·빈 목록을 처리한다', () => {
+  const cards = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+  const records = { a: { done: 'today' } };
+  assert.equal(randomRecommendation(cards, records, undefined, () => 0).id, 'b');
+  assert.equal(randomRecommendation(cards, records, 'b', () => 0).id, 'c');
+  assert.equal(randomRecommendation(cards, { a: { done: 'today' }, b: { read: 'today' }, c: { done: 'today' } }, undefined, () => 0).id, 'b');
+  assert.equal(randomRecommendation(cards, Object.fromEntries(cards.map(c => [c.id, { done: 'today' }])), 'a', () => 0).id, 'b');
+  assert.equal(randomRecommendation([cards[0]], {}, 'a', () => 0).id, 'a');
+  assert.equal(randomRecommendation([], {}), undefined);
 });
 test('129개 카드의 387개 점검 기준은 실제 질문과 정확히 연결된다', () => {
   const guides = JSON.parse(readFileSync(path.join(web, 'content/answer-guides.json'), 'utf8'));

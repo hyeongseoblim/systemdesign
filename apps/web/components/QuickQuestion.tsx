@@ -1,23 +1,10 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { readStorage, writeStorage } from "@/lib/study";
-
-export default function QuickQuestion({ cardId, question, check }: { cardId: string; question: string; check: string }) {
-  const key = `jobStudy::quick::${cardId}`;
-  const [answer, setAnswer] = useState("");
-  const [error, setError] = useState(false);
-
-  useEffect(() => { setAnswer(readStorage(key) ?? ""); }, [key]);
-
+export default function QuickQuestion({ question, answer, explanation }: { question: string; answer: string; explanation: string }) {
   return <section id="questions" className="quick-question">
-    <div className="study-section-head"><span>STEP 2</span><div><h2>한 가지만 떠올려 보기</h2><p>길게 쓰지 않아도 괜찮아요. 말로 답해도 됩니다.</p></div></div>
-    <label htmlFor={`quick-${cardId}`}>{question}</label>
-    <textarea id={`quick-${cardId}`} value={answer} onChange={(event) => {
-      setAnswer(event.target.value);
-      setError(!writeStorage(key, event.target.value));
-    }} placeholder="내 생각을 한두 문장으로 적어 보세요 (선택)" />
-    <details className="answer-guide"><summary>생각해 볼 기준 보기</summary><p>{check}</p></details>
-    {error && <p role="alert">답을 저장하지 못했어요. 화면을 나가기 전에 복사해 주세요.</p>}
+    <div className="study-section-head"><span>STEP 2</span><div><h2>한 가지만 떠올려 보기</h2><p>답을 먼저 떠올린 뒤, 예시 답과 비교해 보세요.</p></div></div>
+    <p className="quick-question-prompt">{question}</p>
+    <details className="answer-guide">
+      <summary>예시 답과 해설 보기</summary>
+      <div className="quick-answer"><strong>예시 답</strong><p>{answer}</p><strong>왜 이렇게 답할까요?</strong><p>{explanation}</p><p className="hint">내가 떠올린 답과 어떤 점이 같고 다른지 비교해 보세요.</p></div>
+    </details>
   </section>;
 }

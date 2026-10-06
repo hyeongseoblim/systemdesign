@@ -13,8 +13,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#0b1120" },
-    { media: "(prefers-color-scheme: light)", color: "#f5f7fb" },
+    { media: "(prefers-color-scheme: dark)", color: "#1b1e1b" },
+    { media: "(prefers-color-scheme: light)", color: "#f5f5f1" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -29,7 +29,8 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body>
-        <div className="app">{children}</div>
+        <a className="skip-to-content" href="#main-content">본문으로 바로가기</a>
+        <main id="main-content" className="app" tabIndex={-1}>{children}</main>
         <Suspense fallback={null}><AppNavigation /></Suspense>
         <ServiceWorkerRegister />
       </body>

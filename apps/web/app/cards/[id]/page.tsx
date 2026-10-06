@@ -62,7 +62,7 @@ export default async function CardPage({
       <ReadingProgress cardId={card.id} />
       <nav className="reading-dock" aria-label="학습 바로가기">
         <Link href={backHref}>← 목록</Link>
-        <a href={hasQuestions ? "#questions" : "#complete"}>{hasQuestions ? "질문 풀기" : "이해도 기록하기"} →</a>
+        <a href={starter || hasQuestions ? "#questions" : "#complete"}>{starter ? "답 떠올리기" : hasQuestions ? "질문 풀기" : "이해도 기록하기"} →</a>
       </nav>
       <Link href={backHref} className="back">
         ← 목록으로
@@ -86,10 +86,10 @@ export default async function CardPage({
 
       <nav className="study-roadmap" aria-label="이 카드 학습 순서">
         <span className="roadmap-title">학습 순서</span>
-        <ol className={hasQuestions || starter ? undefined : "two-steps"}>
+        <ol className={starter || !hasQuestions ? "two-steps" : undefined}>
           <li><b>1</b><a href="#reading">{starter ? "짧은 설명" : "핵심 읽기"}</a></li>
-          {(hasQuestions || starter) && <li><b>2</b><a href="#questions">{starter ? "질문 1개" : `질문 ${card.questions.length}개 답하기`}</a></li>}
-          <li><b>{completionStep}</b><a href="#complete">{starter ? "오늘 마무리" : "이해도 기록"}</a></li>
+          {(hasQuestions || starter) && <li><b>2</b><a href="#questions">{starter ? "떠올리고 비교하기" : `질문 ${card.questions.length}개 답하기`}</a></li>}
+          {!starter && <li><b>{completionStep}</b><a href="#complete">이해도 기록</a></li>}
         </ol>
       </nav>
 
@@ -97,16 +97,17 @@ export default async function CardPage({
         <section id="reading" className="study-section starter-lesson">
           <div className="study-section-head"><span>STEP 1</span><div><h2>먼저 이것만 알아두기</h2><p>처음에는 전체 내용을 외울 필요 없어요.</p></div></div>
           <p className="starter-takeaway">{starter.takeaway}</p>
+          <p className="starter-explanation">{starter.explanation}</p>
           <div className="starter-example"><strong>예를 들면</strong><p>{starter.example}</p></div>
         </section>
-        <QuickQuestion cardId={card.id} question={starter.question} check={starter.check} />
-        <LearnActions cardId={card.id} step={3} simple />
+        <QuickQuestion question={starter.question} answer={starter.answer} explanation={starter.answerExplanation} />
+        <LearnActions cardId={card.id} compact />
         <details className="starter-deep-dive">
           <summary>더 깊이 공부하기 · 전체 본문과 면접 질문 {card.questions.length}개</summary>
           <p>짧은 학습을 마친 뒤 필요할 때 펼쳐보세요.</p>
           {outline.length > 0 && <nav aria-label="본문 목차"><ol>{outline.map((item) => <li key={item.id}><a href={`#${item.id}`}>{item.title}</a></li>)}</ol></nav>}
           <CardBody md={card.contentMd} />
-          <QuestionAnswers cardId={card.id} questions={card.questions} guide={guide} id="deep-questions" step={4} />
+          <QuestionAnswers cardId={card.id} questions={card.questions} guide={guide} id="deep-questions" step={3} />
         </details>
       </> : <>
       {outline.length > 0 && <details className="reading-outline">
@@ -131,7 +132,7 @@ export default async function CardPage({
         area={card.area}
         title={card.title}
         difficulty={card.difficulty}
-        step={starter ? 5 : completionStep + 1}
+        step={starter ? (hasQuestions ? 4 : 3) : completionStep + 1}
       />
     </article>
   );
