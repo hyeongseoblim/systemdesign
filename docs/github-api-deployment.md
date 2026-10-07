@@ -93,3 +93,18 @@ GitHub Secrets에 DB 비밀번호, Neon 키, GCP JSON 키를 등록할 필요는
 ## 현재 검증 범위
 
 파일 작성·로컬 구문 검증과 GCP IAM 구성·GitHub 변수 등록·원격 첫 실행은 별개다. 현재 원격 인증 구성과 배포는 수행하지 않았다.
+
+## 이 채팅에서 배포 실행·완료 확인
+
+환경 설정의 네트워크 시크릿에 `GH_TOKEN`을 등록한다. GitHub fine-grained token의 Resource owner는 `hyeongseoblim`, Repository access는 `systemdesign`만 선택하고 Repository permissions의 Actions를 Read and write로 설정한다. Metadata 읽기 권한은 기본 포함된다. JSON 키나 DB 비밀번호는 필요 없다. 토큰은 채팅이나 파일에 넣지 않는다. 만료 시 환경의 시크릿 값만 갱신한다.
+
+환경 설정의 관리 화면에서 시크릿 이름과 대상 변수는 `GH_TOKEN`, 허용 대상 도메인은 `api.github.com`으로 설정한다. 토큰 값은 해당 보안 입력란에 넣고 저장·게시한다.
+
+인증을 적용한 환경에서 다음 명령으로 API 배포 요청, 해당 요청의 실행 완료 대기, 운영 API health·카드 상세·웹 응답 확인을 수행한다.
+
+```bash
+cd /workspace/systemdesign
+python3 scripts/deploy-production.py
+```
+
+프로세스는 15초마다 진행 상태를 출력하고 40분 후 타임아웃 처리한다. 실행 실패나 타임아웃을 배포 성공으로 보고하지 않는다. 타임아웃 후에는 실행 URL을 확인하고 중복 배포 전에 상태를 조회한다. 웹 응답 검사는 Vercel 배포 버전과 커밋 일치를 증명하지 않는다. 웹 코드 변경을 배포하는 작업에서는 Vercel Git 배포의 대상 커밋과 완료 결과도 별도로 확인한다.
