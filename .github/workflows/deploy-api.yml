@@ -1,7 +1,13 @@
 name: Deploy existing API
+run-name: Deploy API ${{ inputs.request_id || github.sha }}
 
 on:
   workflow_dispatch:
+    inputs:
+      request_id:
+        description: Deployment request identifier
+        required: false
+        type: string
 
 permissions:
   contents: read
