@@ -1,12 +1,14 @@
 package com.jobstudy.common.web
 
 import com.jobstudy.card.CardNotFoundException
+import com.jobstudy.card.InvalidCardStateException
 import com.jobstudy.card.SlugConflictException
 import com.jobstudy.generation.claude.ClaudeRefusalException
 import com.jobstudy.interview.InterviewBudgetExceededException
 import com.jobstudy.interview.InterviewClosedException
 import com.jobstudy.interview.InterviewNotFoundException
 import com.jobstudy.interview.InterviewUnavailableException
+import com.jobstudy.interaction.QuestionNotFoundException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -17,9 +19,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 @RestControllerAdvice
 class GlobalExceptionHandler {
 
-    @ExceptionHandler(CardNotFoundException::class)
-    fun handleNotFound(e: CardNotFoundException): ProblemDetail =
+    @ExceptionHandler(CardNotFoundException::class, QuestionNotFoundException::class)
+    fun handleNotFound(e: RuntimeException): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.message ?: "Not found")
+
+    @ExceptionHandler(InvalidCardStateException::class)
+    fun handleInvalidState(e: InvalidCardStateException): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.message ?: "Invalid state")
 
     @ExceptionHandler(SlugConflictException::class)
     fun handleConflict(e: SlugConflictException): ProblemDetail =
