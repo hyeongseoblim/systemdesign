@@ -1,5 +1,6 @@
 // 2개월치 커리큘럼(V4) SQL 생성기 — 영역별 주제를 인터리빙해 매일 다양한 영역이 섞이게 함
-// 사용: node tools/gen-curriculum.mjs > apps/api/src/main/resources/db/migration/V4__curriculum_2months.sql
+// 과거 스키마용 참조 생성: node tools/gen-curriculum.mjs > /tmp/legacy-curriculum.sql
+// 현재 스키마에는 topic_key가 필수다. 기존 Flyway V4에 덮어쓰거나 이 SQL을 직접 적용하지 않는다.
 // (V2 시드 12개의 display_order 1~3 뒤에 오도록 100부터 시작)
 
 const AREAS = {

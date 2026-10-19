@@ -5,6 +5,11 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const API_BASE = process.env.API_BASE ?? "http://localhost:8080";
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
+if (!ADMIN_TOKEN) {
+  console.error("ADMIN_TOKEN is required for the protected card import API");
+  process.exit(1);
+}
 const here = dirname(fileURLToPath(import.meta.url));
 const cards = JSON.parse(readFileSync(resolve(here, "migrated-cards.json"), "utf8"));
 
@@ -12,7 +17,7 @@ let ok = 0, skip = 0, fail = 0;
 for (const card of cards) {
   const res = await fetch(`${API_BASE}/api/v1/cards`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-Admin-Token": ADMIN_TOKEN },
     body: JSON.stringify(card),
   });
   if (res.status === 201) {

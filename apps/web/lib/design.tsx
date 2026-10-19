@@ -25,7 +25,7 @@ function Svg({ size = 16, children }: { size?: number; children: ReactNode }) {
 
 /* ── 8 영역: 색 + 라인 아이콘 ── */
 export const AREA_META: Record<TopicArea, { label: string; color: string }> = {
-  AI_LLM: { label: "AI/LLM", color: "#CCB0C2" },
+  AI: { label: "AI/LLM", color: "#CCB0C2" },
   SYSTEM_DESIGN: { label: "시스템 디자인", color: "#38BDF8" },
   INFRA: { label: "인프라", color: "#2DD4BF" },
   BACKEND_ARCHITECTURE: { label: "아키텍처", color: "#34D399" },
@@ -40,7 +40,7 @@ export const tint = (hex: string) => `${hex}22`;
 
 export function AreaIcon({ area, size = 16 }: { area: TopicArea; size?: number }) {
   switch (area) {
-    case "AI_LLM":
+    case "AI":
       return (<Svg size={size}><rect x="5" y="5" width="14" height="14" rx="3" /><path d="M9 9h6v6H9zM9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" /></Svg>);
     case "SYSTEM_DESIGN":
       return (

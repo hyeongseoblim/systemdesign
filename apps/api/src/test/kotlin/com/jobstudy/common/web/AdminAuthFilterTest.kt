@@ -12,6 +12,20 @@ class AdminAuthFilterTest {
     private val filter = AdminAuthFilter("admin-secret")
 
     @Test
+    fun `shared interaction answers require authentication even for reads`() {
+        val request = MockHttpServletRequest("GET", "/api/v1/cards/card-id/interactions")
+        val response = MockHttpServletResponse()
+        var chainCalled = false
+        filter.doFilter(request, response) { _, _ -> chainCalled = true }
+        assertEquals(401, response.status)
+        assertFalse(chainCalled)
+
+        request.addHeader("X-Admin-Token", "admin-secret")
+        filter.doFilter(request, MockHttpServletResponse()) { _, _ -> chainCalled = true }
+        assertTrue(chainCalled)
+    }
+
+    @Test
     fun `rejects unauthenticated card write`() {
         val request = MockHttpServletRequest("POST", "/api/v1/cards")
         val response = MockHttpServletResponse()

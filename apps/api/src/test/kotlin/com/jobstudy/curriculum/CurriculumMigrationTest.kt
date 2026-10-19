@@ -11,6 +11,32 @@ import org.testcontainers.junit.jupiter.Testcontainers
 class CurriculumMigrationTest {
 
     @Test
+    fun `deployed V23 schema upgrades without rewriting history or curriculum`() {
+        Flyway.configure()
+            .dataSource(postgres.jdbcUrl, postgres.username, postgres.password)
+            .schemas("upgrade_check")
+            .target("23")
+            .load()
+            .migrate()
+
+        val upgraded = Flyway.configure()
+            .dataSource(postgres.jdbcUrl, postgres.username, postgres.password)
+            .schemas("upgrade_check")
+            .load()
+        assertEquals(1, upgraded.migrate().migrationsExecuted)
+        upgraded.validate()
+
+        postgres.createConnection("").use { connection ->
+            connection.createStatement().use { statement ->
+                statement.executeQuery("SELECT count(*) FROM upgrade_check.curriculum_topics").use { rows ->
+                    rows.next()
+                    assertEquals(384, rows.getInt(1))
+                }
+            }
+        }
+    }
+
+    @Test
     fun `fresh database migrates to unique pending curriculum topics`() {
         Flyway.configure()
             .dataSource(postgres.jdbcUrl, postgres.username, postgres.password)

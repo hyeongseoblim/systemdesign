@@ -45,6 +45,12 @@ class AdminAuthFilter(
     private fun requiresAdminToken(request: HttpServletRequest): Boolean {
         if (request.requestURI.startsWith("/api/v1/admin")) return true
 
+        // The legacy interactions API stores shared answers without user accounts.
+        // Keep those answers private to the administrator, including reads.
+        if (request.requestURI.startsWith("/api/v1/cards/") &&
+            request.requestURI.endsWith("/interactions") && request.method != "OPTIONS"
+        ) return true
+
         // 카드 조회는 공개지만, 생성/수정/삭제는 운영자만 할 수 있다.
         val isCardPath = request.requestURI.startsWith("/api/v1/cards")
         val isReadOnlyMethod = request.method in setOf("GET", "HEAD", "OPTIONS")

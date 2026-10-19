@@ -4,7 +4,7 @@
 
 ## 1. 변환 (HTML → 카드 JSON)
 ```bash
-cd tools && npm install && cd ..
+cd tools && npm ci && cd ..
 node tools/migrate-content.mjs
 # → tools/migrated-cards.json 생성 (커밋돼 있으므로 재실행은 원본 수정 시에만)
 ```
@@ -22,8 +22,10 @@ API가 떠 있는 곳에서:
 API_BASE=http://localhost:8080 node tools/import-cards.mjs
 ```
 - 재실행 안전: slug 충돌(409)은 "이미 존재"로 건너뜀
+- 실행 전에 서버와 일치하는 `ADMIN_TOKEN`을 보안 환경변수로 주입해야 한다. 값은 저장소나 브라우저에 넣지 않는다.
 - VM에서 하려면 Node 설치 후 실행하거나, 로컬에서 `API_BASE=https://api.<도메인>` 으로 원격 등록
 
 ## 참고
 - 원본 HTML은 삭제하지 않는다 (GitHub Pages 링크 유지)
 - `docs/00-platform-architecture.html`(설계 문서)는 학습 카드가 아니므로 제외
+- `legacy-curriculum-2months.sql`과 `gen-curriculum.mjs`는 구형 스키마용 참고 자료다. 현재의 연간 커리큘럼과 안정적인 topic key를 대체하지 않으며 운영 DB에 직접 적용하지 않는다.
