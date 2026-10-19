@@ -1,3 +1,4 @@
+import { AreaIcon, ModeIcon } from "@/lib/design";
 import { getCard, CardFetchError, AREA_LABELS, MODE_LABELS, stripMd } from "@/lib/api";
 import { headings } from "@/lib/reading";
 import answerGuides from "@/content/answer-guides.json";
@@ -69,8 +70,8 @@ export default async function CardPage({
       </Link>
       <header className="detail-hero">
         <div className="meta">
-          <span className="badge">{AREA_LABELS[card.area]}</span>
-          <span className="badge mode">{MODE_LABELS[card.mode] ?? card.mode}</span>
+          <span className="badge"><AreaIcon area={card.area} size={13} />{AREA_LABELS[card.area]}</span>
+          <span className="badge mode"><ModeIcon mode={card.mode} size={12} />{MODE_LABELS[card.mode] ?? card.mode}</span>
           <DifficultyDots level={card.difficulty} />
         </div>
         <h1>{card.title}</h1>

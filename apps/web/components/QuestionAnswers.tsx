@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { QIcon } from "@/lib/design";
 import { QuestionItem } from "@/lib/api";
 import { readStorage, writeStorage } from "@/lib/study";
 
@@ -113,7 +114,7 @@ function AnswerCard({
   return (
     <div className="qcard">
       <div className="qhead">
-        <span className="qn">Q{index + 1}</span>
+        <span className="qn"><QIcon size={14} />Q{index + 1}</span>
         <span className={`saved ${saved ? "show" : ""}`} aria-hidden={!saved}>✓ 저장됨</span>
       </div>
       <p className="qtext">{question}</p>

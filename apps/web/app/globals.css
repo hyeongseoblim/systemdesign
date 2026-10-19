@@ -1219,3 +1219,6 @@ body:has(dialog[open]) { overflow: hidden; }
   .filter-sheet { inset: 0; width: calc(100% - 64px); max-width: 720px; max-height: 80dvh; margin: auto; border-radius: 22px; }
   .reading-dock { left: 50%; right: auto; bottom: 20px; width: min(820px, calc(100% - 48px)); transform: translateX(-50%); padding: 12px; border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); }
 }
+
+/* Shared Signal icons retain the current responsive and color-scheme tokens. */
+.badge > svg, .qn > svg { display: inline-block; vertical-align: middle; margin-right: .35em; }

@@ -1,5 +1,7 @@
 "use client";
 
+import { AreaIcon, ModeIcon } from "@/lib/design";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -189,8 +191,8 @@ export default function CardFeed({ initial, area, mode, difficulty, view = "expl
           return (
             <Link key={c.id} href={cardHref(c.id)} onClick={rememberPosition} className={`card a-${c.area} state-${studyState}`}>
               <div className="meta">
-                <span className="badge">{AREA_LABELS[c.area]}</span>
-                <span className="badge mode">{MODE_LABELS[c.mode]}</span>
+                <span className="badge"><AreaIcon area={c.area} size={13} />{AREA_LABELS[c.area]}</span>
+                <span className="badge mode"><ModeIcon mode={c.mode} size={12} />{MODE_LABELS[c.mode]}</span>
                 <span className={`study-state ${review ? "review" : studyState}`}>{review ? "↺ 복습 필요" : isDone ? "✓ 완료" : isRead ? "● 학습 중" : "새 학습"}</span>
                 <DifficultyDots level={c.difficulty} />
               </div>
