@@ -2,6 +2,8 @@
 
 ## Active
 
+- [ ] **최신 main API 운영 반영 준비** - `52667f7`의 interactions·관리 API·V24는 운영 API에 미반영. 운영 DB 중복 데이터 사전 검사와 최신 API 배포·사후 검증 필요. [현황 기록](docs/status-2026-10-26.md)
+
 ## Waiting On
 
 ## Someday
@@ -10,6 +12,11 @@
 
 ## Done
 
+- [x] ~~클라우드 작업 main 동기화 및 운영 버전 대조~~ (2026-10-26; 로컬 main을 `52667f7`로 fast-forward, 최신 CI 성공 확인. 웹은 같은 SHA의 production READY, API는 10월 7일 이미지 유지 확인)
+- [x] ~~V24 마이그레이션 로컬 재검증~~ (2026-10-26; PostgreSQL 16 Testcontainers에서 신규 DB 및 V23→V24 테스트 2/2 통과, 생략 0; 운영 데이터 중복 검사는 별도)
+- [x] ~~작업 브랜치 통합 및 운영 호환성 검증~~ (2026-10-19; `52667f7`, 과거 브랜치 7개 통합, V1~V23 유지·V24 추가, API·웹 CI 성공; API 운영 반영은 별도)
+- [x] ~~GitHub Actions OIDC API 배포 경로 구축 및 실행~~ (2026-10-07; `8b9c245` 배포 성공, 수동 dispatch 및 운영 health·카드 검사 경로 추가)
+- [x] ~~홈 대시보드·랜덤 추천·시작 학습 흐름 개편~~ (2026-10-06~19; 최신 웹 production 배포 `dpl_5j3sb98m9g9fWLADLoburwfYfQbt`의 Git SHA 확인)
 - [x] ~~V21~V23 콘텐츠와 129개 카드/387문항 해설 API·웹 운영 배포~~ (2026-10-01; CI·Cloud Build 성공, Flyway v23, API 88개 본문 일치·CORS, Vercel Ready, 모바일 크기 브라우저 학습·복습 흐름 확인; [배포 기록](docs/deployment-2026-10-01.md))
 - [x] ~~V21~V23 콘텐츠 로컬 품질 게이트 완료~~ (2026-09-30; 129개 카드/387문항 연결, 웹 학습 테스트 22/22, API 빌드·테스트, 웹 빌드, 임시 PostgreSQL·Flyway V1~V23 적용 및 기존 카드·질문 ID 보존 확인; 운영 배포 제외)
 - [x] ~~나머지 콘텐츠 67개 본문·출처·질문별 해설 심층 검수 및 V23 migration 준비~~ (2026-09-29; 누적 129개/387문항 로컬 반영, 자동 테스트·운영 적용 제외)
