@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import CardDiagram, { hasDiagramImage } from "./CardDiagram";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkCjkFriendly from "remark-cjk-friendly";
@@ -36,73 +36,13 @@ function stripTrailingQnaSection(md: string): string {
 /** 마크다운 본문 렌더 — 코드 하이라이팅 · Callout · 표 래핑 · Mermaid */
 export default function CardBody({ md: rawMd }: { md: string }) {
   const md = stripTrailingQnaSection(rawMd);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      const nodes = ref.current?.querySelectorAll<HTMLElement>(
-        "[data-mermaid]:not([data-rendered])"
-      );
-      if (!nodes || nodes.length === 0) return;
-      const mermaid = (await import("mermaid")).default;
-      if (!active) return;
-      const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      // useMaxWidth:false — 모바일에서 축소 대신 원본 크기 + 박스 내 가로 스크롤
-      mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: "loose",
-        theme: dark ? "dark" : "neutral",
-        themeVariables: { fontFamily: "inherit", fontSize: "13.5px" },
-        flowchart: { useMaxWidth: false },
-        sequence: { useMaxWidth: false },
-        er: { useMaxWidth: false },
-        state: { useMaxWidth: false },
-        class: { useMaxWidth: false },
-        gantt: { useMaxWidth: false },
-      });
-      for (let i = 0; i < nodes.length; i++) {
-        const el = nodes[i];
-        const code = el.getAttribute("data-mermaid") ?? "";
-        try {
-          const { svg } = await mermaid.render(`mmd-${Date.now()}-${i}`, code);
-          if (!active) return;
-          el.innerHTML = svg;
-          el.setAttribute("data-rendered", "1");
-        } catch {
-          el.textContent = code; // 렌더 실패 시 원문 표시
-          el.setAttribute("data-rendered", "1");
-        }
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [md]);
-
   return (
-    <div className="content" ref={ref}>
+    <div className="content">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkCjkFriendly]}
         rehypePlugins={[rehypeHighlight]}
         components={{
           h2({ children }) { return <h2 id={sectionId(flatText(children))}>{children}</h2>; },
-          code({ className, children, ...props }) {
-            const match = /language-(\w+)/.exec(className ?? "");
-            if (match?.[1] === "mermaid") {
-              return (
-                <div
-                  className="mermaid-box"
-                  data-mermaid={String(children).replace(/\n$/, "")}
-                />
-              );
-            }
-            return (
-              <code className={className} {...props}>
-                {children}
-              </code>
-            );
-          },
           pre({ children, ...props }) {
             // 코드 블록 언어 라벨 추출
             let lang: string | undefined;
@@ -118,7 +58,8 @@ export default function CardBody({ md: rawMd }: { md: string }) {
                 (child as { props: { className: string } }).props.className
               )?.[1];
             }
-            if (lang === "mermaid") return <>{children}</>;
+            const source = flatText(children).trim();
+            if (lang === "mermaid" || hasDiagramImage(source)) return <CardDiagram source={source} />;
             return (
               <div className="codeblock">
                 {lang && <span className="lang">{lang}</span>}

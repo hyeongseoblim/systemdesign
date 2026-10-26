@@ -10,6 +10,7 @@
 
 ## Done
 
+- [x] ~~다이어그램 273개 SVG 이미지 구성 및 세로 읽기 로컬 검증~~ (2026-10-27; Mermaid 266개·문자 도표/화살표 설명 7개, 시퀀스 64개 세로 구성, 넓은 도표 확대 구간 배치, 원본·카드 ID 유지; [구성·검증 방법](docs/diagram-reading.md))
 - [x] ~~클라우드 통합 main API·웹 운영 반영 및 V24 적용 검증~~ (2026-10-26; `5f7e5b7` CI·API 배포 성공, API `jobstudy-api-00024-f97` 트래픽 100%, Flyway V24·인덱스 2개 확인, 카드 129개/질문 387개 ID 보존, 인증·CORS·웹 응답 확인; [배포 기록](docs/deployment-2026-10-26.md))
 - [x] ~~클라우드 작업 main 동기화 및 운영 버전 대조~~ (2026-10-26; 로컬 main을 `52667f7`로 fast-forward, 최신 CI 성공 확인. 웹은 같은 SHA의 production READY, API는 10월 7일 이미지 유지 확인)
 - [x] ~~V24 마이그레이션 로컬 재검증~~ (2026-10-26; PostgreSQL 16 Testcontainers에서 신규 DB 및 V23→V24 테스트 2/2 통과, 생략 0; 운영 데이터 중복 검사는 별도)

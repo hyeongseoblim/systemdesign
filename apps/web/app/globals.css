@@ -578,21 +578,23 @@ button { font-family: inherit; }
 .content blockquote[data-co="tip"] { --co: var(--co-tip); }
 .content blockquote[data-co="tip"]::before { content: "💡"; font-size: 13px; }
 
-/* Mermaid */
-.mermaid-box {
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 16px 12px; margin: 16px 0;
-  overflow-x: auto; text-align: center;
-  -webkit-overflow-scrolling: touch;
+/* Diagrams are responsive image figures in the vertical reading flow. */
+.diagram-image {
+  min-width: 0; max-width: 100%; margin: 20px 0;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: #fff; color: #20242b; padding: 12px;
 }
-.mermaid-box svg { height: auto; }
-.mermaid-box:not([data-rendered]) {
-  color: var(--faint); font-size: 12px;
-  font-family: "SF Mono", ui-monospace, monospace;
-  white-space: pre-wrap; text-align: left;
-}
+.diagram-image img { display: block; width: 100%; height: auto; max-width: 100%; }
+.diagram-image .diagram-overview { max-width: 100%; margin: 0 auto; }
+.diagram-details { margin-top: 16px; }
+.diagram-details .diagram-help { font-size: 12px; line-height: 1.6; color: #4b5563; margin-bottom: 12px; }
+.diagram-panel { border-top: 1px solid #dfe3e8; padding-top: 10px; margin-top: 14px; }
+.diagram-panel-viewport { position: relative; width: 100%; overflow: hidden; }
+.diagram-image .diagram-panel-viewport img { position: absolute; top: 0; max-width: none; }
+.diagram-panel-label { display: block; font-size: 12px; color: #4b5563; margin-bottom: 8px; }
+.diagram-description { margin-top: 12px; font-size: 12px; }
+.diagram-description summary { cursor: pointer; padding: 8px 0; }
+.content .diagram-image pre { white-space: pre-wrap; overflow-wrap: anywhere; overflow: visible; padding: 12px; font-size: 12px; }
 
 /* ─────────────────────────────────────────────
    학습 액션 + 이해도 확인

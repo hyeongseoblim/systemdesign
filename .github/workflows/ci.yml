@@ -38,6 +38,7 @@ jobs:
       - name: Study and content regression tests
         run: |
           npm run test:study
+          npm run test:diagrams
           python3 ../../scripts/content-examples.test.py
           python3 ../../scripts/content-io.test.py
       - name: Build
