@@ -112,9 +112,11 @@ export async function getFeed(params: {
   if (params.cursor) q.set("cursor", params.cursor);
   q.set("limit", String(params.limit ?? 20));
 
-  const endpoint = typeof window === "undefined" ? `${API_BASE}/api/v1/cards` : "/api/study/cards";
+  const server = typeof window === "undefined";
+  const endpoint = server ? `${API_BASE}/api/v1/cards` : "/api/study/cards";
   const res = await fetch(`${endpoint}?${q.toString()}`, {
-    cache: "no-store",
+    cache: server ? "force-cache" : "no-store",
+    ...(server ? { next: { revalidate: 60 } } : {}),
     signal: AbortSignal.timeout(30_000),
   });
   if (!res.ok) throw new Error(`feed failed: ${res.status}`);

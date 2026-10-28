@@ -21,6 +21,7 @@ const regular = cards.find(c => c.slug === 'backend-03-transaction');
 const details = apiJson(`${api}${cardsPath}/${regular.id}`);
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || (process.platform === 'darwin' ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : undefined), headless: true });
 const results = [];
+function record(result) { results.push(result); console.log("PASS", result.flow, result.width ?? ""); }
 async function page(width = 390) { const context = await browser.newContext({ viewport: { width, height: 844 } }); return { context, page: await context.newPage() }; }
 async function home(p) { await p.goto(base); await expect(p.locator('.home-focus')).toHaveAttribute('aria-busy', 'false'); }
 async function at(p, card) { await p.goto(`${base}/cards/${card.id}`); await expect(p.locator('.recall-input textarea').first()).toBeVisible(); }
@@ -33,7 +34,7 @@ try {
     assert.ok(geometry.height >= 44); assert.ok(geometry.pageWidth <= geometry.width + 1);
     await expect(p.locator('.home-focus-cta')).toHaveAttribute('href', new RegExp(starter.id));
     if (width === 390) await p.screenshot({ path: `${output}/home-after.png` });
-    results.push({ flow: 'home-primary', width, ...geometry }); await context.close();
+    record({ flow: 'home-primary', width, ...geometry }); await context.close();
   }
   {
     const { context, page: p } = await page();
@@ -42,7 +43,7 @@ try {
     await expect(p.locator('.home-focus')).toHaveAttribute('aria-busy', 'false');
     await p.unroute('**/api/study/cards?**'); await p.getByRole('button', { name: '다시 시도', exact: true }).click();
     await expect(p.locator('.home-focus-cta')).toHaveAttribute('href', new RegExp(starter.id));
-    results.push({ flow: 'catalog-failure-and-retry', passed: true }); await context.close();
+    record({ flow: 'catalog-failure-and-retry', passed: true }); await context.close();
   }
   {
     const { context, page: p } = await page(); await home(p); await p.locator('.home-focus-cta').click();
@@ -56,10 +57,11 @@ try {
     assert.equal(await p.evaluate(id => localStorage.getItem(`jobStudy::mastery::${id}`), starter.id), null);
     await p.getByRole('button', { name: '학습 완료로 표시', exact: true }).click();
     assert.ok(await p.evaluate(id => localStorage.getItem(`jobStudy::done::${id}`), starter.id));
+    const returnStarted = Date.now();
     await p.locator('.completion-next').getByRole('link', { name: '다음 학습 고르기 →', exact: true }).click();
     await expect(p.locator('.home-focus')).toHaveAttribute('aria-busy', 'false');
     await expect(p.locator('.home-focus-cta')).toHaveAttribute('href', new RegExp(nextStarter.id));
-    results.push({ flow: 'starter-recall-save-complete-next', passed: true }); await context.close();
+    record({ flow: 'starter-recall-save-complete-next', passed: true, returnReadyMs: Date.now() - returnStarted }); await context.close();
   }
   {
     const { context, page: p } = await page(); await p.goto(base + '/manifest.webmanifest');
@@ -80,7 +82,7 @@ try {
     const review = p.locator('.feed a.card').filter({ has: p.getByRole('heading', { name: regular.title, exact: true }) });
     await expect(review).toBeVisible(); await review.click(); await expect(p.locator('a.back')).toHaveAttribute('href', /view=review/);
     await p.locator('#questions').scrollIntoViewIfNeeded(); await expect(p.locator('.dock-primary')).toContainText('이해도 기록'); await p.screenshot({ path: `${output}/recall-after.png` });
-    results.push({ flow: 'legacy-answer-checklist-question-resume-review-return', passed: true }); await context.close();
+    record({ flow: 'legacy-answer-checklist-question-resume-review-return', passed: true }); await context.close();
   }
   {
     const { context, page: p } = await page(); await at(p, regular);
@@ -92,7 +94,7 @@ try {
     await home(p); await expect(p.locator('.home-focus-cta')).toHaveAttribute('href', /#resume$/); await p.locator('.home-focus-cta').click();
     await expect.poll(() => p.evaluate(() => Math.round(scrollY))).toBeGreaterThan(y - 80);
     assert.ok(Math.abs((await p.evaluate(() => scrollY)) - y) < 80);
-    results.push({ flow: 'long-diagram-position-direct-home-resume', y, restored: await p.evaluate(() => scrollY) }); await context.close();
+    record({ flow: 'long-diagram-position-direct-home-resume', y, restored: await p.evaluate(() => scrollY) }); await context.close();
   }
   {
     const { context, page: p } = await page(); await at(p, starter);
@@ -103,7 +105,7 @@ try {
     await home(p); await p.locator('.home-focus-cta').click();
     await expect(p.locator('.starter-deep-dive')).toHaveAttribute('open', '');
     await expect.poll(() => p.evaluate(() => scrollY)).toBeGreaterThan(1000);
-    results.push({ flow: 'resume-opens-collapsed-deep-reading', passed: true }); await context.close();
+    record({ flow: 'resume-opens-collapsed-deep-reading', passed: true }); await context.close();
   }
   {
     const { context, page: p } = await page(); await at(p, regular);
@@ -111,7 +113,7 @@ try {
     await p.evaluate(({ id, target }) => { localStorage.setItem(`jobStudy::position::${id}`, target); localStorage.removeItem(`jobStudy::position-offset::${id}`); }, { id: regular.id, target });
     await p.reload(); await p.getByRole('button', { name: '이어서 읽기 ↓', exact: true }).click();
     await expect.poll(() => p.evaluate(id => Math.abs(document.getElementById(id).getBoundingClientRect().top - 96), target)).toBeLessThan(20);
-    results.push({ flow: 'legacy-heading-position-resume', passed: true }); await context.close();
+    record({ flow: 'legacy-heading-position-resume', passed: true }); await context.close();
   }
   {
     const { context, page: p } = await page();
@@ -119,14 +121,14 @@ try {
     assert.equal(response.status(), 200); const feed = await response.json(); assert.equal(feed.items.length, 2); assert.ok(feed.items.every(c => c.area === 'DATABASE'));
     assert.equal((await p.request.get(base + '/api/study/cards/not-a-uuid')).status(), 400);
     assert.equal((await p.request.post(base + '/api/study/cards')).status(), 405);
-    results.push({ flow: 'same-origin-public-read-only-card-proxy', passed: true }); await context.close();
+    record({ flow: 'same-origin-public-read-only-card-proxy', passed: true }); await context.close();
   }
   {
     const { context, page: p } = await page();
     await context.addInitScript(() => { Storage.prototype.setItem = function () { throw new DOMException('blocked', 'QuotaExceededError'); }; });
     await at(p, starter); const input = p.getByRole('textbox', { name: '떠올린 답변', exact: true }); await input.fill('저장 실패 시에도 화면의 답변은 유지한다.');
     await expect(p.locator('.quick-question .recall-save')).toContainText('저장하지 못했어요'); await expect(input).toHaveValue('저장 실패 시에도 화면의 답변은 유지한다.');
-    results.push({ flow: 'storage-failure-keeps-draft-with-error', passed: true }); await context.close();
+    record({ flow: 'storage-failure-keeps-draft-with-error', passed: true }); await context.close();
   }
   {
     const { context, page: p } = await page(320); await at(p, regular); await p.emulateMedia({ colorScheme: 'dark' }); await p.reload();
