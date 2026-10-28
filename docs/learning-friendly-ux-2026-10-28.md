@@ -64,3 +64,12 @@ WEB_BASE=https://jobstudy-eta.vercel.app UX_ARTIFACTS=/tmp/jobstudy-study-ux-pro
 - 기존 답변·새 답변·점검 체크·선택 문항·완료·복습 재진입, 복습 해제 시 이해도 자동 평가 방지, 저장 실패 안내를 확인했다.
 - 학습 테스트 27개, 다이어그램 검사 2개 통과. fixture 설정 없이 실제 환경으로 다시 실행한 프로덕션 빌드도 성공했다.
 - 직접 운영 API 연결 지연으로 로컬 UI 검사는 fixture와 구분해 수행했다. 운영 검증은 배포된 웹 주소의 동일 출처 읽기 경로를 통해 별도로 수행한다.
+
+## 운영 검증 결과
+
+- 코드 `39b61358de86b059f9219bfaa9140f7003c0157b`, Vercel production `dpl_Bdkj34o8QL5aduUna7fZTbRZuRhJ` READY와 운영 alias 연결을 확인했다.
+- [CI 40618986324](https://github.com/hyeongseoblim/systemdesign/actions/runs/40618986324)의 API·웹 작업이 모두 성공했다.
+- `https://jobstudy-eta.vercel.app`에서 동일한 브라우저 13개 시나리오가 모두 통과했다. 결과는 `/tmp/jobstudy-study-ux-production/results.json`, 홈·질문 화면은 같은 디렉터리의 `home-after.png`, `recall-after.png`에 저장했다.
+- 학습 완료 후 홈에서 다음 카드가 준비될 때까지 1,332ms를 측정했다. 수정 전 관찰에서는 목록을 반복 조회하며 약 15초가 걸렸다. 이번 값은 해당 브라우저 실행의 측정이며 첫 방문·모든 네트워크의 응답 시간을 보장하지 않는다.
+- 운영에서도 도표 중간 위치 2,783.44px를 2,783px로 복원했다. 기존 답변·선택 문항·점검 체크·복습 재진입, 접힌 본문·예전 제목 키 복원, 저장 실패 안내와 공개 읽기 경계도 통과했다.
+- 실기기와 실제 지하철 네트워크에서의 사용성 점검은 별도 과제로 유지한다.
