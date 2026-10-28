@@ -13,8 +13,8 @@ execFileSync(process.execPath, [path.join(web, 'node_modules/typescript/bin/tsc'
   path.join(web, 'lib/study.ts'), path.join(web, 'lib/reading.ts'), path.join(web, 'lib/starterPath.ts'), path.join(web, 'lib/home.ts'), '--outDir', output,
   '--module', 'commonjs', '--target', 'ES2022', '--skipLibCheck', '--types', 'node',
   '--typeRoots', path.join(web, 'node_modules/@types')]);
-const { matchesSearch, matchesStudy, needsReview, readStudy, writeStorage, shuffleRank } = require(path.join(output, 'study.js'));
-const { headings, sectionId } = require(path.join(output, 'reading.js'));
+const { matchesSearch, matchesStudy, needsReview, readStudy, writeStorage, shuffleRank, parseChecklist } = require(path.join(output, 'study.js'));
+const { headings, sectionId, parseReadingPosition, readingOffset } = require(path.join(output, 'reading.js'));
 const { nextStarter, STARTER_LESSONS } = require(path.join(output, 'starterPath.js'));
 const { homeLearning, randomRecommendation } = require(path.join(output, 'home.js'));
 after(() => rmSync(output, { recursive: true, force: true }));
@@ -352,4 +352,34 @@ test('V20은 TMS 이벤트 원장·노선 수 가정·Kafka 보장과 질문 해
   assert.match(body, /occurredAt/);
   assert.match(body, /1,225/);
   assert.match(body, /waybillId.*파티션/);
+});
+
+
+test('손상되거나 과거 기준을 포함한 점검 항목은 안전하게 복원한다', () => {
+  assert.deepEqual(parseChecklist('{broken', ['현재 기준']), []);
+  assert.deepEqual(parseChecklist('{"point":true}', ['현재 기준']), []);
+  assert.deepEqual(parseChecklist('["현재 기준","과거 기준","현재 기준",3]', ['현재 기준']), ['현재 기준']);
+});
+test('긴 본문의 위치는 같은 폭에서 정확히, 폭이 바뀌면 구간 비율로 복원한다', () => {
+  const position = { sectionId: 'section-핵심', offset: 1200, fraction: .4, viewportWidth: 390 };
+  assert.deepEqual(parseReadingPosition(JSON.stringify(position)), position);
+  assert.equal(parseReadingPosition('section-legacy'), null);
+  assert.equal(parseReadingPosition('{"sectionId":"x","offset":-1,"fraction":0,"viewportWidth":390}'), null);
+  assert.equal(parseReadingPosition(JSON.stringify({ ...position, fraction: 2 })), null);
+  assert.equal(readingOffset(position, 5000, 390), 1200);
+  assert.equal(readingOffset(position, 4000, 768), 1600);
+  assert.equal(readingOffset(position, 400, 390), 400);
+});
+test('읽는 위치 저장은 기존 키를 유지하며 학습 기록 갱신 이벤트를 발생시키지 않는다', () => {
+  const oldStorage = global.localStorage, oldWindow = global.window;
+  const values = new Map(); let events = 0;
+  global.localStorage = { setItem(key, value) { values.set(key, value); }, removeItem(key) { values.delete(key); } };
+  global.window = { dispatchEvent() { events++; } };
+  try {
+    assert.equal(writeStorage('jobStudy::position::id', 'section-1', false), true);
+    assert.equal(values.get('jobStudy::position::id'), 'section-1');
+    assert.equal(events, 0);
+    assert.equal(writeStorage('jobStudy::done::id', 'today'), true);
+    assert.equal(events, 1);
+  } finally { global.localStorage = oldStorage; global.window = oldWindow; }
 });

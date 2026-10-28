@@ -11,7 +11,9 @@
     "test:study": "node --test ../../scripts/study.test.cjs",
     "generate:diagrams": "node ../../scripts/generate-diagrams.mjs",
     "test:diagrams": "node --test ../../scripts/diagrams.test.cjs",
-    "test:diagrams:browser": "node ../../scripts/diagrams.browser.mjs"
+    "test:diagrams:browser": "node ../../scripts/diagrams.browser.mjs",
+    "test:study:browser": "node ../../scripts/study-ux.browser.mjs",
+    "test:study:fixture": "node ../../scripts/study-fixture-api.mjs"
   },
   "dependencies": {
     "mermaid": "^11.16.1",

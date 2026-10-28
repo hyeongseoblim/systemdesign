@@ -6,6 +6,7 @@ import CardBody from "@/components/CardBody";
 import QuestionAnswers from "@/components/QuestionAnswers";
 import DifficultyDots from "@/components/DifficultyDots";
 import ReadingProgress from "@/components/ReadingProgress";
+import LearningDock from "@/components/LearningDock";
 import LearnActions from "@/components/LearnActions";
 import StartInterviewFromCard from "@/components/StartInterviewFromCard";
 import QuickQuestion from "@/components/QuickQuestion";
@@ -60,11 +61,7 @@ export default async function CardPage({
 
   return (
     <article className={`detail a-${card.area}`}>
-      <ReadingProgress cardId={card.id} />
-      <nav className="reading-dock" aria-label="학습 바로가기">
-        <Link href={backHref}>← 목록</Link>
-        <a href={starter || hasQuestions ? "#questions" : "#complete"}>{starter ? "답 떠올리기" : hasQuestions ? "질문 풀기" : "이해도 기록하기"} →</a>
-      </nav>
+      <LearningDock key={`dock-${card.id}`} backHref={backHref} hasQuestions={!!starter || hasQuestions} />
       <Link href={backHref} className="back">
         ← 목록으로
       </Link>
@@ -85,6 +82,7 @@ export default async function CardPage({
         </div>
       </header>
 
+      <ReadingProgress key={`position-${card.id}`} cardId={card.id} />
       <nav className="study-roadmap" aria-label="이 카드 학습 순서">
         <span className="roadmap-title">학습 순서</span>
         <ol className={starter || !hasQuestions ? "two-steps" : undefined}>
@@ -101,7 +99,7 @@ export default async function CardPage({
           <p className="starter-explanation">{starter.explanation}</p>
           <div className="starter-example"><strong>예를 들면</strong><p>{starter.example}</p></div>
         </section>
-        <QuickQuestion question={starter.question} answer={starter.answer} explanation={starter.answerExplanation} />
+        <QuickQuestion cardId={card.id} question={starter.question} answer={starter.answer} explanation={starter.answerExplanation} />
         <LearnActions cardId={card.id} compact />
         <details className="starter-deep-dive">
           <summary>더 깊이 공부하기 · 전체 본문과 면접 질문 {card.questions.length}개</summary>

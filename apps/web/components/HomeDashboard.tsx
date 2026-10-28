@@ -53,33 +53,37 @@ export default function HomeDashboard({ cards, records, ready, loading, error, c
     const card = cards.find((item) => item.slug === lesson.slug);
     return card ? lessonCard(card, `시작 ${i + 1}`) : null;
   });
+  const primary = state.primary;
+  const primaryStarter = STARTER_LESSONS.find(lesson => lesson.slug === primary?.slug);
+  const primaryHref = settled && primary ? `${cardHref(primary.id)}${state.action === "continue" ? "#resume" : ""}` : "/?view=explore";
   return <div className="home-dashboard">
-    <header className="home-heading"><div><span className="eyebrow">MY LEARNING</span><h2>오늘의 학습</h2></div>
+    <header className="home-heading"><div><span className="eyebrow">한 장씩, 내 속도로</span><h2>오늘의 학습</h2></div>
       <form action="/" className="home-search" role="search"><input type="hidden" name="view" value="explore" /><label htmlFor="home-search" className="sr-only">배우고 싶은 주제 찾기</label><input id="home-search" name="q" type="search" placeholder="배우고 싶은 주제 검색" /><button type="submit" aria-label="검색">→</button></form>
     </header>
+    <section className="home-focus" aria-label="지금 학습할 한 장" aria-busy={!ready || loading}>
+      <div className="home-focus-caption"><span>{settled ? primaryTitle : error ? "목록을 다시 확인해 주세요" : "학습 준비 중"}</span><span>{settled && primary ? AREA_LABELS[primary.area] : "내 학습 기록 확인"}</span></div>
+      <h3>{settled && primary ? primaryStarter?.label ?? primary.title : error ? "목록 일부를 불러오지 못했어요" : "나에게 맞는 한 장을 찾고 있어요"}</h3>
+      <p>{settled && primary ? primaryStarter?.takeaway ?? stripMd(primary.summary ?? primary.title) : error ? "아래의 다시 시도를 누르거나 전체 카드에서 골라보세요." : settled ? "관심 있는 주제를 골라 오늘의 학습을 시작해 보세요." : "이전에 읽던 카드와 복습 기록을 확인합니다."}</p>
+      <div className="home-focus-footer"><span>읽기 <b aria-hidden="true">→</b> 떠올리기 <b aria-hidden="true">→</b> 마무리</span><Link className="home-focus-cta" href={primaryHref} onClick={rememberPosition}>{settled && primary ? state.action === "continue" ? "이어서 학습하기" : state.action === "review" ? "한 장 복습하기" : "이 한 장 시작하기" : "전체 카드 보기"}<span aria-hidden="true">→</span></Link></div>
+    </section>
     <nav className="home-metrics" aria-label="학습 현황"><Link href="/?view=explore&study=complete">완료 <strong>{settled ? state.completeCount : "—"}</strong></Link><Link href="/?view=review">복습 <strong>{settled ? state.review.length : "—"}</strong></Link><Link href="/?view=explore">전체 카드 <strong>{settled ? cards.length : "—"}</strong></Link></nav>
-    <section className="home-topics" aria-label="주제별 카테고리"><div className="home-section-title"><h2>주제별로 골라보기</h2><Link href="/?view=explore">전체 보기 →</Link></div><div className="home-area-grid">{(Object.keys(AREA_LABELS) as TopicArea[]).map(area => <Link key={area} className={`home-area a-${area}`} href={`/?view=explore&area=${area}`}><div className="home-area-title"><span className="home-area-dot" aria-hidden="true" /><strong>{AREA_LABELS[area]}</strong><span aria-hidden="true">↗</span></div><p>{TOPIC_HINTS[area]}</p><span className="home-area-count">{settled ? `${cards.filter(card => card.area === area).length}개 카드` : "카드 탐색"}</span></Link>)}</div></section>
-    <nav className="home-action-grid" aria-label="학습 선택" aria-busy={!settled}>
-      <Link className="home-action-card primary" href={settled && state.primary ? cardHref(state.primary.id) : "/?view=explore"} onClick={rememberPosition}>
-        <div className="home-action-top"><span className="home-action-icon"><Icon type="learn" /></span><span className="home-action-badge">{settled ? "추천" : "준비 중"}</span></div>
-        <h3>{settled ? primaryTitle : error ? "목록 다시 확인" : "학습 불러오는 중"}</h3>
-        <p>{settled && state.primary ? state.primary.title : error ? "전체 카드에서 다시 시도해 주세요." : settled ? "관심 있는 주제를 골라보세요." : "학습 기록을 확인하고 있어요."}</p>
-        <span className="home-action-footer">{settled && state.primary ? "이 카드 열기" : "전체 카드 보기"}<span aria-hidden="true">→</span></span>
-      </Link>
-      <Link className="home-action-card" href="/?view=review"><div className="home-action-top"><span className="home-action-icon review"><Icon type="review" /></span><span className="home-action-count">{settled ? `${state.review.length}개` : "—"}</span></div><h3>복습하기</h3><p>{settled && state.review.length ? "다시 보고 싶은 카드를 떠올려 보세요." : "학습 중 저장한 카드를 다시 확인해요."}</p><span className="home-action-footer">복습 목록<span aria-hidden="true">→</span></span></Link>
-      <Link className="home-action-card" href="/?view=explore"><div className="home-action-top"><span className="home-action-icon explore"><Icon type="explore" /></span><span className="home-action-count">{settled ? `${cards.length}개` : "전체"}</span></div><h3>전체 카드 탐색</h3><p>분야와 난이도로 원하는 학습을 찾아보세요.</p><span className="home-action-footer">카드 둘러보기<span aria-hidden="true">→</span></span></Link>
-      <Link className="home-action-card" href="/interview"><div className="home-action-top"><span className="home-action-icon interview"><Icon type="interview" /></span></div><h3>면접 연습</h3><p>배운 내용을 말로 설명하며 확인해 보세요.</p><span className="home-action-footer">연습 시작하기<span aria-hidden="true">→</span></span></Link>
-    </nav>
+    <nav className="home-study-tools" aria-label="다른 학습 선택"><Link href="/?view=review"><Icon type="review" /><span>복습하기<small>{settled ? `${state.review.length}장 다시 보기` : "내 기록 확인"}</small></span><b aria-hidden="true">→</b></Link><Link href="/?view=explore"><Icon type="explore" /><span>카드 둘러보기<small>주제·난이도로 찾기</small></span><b aria-hidden="true">→</b></Link><Link href="/interview"><Icon type="interview" /><span>말로 설명하기<small>면접 질문 연습</small></span><b aria-hidden="true">→</b></Link></nav>
     {settled && <>
-      <section className="home-random" aria-label="랜덤 학습 추천">
-        <div className="home-section-title"><h2>무엇을 배울지 고민이라면</h2><button className="chip" onClick={() => setRandomId(randomRecommendation(cards, records, randomId)?.id)} disabled={!cards.length}>{randomCard ? "다시 추천" : "랜덤으로 한 장 추천"}</button></div>
-        <p className="hint">미학습 카드부터 골라드려요. 모두 학습했다면 다시 볼 카드를 추천합니다.</p>
-        <div aria-live="polite" aria-atomic="true">{randomCard ? <div className="home-random-result">{lessonCard(randomCard)}</div> : <p className="home-random-placeholder">추천을 누르면 학습 카드 한 장이 여기에 나타납니다.</p>}</div>
-      </section>
-      {!state.started && <section aria-label="초기 학습 안내"><div className="home-section-title"><h2>처음이라면, 이 5장부터</h2><span>전체 {cards.length}개 중 선택 학습</span></div><div className="home-lesson-grid">{starters}</div></section>}
-      {state.review.length > 0 && <section><div className="home-section-title"><h2>다시 볼 카드</h2><Link href="/?view=review">모두 보기 →</Link></div><div className="home-lesson-grid">{state.review.slice(0, 3).map(card => lessonCard(card))}</div></section>}
+      {!state.started && <section aria-label="초기 학습 안내"><div className="home-section-title"><h2>처음이라면, 이 5장부터</h2><span>순서대로 한 장씩</span></div>
+        <ol className="starter-route-list">{STARTER_LESSONS.map((lesson, i) => {
+          const card = cards.find(item => item.slug === lesson.slug);
+          return card ? <li key={lesson.slug}><Link href={cardHref(card.id)} onClick={rememberPosition}><span className="starter-route-number">{i + 1}</span><span>{lesson.label}</span><span>{i === 0 ? "여기서 시작 →" : "읽어보기 →"}</span></Link></li> : null;
+        })}</ol>
+      </section>}
+      {state.review.length > 0 && <section><div className="home-section-title"><h2>다시 떠올려 볼 카드</h2><Link href="/?view=review">모두 보기 →</Link></div><div className="home-lesson-grid">{state.review.slice(0, 3).map(card => lessonCard(card))}</div></section>}
     </>}
-    {settled && state.started && <details className="home-starter-archive"><summary>초기 5장 {state.starterComplete ? "다시 보기" : "이어보기"}<span>{state.starterDone}/{STARTER_LESSONS.length} 완료</span></summary><div className="home-lesson-grid">{starters}</div></details>}
-    <p className="home-storage-note">학습 기록은 이 브라우저에 저장됩니다.</p>
+    {settled && state.started && <details className="home-starter-archive"><summary>처음 5장 이어보기<span>{state.starterDone}/{STARTER_LESSONS.length} 완료</span></summary><div className="home-lesson-grid">{starters}</div></details>}
+    <section className="home-topics" aria-label="주제별 카테고리"><div className="home-section-title"><h2>관심 있는 주제로 넓혀보기</h2><Link href="/?view=explore">전체 보기 →</Link></div><div className="home-area-grid">{(Object.keys(AREA_LABELS) as TopicArea[]).map(area => <Link key={area} className={`home-area a-${area}`} href={`/?view=explore&area=${area}`}><div className="home-area-title"><span className="home-area-dot" aria-hidden="true" /><strong>{AREA_LABELS[area]}</strong><span aria-hidden="true">↗</span></div><p>{TOPIC_HINTS[area]}</p><span className="home-area-count">{settled ? `${cards.filter(card => card.area === area).length}개 카드` : "카드 탐색"}</span></Link>)}</div></section>
+    {settled && <section className="home-random" aria-label="랜덤 학습 추천">
+      <div className="home-section-title"><h2>새로운 주제를 만나고 싶다면</h2><button className="chip" onClick={() => setRandomId(randomRecommendation(cards, records, randomId)?.id)} disabled={!cards.length}>{randomCard ? "다시 추천" : "랜덤으로 한 장 추천"}</button></div>
+      <p className="hint">아직 읽지 않은 카드부터 골라드려요.</p>
+      <div aria-live="polite" aria-atomic="true">{randomCard && <div className="home-random-result">{lessonCard(randomCard)}</div>}</div>
+    </section>}
+    <p className="home-storage-note">학습 기록은 이 브라우저에 저장돼요. 잠깐 멈춰도 다음에 이어갈 수 있어요.</p>
   </div>;
 }

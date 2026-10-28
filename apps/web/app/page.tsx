@@ -72,7 +72,7 @@ export default async function Home({
           </Link>
           <Link href="/interview" className="brand-action">
             <span aria-hidden="true">●</span>
-            AI 면접
+            면접 연습
           </Link>
         </div>
         {activeView === "explore" && <FilterSheet>

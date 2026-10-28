@@ -13,11 +13,11 @@ export const MASTERY_LABELS: Record<Mastery, string> = {
 export function readStorage(key: string): string | null {
   try { return localStorage.getItem(key); } catch { return null; }
 }
-export function writeStorage(key: string, value: string | null): boolean {
+export function writeStorage(key: string, value: string | null, notify = true): boolean {
   try {
     if (value === null) localStorage.removeItem(key);
     else localStorage.setItem(key, value);
-    window.dispatchEvent(new Event("study-change"));
+    if (notify) window.dispatchEvent(new Event("study-change"));
     return true;
   } catch { return false; }
 }
@@ -48,4 +48,12 @@ export function shuffleRank(id: string, seed: number): number {
   let hash = seed | 0;
   for (const ch of id) hash = Math.imul(hash ^ ch.charCodeAt(0), 16777619);
   return hash >>> 0;
+}
+
+/** Ignore stale or malformed checklists without losing a saved answer. */
+export function parseChecklist(raw: string | null, points: string[]): string[] {
+  try {
+    const values: unknown = JSON.parse(raw ?? "[]");
+    return Array.isArray(values) ? [...new Set(values.filter((value): value is string => typeof value === "string" && points.includes(value)))] : [];
+  } catch { return []; }
 }

@@ -112,8 +112,10 @@ export async function getFeed(params: {
   if (params.cursor) q.set("cursor", params.cursor);
   q.set("limit", String(params.limit ?? 20));
 
-  const res = await fetch(`${API_BASE}/api/v1/cards?${q.toString()}`, {
+  const endpoint = typeof window === "undefined" ? `${API_BASE}/api/v1/cards` : "/api/study/cards";
+  const res = await fetch(`${endpoint}?${q.toString()}`, {
     cache: "no-store",
+    signal: AbortSignal.timeout(30_000),
   });
   if (!res.ok) throw new Error(`feed failed: ${res.status}`);
   return res.json();
@@ -126,6 +128,7 @@ export class CardFetchError extends Error {
 export async function getCard(id: string): Promise<CardDetail> {
   const res = await fetch(`${API_BASE}/api/v1/cards/${id}`, {
     cache: "no-store",
+    signal: AbortSignal.timeout(30_000),
   });
   if (!res.ok) throw new CardFetchError(res.status);
   return res.json();

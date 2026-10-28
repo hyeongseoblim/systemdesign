@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { readKey, doneKey } from "@/lib/api";
 import { Mastery, MASTERY_LABELS, masteryKey, readStudy, writeStorage } from "@/lib/study";
 
@@ -23,22 +24,25 @@ export default function LearnActions({ cardId, step = 3, compact = false }: { ca
       window.removeEventListener("storage", refresh);
     };
   }, [cardId]);
-  function rate(value: Mastery) {
-    if (!writeStorage(masteryKey(cardId), value)) { setError(true); return; }
+  function rate(value: Mastery | undefined) {
+    if (!writeStorage(masteryKey(cardId), value ?? null)) { setError(true); return; }
     setMastery(value); setError(false);
   }
   function toggle() {
     if (!writeStorage(doneKey(cardId), done ? null : new Date().toISOString())) { setError(true); return; }
     setDone(!done); setError(false);
   }
-  if (compact) return <div className="starter-record" aria-label="학습 기록">
+  const nextLinks = done && <div className="completion-next"><p role="status">오늘 한 장을 마쳤어요. 여기서 쉬어도 좋아요.</p><div><Link href="/">다음 학습 고르기 →</Link><Link href="/?view=review">내 복습 목록</Link></div></div>;
+  if (compact) return <section id="complete" className="starter-record" aria-label="학습 기록">
+    <h2>오늘의 한 장, 여기까지</h2>
     <div className="starter-record-buttons">
       <button className={`chip ${done ? "on" : ""}`} onClick={toggle} aria-pressed={done}>{done ? "✓ 학습 완료 · 표시 해제" : "학습 완료로 표시"}</button>
-      <button className={`chip ${mastery === "review" || mastery === "hint" ? "on" : ""}`} onClick={() => rate(mastery === "review" || mastery === "hint" ? "confident" : "review")} aria-pressed={mastery === "review" || mastery === "hint"}>{mastery === "review" || mastery === "hint" ? "✓ 복습에 저장됨 · 해제" : "복습에 저장"}</button>
+      <button className={`chip ${mastery === "review" || mastery === "hint" ? "on" : ""}`} onClick={() => rate(mastery === "review" || mastery === "hint" ? undefined : "review")} aria-pressed={mastery === "review" || mastery === "hint"}>{mastery === "review" || mastery === "hint" ? "✓ 복습에 저장됨 · 해제" : "복습에 저장"}</button>
     </div>
     <p className="hint" aria-live="polite">{done ? "완료를 기록했어요. 홈에서 다음 학습을 확인할 수 있어요." : "답을 비교한 뒤 완료를 표시하면 홈의 다음 학습에 반영됩니다."}</p>
     {error && <p role="alert">학습 기록을 저장하지 못했어요. 브라우저의 저장소 설정을 확인해 주세요.</p>}
-  </div>;
+    {nextLinks}
+  </section>;
   return (
     <section id="complete" className={`learn-actions ${done ? "is-done" : ""}`}>
       <div className="learn-actions-copy"><span>STEP {step}</span><div>
@@ -53,6 +57,7 @@ export default function LearnActions({ cardId, step = 3, compact = false }: { ca
       <p className="hint" aria-live="polite">{mastery === "confident" ? "복습 필요 목록에서 제외됩니다." : mastery ? "홈의 ‘복습 필요’에서 다시 볼 수 있어요." : "선택한 이해도는 이 브라우저에 저장됩니다."}</p>
       <button className={`done-btn ${done ? "on" : ""}`} onClick={toggle} aria-pressed={done}>{done ? "✓ 학습 완료됨" : "학습 완료로 표시"}</button>
       {done && <p className="undo-hint">다시 누르면 완료 표시가 해제됩니다. 이해도 기록은 유지됩니다.</p>}
+      {nextLinks}
       {error && <p role="alert">이 브라우저에 기록을 저장하지 못했어요. 저장소 사용 설정을 확인해 주세요.</p>}
     </section>
   );
