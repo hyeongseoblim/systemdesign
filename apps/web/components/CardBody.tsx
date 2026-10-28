@@ -76,8 +76,11 @@ export default function CardBody({ md: rawMd }: { md: string }) {
           },
           table({ children, ...props }) {
             return (
-              <div className="table-wrap">
-                <table {...props}>{children}</table>
+              <div className="table-container">
+                <p className="table-hint">표를 좌우로 밀어 모든 열을 볼 수 있어요.</p>
+                <div className="table-wrap" role="region" aria-label="표: 좌우로 스크롤" tabIndex={0}>
+                  <table {...props}>{children}</table>
+                </div>
               </div>
             );
           },

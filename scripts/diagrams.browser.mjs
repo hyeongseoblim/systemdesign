@@ -49,11 +49,9 @@ try {
       const errors = await page.locator('.diagram-image').evaluateAll(figures => figures.flatMap(el => {
         const issues = [];
         if (el.scrollWidth > el.clientWidth + 1) issues.push('figure overflow');
-        for (const panel of el.querySelectorAll('.diagram-panel-viewport')) {
-          const img = panel.querySelector('img');
-          if (img.clientWidth <= panel.clientWidth) issues.push('panel did not enlarge');
-          if (img.clientHeight + 2 < panel.clientHeight) issues.push('panel bottom missing');
-        }
+        const overview = el.querySelector('.diagram-overview');
+        if (overview && Number(overview.getAttribute('width')) > el.clientWidth * 1.25 && !el.querySelector('.diagram-help a')) issues.push('missing full image link');
+        if (el.querySelector('.diagram-panel-viewport')) issues.push('cropped diagram panel');
         if (!el.querySelector('img')) issues.push('missing diagram');
         return issues;
       }));

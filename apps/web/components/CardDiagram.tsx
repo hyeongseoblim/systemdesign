@@ -56,15 +56,7 @@ export default function CardDiagram({ source }: { source: string }) {
   return <figure className="diagram-image" ref={ref} aria-label="설명 다이어그램">
     {diagram ? <>
       <img className="diagram-overview" src={diagram.src} width={diagram.width} height={diagram.height} alt="설명 다이어그램 전체 보기" loading="lazy" decoding="async" />
-      {showDetails && <div className="diagram-details">
-        <p className="diagram-help">확대해서 읽기 · 왼쪽부터 순서대로 아래에 이어집니다.</p>
-        {diagram.panels.map((panel, index) => <div className="diagram-panel" key={index}>
-          <span className="diagram-panel-label">{index + 1} / {diagram.panels.length}</span>
-          <div className="diagram-panel-viewport" style={{ aspectRatio: `${panel.width} / ${panel.height}` }}>
-            <img src={diagram.src} width={diagram.width} height={diagram.height} style={{ width: `${diagram.width / panel.width * 100}%`, left: `${-panel.offset / panel.width * 100}%` }} alt={`다이어그램 확대 ${index + 1}/${diagram.panels.length}`} loading="lazy" decoding="async" />
-          </div>
-        </div>)}
-      </div>}
+      {showDetails && <p className="diagram-help"><a href={diagram.src} target="_blank" rel="noopener noreferrer">전체 도표 열어 확대하기 ↗</a></p>}
       <details className="diagram-description"><summary>다이어그램 텍스트 설명</summary><pre>{code}</pre></details>
     </> : failed ? <><figcaption>다이어그램을 표시하지 못했어요. 텍스트 설명으로 확인해 주세요.</figcaption><pre>{code}</pre></> : <p role="status">다이어그램 이미지를 준비하고 있어요.</p>}
   </figure>;
