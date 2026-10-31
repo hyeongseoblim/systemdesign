@@ -8,6 +8,30 @@ import rehypeHighlight from "rehype-highlight";
 import { sectionId } from "@/lib/reading";
 import type { ReactNode } from "react";
 
+type HtmlNode = { type?: string; tagName?: string; value?: string; children?: HtmlNode[]; properties?: Record<string, unknown> };
+function nodeText(node: HtmlNode): string {
+  return node.value ?? node.children?.map(nodeText).join("") ?? "";
+}
+/** Keep real table semantics while providing labels for the narrow-screen layout. */
+function labelTableCells() {
+  return (tree: HtmlNode) => {
+    function visit(node: HtmlNode) {
+      if (node.tagName === "table") {
+        const head = node.children?.find(child => child.tagName === "thead");
+        const headers = head?.children?.find(child => child.tagName === "tr")?.children?.filter(child => child.tagName === "th").map(nodeText) ?? [];
+        const body = node.children?.find(child => child.tagName === "tbody");
+        for (const row of body?.children ?? []) {
+          row.children?.filter(cell => cell.tagName === "td").forEach((cell, index) => {
+            cell.properties = { ...cell.properties, "data-label": headers[index]?.trim() || (index === 0 ? "항목" : `${index + 1}번째 항목`) };
+          });
+        }
+      }
+      node.children?.forEach(visit);
+    }
+    visit(tree);
+  };
+}
+
 /** React 노드 트리에서 텍스트만 평탄화 (callout 분류용) */
 function flatText(node: ReactNode): string {
   if (node == null || typeof node === "boolean") return "";
@@ -40,7 +64,7 @@ export default function CardBody({ md: rawMd }: { md: string }) {
     <div className="content">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkCjkFriendly]}
-        rehypePlugins={[rehypeHighlight]}
+        rehypePlugins={[rehypeHighlight, labelTableCells]}
         components={{
           h2({ children }) { return <h2 id={sectionId(flatText(children))}>{children}</h2>; },
           pre({ children, ...props }) {
@@ -77,8 +101,7 @@ export default function CardBody({ md: rawMd }: { md: string }) {
           table({ children, ...props }) {
             return (
               <div className="table-container">
-                <p className="table-hint">표를 좌우로 밀어 모든 열을 볼 수 있어요.</p>
-                <div className="table-wrap" role="region" aria-label="표: 좌우로 스크롤" tabIndex={0}>
+                <div className="table-wrap" role="region" aria-label="학습 내용 표" tabIndex={0}>
                   <table {...props}>{children}</table>
                 </div>
               </div>

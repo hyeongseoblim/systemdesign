@@ -535,12 +535,14 @@ button { font-family: inherit; }
   border: 1px solid var(--border); border-radius: var(--radius-sm);
   -webkit-overflow-scrolling: touch;
 }
-.table-hint { display: none; }
 @media (max-width: 600px) {
-  .table-hint { display: block; margin: 16px 0 -8px; color: var(--muted); font-size: 12px; }
-  .content .table-wrap table { min-width: 600px; }
-  .content .table-wrap th, .content .table-wrap td { overflow-wrap: normal; word-break: keep-all; }
-  .content .table-wrap code { word-break: normal; overflow-wrap: normal; }
+  .content .table-wrap { overflow: visible; border: 0; }
+  .content .table-wrap table, .content .table-wrap tbody, .content .table-wrap tr, .content .table-wrap td { display: block; width: 100%; }
+  .content .table-wrap thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .content .table-wrap tbody tr { border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 12px; overflow: hidden; background: var(--card); }
+  .content .table-wrap td { border: 0; padding: 8px 12px; overflow-wrap: anywhere; }
+  .content .table-wrap td + td { border-left: 0; border-top: 1px solid var(--border); }
+  .content .table-wrap td::before { content: attr(data-label); display: block; color: var(--muted); font-size: 12px; font-weight: 700; margin-bottom: 2px; }
 }
 .content table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .content th {
