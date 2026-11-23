@@ -1,43 +1,70 @@
-// STUDY WITH JOB PWA service worker — 네트워크 우선 + 오프라인 캐시 fallback
-const CACHE = "study-with-job-v2";
-const APP_SHELL = ["/", "/manifest.webmanifest"];
+const PREFIX = "study-with-job-";
+const PAGES = PREFIX + "pages-v3";
+const ASSETS = PREFIX + "assets-v3";
+const OFFLINE = "/offline.html";
+const PAGE_LIMIT = 20;
+const ASSET_LIMIT = 120;
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(APP_SHELL)));
-  self.skipWaiting();
+  event.waitUntil(caches.open(PAGES).then((cache) => cache.add(OFFLINE)));
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-      )
-  );
-  self.clients.claim();
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((key) => key.startsWith(PREFIX) && key !== PAGES && key !== ASSETS)
+      .map((key) => caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
+
+async function store(cache, key, response, limit, preserve) {
+  await cache.put(key, response);
+  const keys = (await cache.keys()).filter((request) => request.url !== preserve);
+  await Promise.all(keys.slice(0, Math.max(0, keys.length - limit)).map((request) => cache.delete(request)));
+}
+
+async function readPage(request, isCard) {
+  const cache = await caches.open(PAGES);
+  let response;
+  try {
+    response = await fetch(request);
+  } catch {
+    return (isCard && await cache.match(request)) || await cache.match(OFFLINE) || Response.error();
+  }
+  if (isCard && response.ok && response.headers.get("content-type")?.includes("text/html")) {
+    try {
+      await store(cache, request, response.clone(), PAGE_LIMIT, new URL(OFFLINE, self.location.origin).href);
+    } catch {
+      // Storage can be unavailable or full. Keep the online response usable.
+    }
+  }
+  return response;
+}
+
+async function readAsset(request) {
+  const cache = await caches.open(ASSETS);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response.ok) {
+    try {
+      await store(cache, request, response.clone(), ASSET_LIMIT);
+    } catch {
+      // Storage can be unavailable or full.
+    }
+  }
+  return response;
+}
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
-  if (request.method !== "GET") return;
-
-  // 페이지 내비게이션: 네트워크 우선, 실패 시 캐시
+  const url = new URL(request.url);
+  if (request.method !== "GET" || url.origin !== self.location.origin) return;
   if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(request, copy));
-          return res;
-        })
-        .catch(() => caches.match(request).then((r) => r || caches.match("/")))
-    );
-    return;
+    const isCard = /^\/cards\/[0-9a-f-]{36}$/i.test(url.pathname);
+    event.respondWith(readPage(request, isCard));
+  } else if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/diagrams/")) {
+    event.respondWith(readAsset(request));
   }
-
-  // 정적 자산: 캐시 우선
-  event.respondWith(
-    caches.match(request).then((cached) => cached || fetch(request))
-  );
 });

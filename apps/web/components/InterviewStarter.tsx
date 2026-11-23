@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@astryxdesign/core/Button";
+
 import { useState } from "react";
 import { AREA_LABELS, TopicArea } from "@/lib/api";
 import { buildChatGptInterviewPrompt } from "@/lib/chatgptInterview";
@@ -152,13 +154,14 @@ export default function InterviewStarter({
 
       {error && <p className="form-error">{error}</p>}
 
-      <button
-        className="primary-btn"
+      <Button
+        className="app-control"
+        label="무료 면접 프롬프트 만들기"
+        variant="primary"
+        width="100%"
         onClick={prepare}
-        disabled={!topic.trim()}
-      >
-        무료 면접 프롬프트 만들기
-      </button>
+        isDisabled={!topic.trim()}
+      />
       <p className="hint">
         API를 호출하지 않습니다. 프롬프트를 개인 ChatGPT 대화에 붙여넣어 진행합니다.
       </p>
@@ -182,12 +185,8 @@ export default function InterviewStarter({
             <li>면접이 끝나면 “면접 종료”라고 입력해 피드백을 받습니다.</li>
           </ol>
           <div className="handoff-actions">
-            <button className="ghost-btn" type="button" onClick={copyPrompt}>
-              {copied ? "✓ 복사됨" : "프롬프트 복사"}
-            </button>
-            <button className="primary-btn" type="button" onClick={openChatGpt}>
-              ChatGPT 웹 열기 ↗
-            </button>
+            <Button className="app-control" label={copied ? "✓ 복사됨" : "프롬프트 복사"} onClick={copyPrompt} />
+            <Button className="app-control" label="ChatGPT 웹 열기 ↗" variant="primary" onClick={openChatGpt} />
           </div>
         </div>
       )}

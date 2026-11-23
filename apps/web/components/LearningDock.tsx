@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { Button } from "@astryxdesign/core/Button";
 import { useEffect, useState } from "react";
 
 /** Keep the next learning action within reach as the reader moves down the page. */
@@ -24,8 +25,13 @@ export default function LearningDock({ backHref, hasQuestions = true }: { backHr
     onScroll(); window.addEventListener("scroll", onScroll, { passive: true }); window.addEventListener("resize", onScroll);
     return () => { observer.disconnect(); cancelAnimationFrame(frame); window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); };
   }, []);
+  const isRecall = (phase === "reading" && hasQuestions) || phase === "deep-reading";
+  const nextHref = phase === "deep-reading" ? "#deep-questions" : isRecall ? "#questions" : "#complete";
+  const nextLabel = isRecall ? "기억에서 꺼내보기 →" : "이해도 기록하기 →";
   return <nav className="reading-dock" aria-label="학습 이동">
-    <Link href={backHref}>← 목록</Link>
-    {phase === "complete" ? <Link className="dock-primary" href="/">다음 학습 고르기 →</Link> : <a className="dock-primary" href={phase === "deep-reading" ? "#deep-questions" : phase === "reading" && hasQuestions ? "#questions" : "#complete"}>{(phase === "reading" && hasQuestions) || phase === "deep-reading" ? "기억에서 꺼내보기 →" : "이해도 기록하기 →"}</a>}
+    <Button as={Link} href={backHref} label="← 목록" variant="secondary" className="app-control" />
+    {phase === "complete"
+      ? <Button as={Link} href="/" label="다음 학습 고르기 →" variant="primary" className="app-control dock-primary" />
+      : <Button href={nextHref} label={nextLabel} variant="primary" className="app-control dock-primary" />}
   </nav>;
 }

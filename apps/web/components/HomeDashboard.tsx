@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import InstallApp from "@/components/InstallApp";
+import { Badge } from "@astryxdesign/core/Badge";
+import { Button } from "@astryxdesign/core/Button";
+import { Card } from "@astryxdesign/core/Card";
 import { AREA_LABELS, MODE_LABELS, stripMd, type CardSummary, type TopicArea } from "@/lib/api";
 import { homeLearning, randomRecommendation } from "@/lib/home";
 import { STARTER_LESSONS } from "@/lib/starterPath";
@@ -56,15 +60,39 @@ export default function HomeDashboard({ cards, records, ready, loading, error, c
   const primary = state.primary;
   const primaryStarter = STARTER_LESSONS.find(lesson => lesson.slug === primary?.slug);
   const primaryHref = settled && primary ? `${cardHref(primary.id)}${state.action === "continue" ? "#resume" : ""}` : "/?view=explore";
+  const primaryLabel = !settled || !primary
+    ? "전체 카드 보기"
+    : state.action === "continue"
+      ? "이어서 학습하기"
+      : state.action === "review"
+        ? "한 장 복습하기"
+        : "이 한 장 시작하기";
   return <div className="home-dashboard">
     <header className="home-heading"><div><span className="eyebrow">한 장씩, 내 속도로</span><h2>오늘의 학습</h2></div>
       <form action="/" className="home-search" role="search"><input type="hidden" name="view" value="explore" /><label htmlFor="home-search" className="sr-only">배우고 싶은 주제 찾기</label><input id="home-search" name="q" type="search" placeholder="배우고 싶은 주제 검색" /><button type="submit" aria-label="검색">→</button></form>
     </header>
     <section className="home-focus" aria-label="지금 학습할 한 장" aria-busy={!ready || loading}>
-      <div className="home-focus-caption"><span>{settled ? primaryTitle : error ? "목록을 다시 확인해 주세요" : "학습 준비 중"}</span><span>{settled && primary ? AREA_LABELS[primary.area] : "내 학습 기록 확인"}</span></div>
-      <h3>{settled && primary ? primaryStarter?.label ?? primary.title : error ? "목록 일부를 불러오지 못했어요" : "나에게 맞는 한 장을 찾고 있어요"}</h3>
-      <p>{settled && primary ? primaryStarter?.takeaway ?? stripMd(primary.summary ?? primary.title) : error ? "아래의 다시 시도를 누르거나 전체 카드에서 골라보세요." : settled ? "관심 있는 주제를 골라 오늘의 학습을 시작해 보세요." : "이전에 읽던 카드와 복습 기록을 확인합니다."}</p>
-      <div className="home-focus-footer"><span>읽기 <b aria-hidden="true">→</b> 떠올리기 <b aria-hidden="true">→</b> 마무리</span><Link className="home-focus-cta" href={primaryHref} onClick={rememberPosition}>{settled && primary ? state.action === "continue" ? "이어서 학습하기" : state.action === "review" ? "한 장 복습하기" : "이 한 장 시작하기" : "전체 카드 보기"}<span aria-hidden="true">→</span></Link></div>
+      <Card className="home-focus-card">
+        <div className="home-focus-caption">
+          <Badge label={settled ? primaryTitle : error ? "목록을 다시 확인해 주세요" : "학습 준비 중"} />
+          <span>{settled && primary ? AREA_LABELS[primary.area] : "내 학습 기록 확인"}</span>
+        </div>
+        <h3>{settled && primary ? primaryStarter?.label ?? primary.title : error ? "목록 일부를 불러오지 못했어요" : "나에게 맞는 한 장을 찾고 있어요"}</h3>
+        <p>{settled && primary ? primaryStarter?.takeaway ?? stripMd(primary.summary ?? primary.title) : error ? "아래의 다시 시도를 누르거나 전체 카드에서 골라보세요." : settled ? "관심 있는 주제를 골라 오늘의 학습을 시작해 보세요." : "이전에 읽던 카드와 복습 기록을 확인합니다."}</p>
+        <div className="home-focus-footer">
+          <span>읽기 <b aria-hidden="true">→</b> 떠올리기 <b aria-hidden="true">→</b> 마무리</span>
+          <Button
+            as={Link}
+            href={primaryHref}
+            onClick={rememberPosition}
+            className="home-focus-cta"
+            label={primaryLabel}
+            variant="primary"
+            size="lg"
+            endContent={<span aria-hidden="true">→</span>}
+          />
+        </div>
+      </Card>
     </section>
     <nav className="home-metrics" aria-label="학습 현황"><Link href="/?view=explore&study=complete">완료 <strong>{settled ? state.completeCount : "—"}</strong></Link><Link href="/?view=review">복습 <strong>{settled ? state.review.length : "—"}</strong></Link><Link href="/?view=explore">전체 카드 <strong>{settled ? cards.length : "—"}</strong></Link></nav>
     <nav className="home-study-tools" aria-label="다른 학습 선택"><Link href="/?view=review"><Icon type="review" /><span>복습하기<small>{settled ? `${state.review.length}장 다시 보기` : "내 기록 확인"}</small></span><b aria-hidden="true">→</b></Link><Link href="/?view=explore"><Icon type="explore" /><span>카드 둘러보기<small>주제·난이도로 찾기</small></span><b aria-hidden="true">→</b></Link><Link href="/interview"><Icon type="interview" /><span>말로 설명하기<small>면접 질문 연습</small></span><b aria-hidden="true">→</b></Link></nav>
@@ -84,6 +112,7 @@ export default function HomeDashboard({ cards, records, ready, loading, error, c
       <p className="hint">아직 읽지 않은 카드부터 골라드려요.</p>
       <div aria-live="polite" aria-atomic="true">{randomCard && <div className="home-random-result">{lessonCard(randomCard)}</div>}</div>
     </section>}
+    <InstallApp />
     <p className="home-storage-note">학습 기록은 이 브라우저에 저장돼요. 잠깐 멈춰도 다음에 이어갈 수 있어요.</p>
   </div>;
 }

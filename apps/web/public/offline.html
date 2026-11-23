@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>오프라인 · STUDY WITH JOB</title>
+  <style>
+    :root { color-scheme: light dark; font: 1rem/1.7 system-ui, sans-serif; }
+    main { max-width: 34rem; margin: 12vh auto 0; padding: 1.25rem; }
+    a { display: inline-grid; align-items: center; min-height: 44px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>인터넷 연결이 필요해요</h1>
+    <p>연결이 돌아오면 홈을 다시 열어 주세요. 이 기기에 저장된 카드는 아래에서 읽을 수 있어요.</p>
+    <section id="saved" hidden aria-labelledby="saved-title">
+      <h2 id="saved-title">이 기기에 저장된 카드</h2>
+      <ul id="saved-list"></ul>
+    </section>
+    <a href="/">홈 다시 열기</a>
+  </main>
+  <script>
+    async function showSavedCards() {
+      const cache = await caches.open("study-with-job-pages-v3");
+      const pages = await cache.keys();
+      const seen = new Set();
+      const list = document.getElementById("saved-list");
+      for (const request of pages.reverse()) {
+        const url = new URL(request.url);
+        if (!url.pathname.startsWith("/cards/") || seen.has(url.pathname)) continue;
+        const response = await cache.match(request);
+        if (!response) continue;
+        const doc = new DOMParser().parseFromString(await response.text(), "text/html");
+        const title = doc.querySelector("h1")?.textContent;
+        if (!title) continue;
+        seen.add(url.pathname);
+        const item = document.createElement("li");
+        const link = document.createElement("a");
+        link.href = url.pathname + url.search;
+        link.textContent = title;
+        item.append(link);
+        list.append(item);
+      }
+      document.getElementById("saved").hidden = list.childElementCount === 0;
+    }
+    showSavedCards().catch(() => {});
+  </script>
+</body>
+</html>

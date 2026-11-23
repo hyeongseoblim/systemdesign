@@ -4,6 +4,8 @@ import { AreaIcon, ModeIcon } from "@/lib/design";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { Badge } from "@astryxdesign/core/Badge";
+import { Button } from "@astryxdesign/core/Button";
 import { useSearchParams } from "next/navigation";
 import { CardSummary, FeedResponse, TopicArea, LearningMode, DifficultyLevel, getFeed,
   AREA_LABELS, MODE_LABELS, MODE_GUIDES, DIFFICULTY_LABELS, stripMd } from "@/lib/api";
@@ -193,7 +195,7 @@ export default function CardFeed({ initial, area, mode, difficulty, view = "expl
               <div className="meta">
                 <span className="badge"><AreaIcon area={c.area} size={13} />{AREA_LABELS[c.area]}</span>
                 <span className="badge mode"><ModeIcon mode={c.mode} size={12} />{MODE_LABELS[c.mode]}</span>
-                <span className={`study-state ${review ? "review" : studyState}`}>{review ? "↺ 복습 필요" : isDone ? "✓ 완료" : isRead ? "● 학습 중" : "새 학습"}</span>
+                <Badge variant={review ? "warning" : isDone ? "success" : "neutral"} label={review ? "복습 필요" : isDone ? "완료" : isRead ? "학습 중" : "새 학습"} />
                 <DifficultyDots level={c.difficulty} />
               </div>
               <h2>{c.title}</h2>
@@ -205,7 +207,7 @@ export default function CardFeed({ initial, area, mode, difficulty, view = "expl
           );
         })}
       </div>}
-      {view !== "home" && filtered.length > visible && <button className="loadmore" onClick={() => updateOptions({ visible: visible + 20 })}>20개 더 보기 · {Math.min(visible, filtered.length)}/{filtered.length}개 표시</button>}
+      {view !== "home" && filtered.length > visible && <Button className="app-control" width="100%" label={`20개 더 보기 · ${Math.min(visible, filtered.length)}/${filtered.length}개 표시`} onClick={() => updateOptions({ visible: visible + 20 })} />}
     </>
   );
 }
