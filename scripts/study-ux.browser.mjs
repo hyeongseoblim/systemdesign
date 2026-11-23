@@ -137,6 +137,42 @@ try {
     assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1));
     await p.screenshot({ path: `${output}/recall-dark-320.png` }); results.push({ flow: 'dark-small-mobile-recall', passed: true }); await context.close();
   }
+  for (const width of [320, 1280]) {
+    const { context, page: p } = await page(width);
+    await p.emulateMedia({ colorScheme: width === 320 ? 'dark' : 'light' });
+    await p.goto(base + '/?view=explore');
+    const filter = p.getByRole('button', { name: '필터', exact: true });
+    await filter.click();
+    const close = p.getByRole('dialog').getByRole('button', { name: '닫기', exact: true });
+    for (const button of [filter, close]) {
+      const size = await button.evaluate(el => {
+        const style = getComputedStyle(el);
+        return { width: el.offsetWidth, height: el.offsetHeight, padding: parseFloat(style.paddingInlineStart) };
+      });
+      assert.ok(size.width >= 44 && size.height >= 44 && size.padding >= 8, JSON.stringify(size));
+    }
+    await close.click();
+
+    await at(p, starter);
+    const badge = p.locator('.detail .meta .badge').first();
+    await expect(badge).toHaveCSS('display', 'flex');
+    await expect(badge).toHaveCSS('white-space', 'nowrap');
+
+    await p.goto(base + '/interview');
+    await p.getByLabel('주제', { exact: true }).fill('트랜잭션');
+    const prepare = p.getByRole('button', { name: '무료 면접 프롬프트 만들기' });
+    assert.ok(await prepare.evaluate(el => parseFloat(getComputedStyle(el).marginTop) >= 12));
+    await prepare.click();
+    const handoff = p.locator('.handoff-actions');
+    await expect(handoff.getByRole('button', { name: '프롬프트 복사' })).toBeVisible();
+    if (width === 320) {
+      const widths = await handoff.locator('button').evaluateAll(buttons => buttons.map(el => el.offsetWidth));
+      assert.equal(widths[0], widths[1]);
+    }
+    assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1));
+    record({ flow: 'astryx-control-spacing', width });
+    await context.close();
+  }
   await writeFile(`${output}/results.json`, JSON.stringify(results, null, 2));
   console.log(JSON.stringify(results, null, 2));
 } finally { await browser.close(); }

@@ -155,7 +155,7 @@ export default function InterviewStarter({
       {error && <p className="form-error">{error}</p>}
 
       <Button
-        className="app-control"
+        className="app-control interview-prepare"
         label="무료 면접 프롬프트 만들기"
         variant="primary"
         width="100%"
