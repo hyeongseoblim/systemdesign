@@ -30,7 +30,12 @@ async function readPage(request, isCard) {
   try {
     response = await fetch(request);
   } catch {
-    return (isCard && await cache.match(request)) || await cache.match(OFFLINE) || Response.error();
+    if (isCard) {
+      const path = new URL(request.url).pathname;
+      const saved = await cache.match(request) || await cache.match(path);
+      if (saved) return saved;
+    }
+    return await cache.match(OFFLINE) || Response.error();
   }
   if (isCard && response.ok && response.headers.get("content-type")?.includes("text/html")) {
     try {

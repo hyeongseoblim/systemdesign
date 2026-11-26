@@ -6,6 +6,7 @@ import CardBody from "@/components/CardBody";
 import QuestionAnswers from "@/components/QuestionAnswers";
 import DifficultyDots from "@/components/DifficultyDots";
 import ReadingProgress from "@/components/ReadingProgress";
+import SaveOfflineCard from "@/components/SaveOfflineCard";
 import LearningDock from "@/components/LearningDock";
 import LearnActions from "@/components/LearnActions";
 import StartInterviewFromCard from "@/components/StartInterviewFromCard";
@@ -82,6 +83,7 @@ export default async function CardPage({
         </div>
       </header>
 
+      <SaveOfflineCard key={card.id} cardId={card.id} />
       <ReadingProgress key={`position-${card.id}`} cardId={card.id} />
       <nav className="study-roadmap" aria-label="이 카드 학습 순서">
         <span className="roadmap-title">학습 순서</span>

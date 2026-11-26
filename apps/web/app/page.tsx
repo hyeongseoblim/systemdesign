@@ -12,6 +12,7 @@ import CardFeed from "@/components/CardFeed";
 import ActiveTabScroller from "@/components/ActiveTabScroller";
 import Link from "next/link";
 import FilterSheet from "@/components/FilterSheet";
+import { STARTER_LESSONS } from "@/lib/starterPath";
 
 const AREAS = Object.keys(AREA_LABELS) as TopicArea[];
 const MODES = Object.keys(MODE_LABELS) as LearningMode[];
@@ -48,12 +49,14 @@ export default async function Home({
   let initial;
   let error: string | null = null;
   try {
-    initial = await getFeed({
-      area: activeArea,
-      mode: activeMode,
-      difficulty: activeDifficulty,
-      limit: 20,
-    });
+    const [feed, starterFeed] = await Promise.all([
+      getFeed({ area: activeArea, mode: activeMode, difficulty: activeDifficulty, limit: 20 }),
+      activeView === "home" ? getFeed({ area: "BACKEND_DEV", limit: 20 }).catch(() => null) : null,
+    ]);
+    const firstLesson = starterFeed?.items.find(card => card.slug === STARTER_LESSONS[0].slug);
+    initial = firstLesson && !feed.items.some(card => card.id === firstLesson.id)
+      ? { ...feed, items: [...feed.items, firstLesson] }
+      : feed;
   } catch (e) {
     error = e instanceof Error ? e.message : "불러오기 실패";
     initial = { items: [], nextCursor: null };

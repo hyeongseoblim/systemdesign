@@ -37,6 +37,35 @@ try {
     record({ flow: 'home-primary', width, ...geometry }); await context.close();
   }
   {
+    const { context, page: p } = await page(320);
+    let releaseCatalog;
+    let catalogRequested = false;
+    const waiting = new Promise(resolve => { releaseCatalog = resolve; });
+    await p.route('**/api/study/cards?**', async route => {
+      catalogRequested = true;
+      await waiting;
+      await route.continue();
+    });
+    try {
+      await p.goto(base);
+      await expect.poll(() => catalogRequested).toBe(true);
+      const start = p.getByRole('link', { name: '이 한 장 시작하기' });
+      await expect(start).toHaveAttribute('href', new RegExp(starter.id));
+      await expect(p.getByRole('navigation', { name: '학습 현황' }).getByText('—').first()).toBeVisible();
+      await start.focus();
+      await p.keyboard.press('Tab');
+      await expect(p.getByRole('searchbox', { name: '배우고 싶은 주제 찾기' })).toBeFocused();
+      await start.focus();
+      await p.keyboard.press('Enter');
+      await expect(p.getByRole('textbox', { name: '떠올린 답변', exact: true })).toBeVisible();
+      record({ flow: 'start-with-catalog-pending-via-keyboard', passed: true });
+    } finally {
+      releaseCatalog();
+      await p.unrouteAll({ behavior: 'wait' });
+      await context.close();
+    }
+  }
+  {
     const { context, page: p } = await page();
     await p.route('**/api/study/cards?**', route => route.abort('failed'));
     await p.goto(base); await expect(p.locator('.catalog-status[role="alert"]')).toBeVisible();
@@ -172,6 +201,31 @@ try {
     assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1));
     record({ flow: 'astryx-control-spacing', width });
     await context.close();
+  }
+  {
+    const { context, page: p } = await page(390);
+    try {
+      await home(p);
+      await p.waitForFunction(() => navigator.serviceWorker.controller !== null);
+      await p.locator('.home-focus-cta').click();
+      const card = p.locator('.detail h1');
+      await expect(card).toBeVisible();
+      const title = await card.innerText();
+      await p.getByRole('button', { name: '오프라인에 저장', exact: true }).click();
+      await expect(p.locator('.offline-card-action > [role=status]')).toContainText('저장했어요');
+      await context.setOffline(true);
+      await p.goto(base);
+      await p.getByRole('link', { name: title, exact: true }).click();
+      await expect(card).toHaveText(title);
+      const input = p.getByRole('textbox', { name: '떠올린 답변', exact: true });
+      await input.fill('오프라인에서 작성한 답변');
+      await expect(p.locator('.quick-question .recall-save')).toContainText('저장됨');
+      await p.reload();
+      await expect(input).toHaveValue('오프라인에서 작성한 답변');
+      record({ flow: 'save-open-and-answer-offline-after-client-navigation', passed: true });
+    } finally {
+      await context.close();
+    }
   }
   await writeFile(`${output}/results.json`, JSON.stringify(results, null, 2));
   console.log(JSON.stringify(results, null, 2));
